@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<openbox_menu xmlns="http://openbox.org/"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://openbox.org/
+                file:///usr/share/openbox/menu.xsd">
+
+<menu id="root-menu" label="Openbox 3">
+  <item label="xterm">
+    <action name="Execute"><execute>xterm -geometry 80x32</execute></action>
+  </item>
+  <!-- 
+  <item label="rxvt">
+    <action name="Execute"><execute>rxvt -geometry 80x38-0+0</execute></action>
+  </item>
+  -->
+  <separator />
+  <item label="Firefox 15">
+    <action name="Execute"><execute>/usr/local/firefox/firefox -P masterprofile</execute></action>
+    <!-- after firefox 11, add -new-instance instead of -no-remote -->
+  </item>
+  <menu id="browser-menu" label="Other browsers">
+  <item label="Social Firefox">
+    <action name="Execute"><execute>/usr/local/firefox/firefox -no-remote -P facebook</execute></action>
+  </item>
+  <item label="Default Firefox">
+    <action name="Execute"><execute>/usr/local/firefox/firefox -no-remote -P Default</execute></action>
+  </item>
+  <separator />
+  <item label="Firefox 13">
+    <action name="Execute"><execute>/usr/local/firefox13/firefox -P firefox13</execute></action>
+    <!-- after firefox 11, add -new-instance instead of -no-remote -->
+  </item>
+  <item label="Social Firefox 13">
+    <action name="Execute"><execute>/usr/local/firefox13/firefox -no-remote -P facebook13</execute></action>
+  </item>
+  <item label="open selection in Firefox">
+    <action name="Execute"><execute>sh -c 'firefox `pyclip`'</execute></action>
+  </item>
+  <item label="open selection in new tab">
+    <action name="Execute"><execute>sh -c 'firefox -new-tab `pyclip`'</execute></action>
+  </item>
+<!-- Here's how to do an extended comment that can even allow double-dashes: -->
+<![CDATA[
+  <item label="Facebook Firefox 4">
+    <action name="Execute"><execute>/usr/bin/firefox -no-remote -P facebook4</execute></action>
+  </item>
+  <item label="Firefox 4 (system)">
+    <action name="Execute"><execute>firefox -no-remote -P firefox4</execute></action>
+  </item>
+  <item label="Firefox 3.5 (system)">
+    <action name="Execute"><execute>firefox -no-remote -P Firefox3.5</execute></action>
+  </item>
+  <item label="Facebook Firefox">
+    <action name="Execute"><execute>firefox -no-remote -P facebook</execute></action>
+  </item>
+  <item label="Firefox 3.5 (Mozilla.org)">
+    <action name="Execute"><execute>/usr/local/firefox3.5/firefox -P Firefox3.5</execute></action>
+  </item>
+  <item label="Firefox 3">
+    <action name="Execute"><execute>firefox -no-remote -P akkana</execute></action>
+  </item>
+]]> <!-- -->
+  <item label="Chromium">
+    <action name="Execute"><execute>chromium-browser</execute></action>
+  </item>
+  <item label="Arora">
+    <action name="Execute"><execute>arora</execute></action>
+  </item>
+  <item label="Opera">
+    <action name="Execute"><execute>opera</execute></action>
+  </item>
+  <item label="Netsurf">
+    <action name="Execute"><execute>netsurf</execute></action>
+  </item>
+<!-- 
+  <item label="Ubuntu's Firefox3">
+    <action name="Execute"><execute>firefox-3.0</execute></action>
+  </item>
+  <item label="Kitfox">
+    <action name="Execute"><execute>/usr/local/kitfox/firefox</execute></action>
+  </item>
+  <item label="Firefox">
+    <action name="Execute"><execute>mozilla-firefox -splash</execute></action>
+  </item>
+ -->
+  </menu>
+  <item label="emacs">
+    <action name="Execute"><execute>emacs</execute></action>
+  </item>
+<!-- 
+  <item label="xchat from src">
+    <action name="Execute"><execute>/usr/local/bin/xchat</execute></action>
+    <action name="ToggleOmnipresent" />
+  </item>
+ -->
+  <item label="xchat">
+    <action name="Execute"><execute>xchat</execute></action>
+  </item>
+  <separator />
+  <item label="GIMP 2.8">
+    <action name="Execute"><execute>/home/akkana/bin/gimp-2.8</execute></action>
+  </item>
+  <item label="GIMP 2.6 (Ubuntu)">
+    <action name="Execute"><execute>/usr/bin/gimp</execute></action>
+  </item>
+  <item label="GIMP git">
+    <action name="Execute"><execute>/home/akkana/bin/gimp-git</execute></action>
+  </item>
+
+  <separator />
+
+  <item label="Eclipse">
+    <action name="Execute"><execute>/home/akkana/Archive/android/eclipse/eclipse</execute></action>
+  </item>
+  <item label="Libre Office">
+    <action name="Execute"><execute>libreoffice</execute></action>
+  </item>
+  <item label="VirtualBox">
+    <action name="Execute"><execute>VirtualBox</execute></action>
+  </item>
+  <item label="Arduino">
+    <action name="Execute"><execute>arduino</execute></action>
+  </item>
+  <item label="Fritzing">
+    <action name="Execute"><execute>Fritzing</execute></action>
+  </item>
+  <item label="Music (vlc)">
+    <action name="Execute"><execute>vlc --random /home/akkana/Music</execute></action>
+  </item>
+
+  <separator />
+
+  <item label="moonroot">
+    <!-- <decor>no</decor> -->
+    <action name="Execute"><execute>moonroot -s</execute></action>
+  </item>
+  <item label="dclock">
+    <action name="Execute"><execute>dclock -geometry 165x65-0+0</execute></action>
+  </item>
+  <item label="volume">
+    <action name="Execute"><execute>vol</execute></action>
+  </item>
+  <item label="xzoom">
+    <action name="Execute"><execute>xzoom</execute></action>
+  </item>
+  <item label="xconsole">
+    <action name="Execute"><execute>xconsole</execute></action>
+  </item>
+  <item label="xosview">
+    <action name="Execute"><execute>xosview -geometry 330x300 +cpu +load +mem -swap -page -ints -disk</execute></action>
+  </item>
+  <item label="gnome system monitor">
+    <action name="Execute"><execute>gnome-system-monitor</execute></action>
+  </item>
+  <item label="gmemusage">
+    <action name="Execute"><execute>gmemusage</execute></action>
+  </item>
+  <separator />
+
+  <!-- 
+  <menu id="pipe-wifi" label="Wifi..."
+   execute="/home/akkana/.config/openbox/wifi-pipe.py eth0" />
+   -->
+
+<!--
+  <menu id="term-menu"/>
+  <item label="Run...">
+    <action name="Execute">
+      <command>gmrun</command>
+    </action>
+  </item>
+ -->
+
+  <item label="xephem">
+    <action name="Execute"><execute>xephem</execute></action>
+  </item>
+  <item label="kstars">
+    <action name="Execute"><execute>kstars</execute></action>
+  </item>
+  <separator />
+  <item label="Screenshot a Window">
+    <action name="Execute">
+      <execute>scrot -b -s /tmp/screenshot.jpg</execute>
+<!--  <execute>import +repage -screen -frame /tmp/screenshot.png</execute> -->
+    </action>
+  </item>
+  <item label="Screenshot, Full Screen">
+    <action name="Execute">
+      <execute>scrot /tmp/screenshot.jpg</execute>
+    </action>
+  </item>
+  <item label="New Background">
+    <!-- <action name="Execute"><execute>bash -c 'hsetroot -center `find -L $HOME/Backgrounds -name "*.*" | $HOME/bin/randomline`'</execute></action> -->
+    <action name="Execute"><execute>/home/akkana/bin/randombg</execute></action>
+  </item>
+  <!--
+  <item label="Invert">
+    <action name="Execute"><execute>/home/akkana/bin/linux/invgamma</execute></action>
+  </item>
+  -->
+  <separator />
+  <!-- This requires the presence of the 'menu' package to work -->
+  <!-- <menu id="Debian" /> -->
+  <menu id="client-list-menu" />
+  <separator />
+  <!-- 
+  <item label="ObConf">
+    <action name="Execute"><execute>obconf</execute></action>
+  </item>
+   -->
+  <item label="Reconfigure">
+    <action name="Reconfigure" />
+  </item>
+  <item label="Restart Openbox">
+    <action name="Restart" />
+  </item>
+  <separator />
+  <item label="xkill">
+    <action name="Execute"><execute>xkill</execute></action>
+  </item>
+  <item label="Exit X and Openbox">
+    <action name="Exit"><prompt>no</prompt></action>
+  </item>
+  <!-- 
+  <item label="Monitor Off">
+    <action name="Execute"><execute>/home/akkana/bin/screenoff</execute></action>
+  </item>
+   -->
+  <item label="Sleep">
+    <action name="Execute"><execute>sudo pm-suspend --auto-quirks</execute></action>
+  </item>
+  <item label="Reboot">
+    <action name="Execute"><execute>sudo shutdown -r now</execute></action>
+  </item>
+  <item label="Shut Down">
+    <action name="Execute"><execute>sudo shutdown -h now</execute></action>
+  </item>
+<comment><!-- openbox ignores unknown tags, like 'comment' -->
+  <item label="Old openbox">
+    <action name="restart"><command>sh -c 'env LD_LIBRARY_PATH=/usr/lib /usr/bin/openbox'</command></action>
+  </item>
+  <item label="New openbox">
+    <action name="restart"><command>sh -c 'env -u LD_LIBRARY_PATH /usr/local/bin/openbox'</command></action>
+  </item>
+  <item label="Focus debug">
+    <action name="restart"><command>openbox --debug-focus</command></action>
+  </item>
+</comment>
+</menu>
+
+</openbox_menu>

@@ -1,0 +1,125 @@
+" Akkana's vimrc
+
+syntax on
+
+set background=light
+colorscheme akk
+
+" disable the evil alt screen
+" set t_ti= t_te=
+
+" Reduce the delay on inserting with O.
+" Another possibility is to turn of esckeys.
+" http://stackoverflow.com/questions/2158516/vim-delay-before-o-opens-a-new-line
+set ttimeoutlen=100
+
+" But really, a better solution is to map something to open up space
+" in an email message so I don't always have to do o <ret> <ESC> O (wait)
+map <leader>o o<CR><ESC>O
+
+" allow backspacing between lines
+set bs=2
+
+" Fix for a security bug, see http://www.guninski.com/vim1.html
+"set modelines=0
+" Yikes -- that turns off being able to use modelines at all! Not worth it.
+set modeline
+
+" Line and paragraph wrapping
+map <leader>l r<CR>J
+map <leader>p r<CR>gq}
+
+" I too often parenthesize things then change my mind
+map <leader>, 2s, <ESC>
+
+" Split one run-on sentence into two:
+map <leader>c 2s.  <ESC> ~
+
+" De-elainify email, from people who don't mark quotes or wrap lines.
+map <leader>e :.,$!deelainify<CR>
+
+" Google the current line
+"map <leader>g 0"xy$:!lynx -dump -accept_all_cookies 'www.google.com/search?q=^Rx' \| grep ^Rx \| grep -v http \| head -n 20 \| grep ^Rx
+
+map <leader>g 0"xy$:!lynx -dump -accept_all_cookies 'www.google.com/search?q=x'
+
+" ctrl-space quits insert mode and does bad things.
+" Stop that!
+" One way of testing: :^K^space:
+" Other possible ways of saying it: <Nul>, <Char-0>, <C- >, <C-@>
+" p0g on #vim finally found the answer: imap is the important one.
+imap <Nul> <Space>
+map <Nul> <Nop>
+vmap <Nul> <Nop>
+cmap <Nul> <Nop>
+nmap <Nul> <Nop>
+
+" From the vim list: tag-ify the previous word
+inoremap <leader>, <esc>diwi<<esc>pa><cr></<esc>pa><esc>kA
+
+" Stuff for mail
+" autocmd FileType mail source ~/.vimmailrc
+
+" Case fold searches by default, unless they contain some capital letters.
+set ignorecase
+set smartcase
+
+" textwidth slightly narrower than the default
+set textwidth=70
+
+" Mutt overrides textwidth for mail, unless I override it again:
+autocmd FileType mail set textwidth=68
+
+" Turn off the 'thanks for flying vim' messages
+set notitle
+
+" http://software.newsforge.com/software/06/06/08/1431244.shtml?tid=130&tid=138
+"set hls
+function ToggleHLSearch()
+  if &hls
+    set nohls
+  else
+    set hls
+  endif
+endfunction
+nmap <silent> <C-S-n> <ESC>:call ToggleHLSearch()<CR>
+
+" Also from nomis:
+set pastetoggle=<F11>
+
+" Turn on spellchecking
+setlocal spell spelllang=en_us
+
+" From Juliet Kemp's vimscript article
+fu! WordsThisLine() range
+  let words = 0
+  for linenum in range(a:firstline, a:lastline)
+    let words += len(split(getline(linenum)))
+  endfor
+  echo words
+  return words
+endfu
+
+fu! Dictionary()
+  let dict = "dict"
+  let wordUnderCursor = expand("<cword>")
+  let command = "!" . dict . " " . wordUnderCursor
+  execute command
+endfu
+
+fu! Label() range
+  call inputsave()
+  let label = input("Enter label: ")
+  call inputrestore()
+  for linenum in range(a:firstline, a:lastline)
+    let curline = getline(linenum)
+    call setline(linenum, label . " " . curline)
+  endfor
+endfu
+
+" Thinkpad has F1 where ESC should be, so remap it:
+" (but that shouldn't be necessary if we remap it at system level in rc.local)
+" (but loadkeys no longer works in Ubuntu Pangolin, sigh ...)
+map <F1> <Esc>
+imap <F1> <Esc>
+
