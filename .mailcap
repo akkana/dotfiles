@@ -1,0 +1,72 @@
+#
+# Set up a handler for html for mutt to use.
+# The effect of this is that mutt auto-displays using lynx,
+# but you can show each attachment in Netscape via the attachment screen.
+# Unfortunately, it still doesn't pick up attached images.
+#text/html; mimehelper 5 /usr/local/kitfox/firefox -remote 'openURL(file://%s)'; nametemplate=%s.html
+text/html; mimehelper 5 firefox 'file://%s'; nametemplate=%s.html
+#text/html; w3m -T text/html -s -graph -dump %s; copiousoutput
+# text/html; elinks -dump %s; copiousoutput
+# text/html; links -dump %s; nametemplate=%s.html; copiousoutput
+text/html; lynx -dump %s; nametemplate=%s.html; copiousoutput
+# text/html; lynx -cfg=~/.lynxrc -nolist -dump %s; nametemplate=%s.html; copiousoutput
+
+# text/html; netscape -remote openURL(file://%s)
+
+# Use pho for images
+image/*; mimehelper 2 pho -P %s; x-mozilla-flags=internal
+
+# Some simple types
+
+# Stuff from mp3.com
+#audio/x-mpegurl; /usr/bin/xmms %s
+
+# trn is always pestering me about what I want to do with encoded signatures.
+# Here's the answer:
+application/x-pkcs7-signature data; cat %s >/dev/null
+
+# Basic audio
+audio/wav;/usr/bin/play "%u"
+audio/x-wav;/usr/bin/play "%u"
+audio/x-pn-wav;/usr/bin/play "%u"
+audio/basic;/home/akkana/RealPlayer8/realplay "%u"
+audio/x-pn-au;/home/akkana/RealPlayer8/realplay "%u"
+audio/aiff;/usr/bin/play "%u"
+audio/x-aiff;/usr/bin/play "%u"
+audio/x-pn-aiff;/usr/bin/play "%u"
+#audio/x-mp3; /usr/bin/xmms %s
+
+# Override ubuntu's occasional odd desire to use evince instead of xpdf
+# But, sigh, in natty ubuntu has broken xpdf and epdfview so they
+# crash on startup. There's no alternative to evince now. :-(
+# But evince isn't usable because it comes up too small and the
+# doc is gone before we can resize. Sigh!
+# mupdf -r 100 works pretty well, so use a script that does that.
+application/pdf; mutt_bgrun /home/akkana/bin/pdf '%s'; test=test "$DISPLAY" != ""; description=Portable Document Format; nametemplate=%s.pdf
+
+#application/x-pdf; /usr/local/bin/xpdf '%s'; test=test "$DISPLAY" != ""; description=Portable Document Format; nametemplate=%s.pdf
+#application/postscript; /usr/local/bin/xpdf '%s'; test=test "$DISPLAY" != ""; description=Portable Document Format; nametemplate=%s.pdf
+
+# Realplayer stuff
+audio/x-pn-realaudio;/home/akkana/RealPlayer8/realplay "%u"
+audio/vnd.rn-realaudio;/home/akkana/RealPlayer8/realplay "%u"
+application/smil;/home/akkana/RealPlayer8/realplay "%u"
+text/vnd.rn-realtext;/home/akkana/RealPlayer8/realplay "%u"
+video/vnd.rn-realvideo;/home/akkana/RealPlayer8/realplay "%u"
+image/vnd.rn-realflash;/home/akkana/RealPlayer8/realplay "%u"
+# application/x-shockwave-flash2-preview;/home/akkana/RealPlayer8/realplay "%u"
+application/sdp;/home/akkana/RealPlayer8/realplay "%u"
+application/x-sdp;/home/akkana/RealPlayer8/realplay "%u"
+application/vnd.rn-realmedia;/home/akkana/RealPlayer8/realplay "%u"
+image/vnd.rn-realpix;/home/akkana/RealPlayer8/realplay "%u"
+audio/x-pn-windows-acm;/home/akkana/RealPlayer8/realplay "%u"
+
+# Java Web Start
+application/x-java-jnlp-file; /home/akkana/Tarballs/j2sdk1.4.2_06/jre/javaws/javaws %s
+
+application/msword; mimehelper 2 catdoc %s; copiousoutput
+application/msword; mimehelper 5 abiword %s
+
+application/vnd.openxmlformats-officedocument.wordprocessingml.document; mimehelper 2 catdoc %s; copiousoutput
+
+application/vnd.ms-excel; mimehelper 5 gnumeric %s

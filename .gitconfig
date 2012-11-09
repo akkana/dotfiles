@@ -1,0 +1,21 @@
+[user]
+	name = Akkana Peck
+	email = akkana@shallowsky.com
+[color]
+	ui = auto
+[core]
+	pager = less -FRSX
+[color "diff"]
+	frag = cyan white
+	new = magenta
+	commit = blue
+[color "branch"]
+	current = magenta
+[color "status"]
+	updated = magenta
+[github]
+	token = 24831be70f7bd27fec0301d305723ae5
+[diff]
+	tool = meld
+[difftool]
+	prompt = false

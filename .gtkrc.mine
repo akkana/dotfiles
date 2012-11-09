@@ -1,0 +1,19 @@
+gtk-can-change-accels = 1
+
+gtk-key-theme-name = "Emacs"
+gtk-entry-select-on-focus = 0
+
+# bind "<ctrl>h" { "delete-from-cursor" (chars, -1) }
+# bind "<ctrl>w" { "delete-from-cursor" (word-ends, -1) }
+# bind "<ctrl>u" { "delete-from-cursor" (paragraphs, -1) }
+
+# The gtk popdown delay only works if the mouse is in the triangle
+# between the menu item and its submenu.
+gtk-menu-popdown-delay = 9000
+gtk-menu-popup-delay = 9000
+
+gtk-cursor-blink = 0
+
+# gtk-menu-font-name = "sans bold italic 8"
+
+#gtk-icon-sizes = "gtk-large-toolbar=24,24:panel-menu=20,20:gtk-menu=14,14:gtk-button=1,1"

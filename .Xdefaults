@@ -1,0 +1,283 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!'    Akkana's .Xdefaults
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! (what are these single quotes at the beginning of lines?
+!' They're because someone broke X defaults parsing a few years
+!  ago so that it now gets confused by apostrophes in a comment line,
+!  and treats them as single quotes
+!  This bug is evidently never going to get fixed, so adding another
+!  apostrophe is the only way to avoid error messages. Sigh.)
+!
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!! Xterm colors (e.g. for rxvt)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Green-on-black scheme:
+!XTerm*background: grey30
+!XTerm*foreground: green
+!XTerm*pointerColor: yellow
+!XTerm*colorBD: yellow
+!XTerm*cursorColor: yellow
+!XTerm*colorUL: magenta
+
+! black-on-light-grey scheme:
+XTerm*foreground: black
+! background was grey80
+XTerm*background: #ccdddd
+XTerm*pointerColor: red
+!XTerm*highlightColor: blue
+XTerm*cursorColor: red
+XTerm*colorBD: dark blue
+XTerm*colorUL: purple4
+
+! Try to make titlebar setting work again, as per
+! https://bugs.launchpad.net/ubuntu/+source/xterm/+bug/408496
+! but nothing works ...
+!xterm.utf8Title: false
+!xterm.allowTitleOps: true
+!xterm.title: blah
+
+!! Set up the escape-seq colors so they''ll work okay on light background
+!! even with all the Linux color schemes intended for white-on-black.
+*VT100*color0: black
+*VT100*color1: red3
+!*VT100*color1: firebrick4
+!! color2 was green3
+*VT100*color2: DarkGreen
+!! color3 was yellow3
+*VT100*color3: orange4
+*VT100*color4: blue3
+*VT100*color5: magenta4
+!! color6 was cyan3
+*VT100*color6: cyan4
+*VT100*color7: gray90
+!! color8 was gray50
+*VT100*color8: gray30
+*VT100*color9: red
+!! color10 was green
+*VT100*color10: rgb:00/aa/00
+!! color11 was yellow
+*VT100*color11: dark orange
+*VT100*color12: rgb:5c/5c/ff
+*VT100*color13: magenta
+!! color14 was cyan
+*VT100*color14: dark cyan
+*VT100*color15: white
+
+XTerm*ptyHandshake: true
+XTerm*utmpInhibit: false
+
+! Colors that work in both schemes:
+!XTerm*pointerColorBackground: magenta
+!XTerm*borderColor: green
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!! Xterm resources
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+XTerm*loginShell: true
+XTerm*saveLines: 3000
+XTerm*scrollBar: false
+XTerm*geometry: 80x60
+XTerm*titeInhibit: true
+XTerm*allowSendEvents: true
+XTerm*locale: UTF-8
+
+! Debian/ubuntu weirdly changed the default to not allow tracking
+! window size:
+XTerm*allowWindowOps: true
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!! resources specific to urxvt
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+urxvt*termName: rxvt-unicode-noalt
+
+!' Bold and underline colors -- regular xterm doesn't follow these,
+!! but rxvt does, and perhaps others do as well.
+XTerm*boldColors: true
+XTerm*colorBDMode: true
+XTerm*colorULMode: true
+
+! Tell Xterm that page up really means page up!  No shift required.
+!' Try to make the page up/down keys work normally: this doesn't work.
+XTerm.vt100.translations: #override\n\
+  <KeyPress>Prior : scroll-back(1,page)\n\
+  <KeyPress>Next : scroll-forw(1,page)\n
+
+! Make it easier to grab URLs by double-clicking:
+XTerm*charClass:33:48,35-38:48,42-44:48,45-47:48,58:48,61:48,63-64:48,126:48
+! :!%$*+-./@?~ are word chars..
+!' should also work for ~, but it doesn't, for some reason.
+! And the equivalent, list of word separators for rxvt (much easier syntax!):
+XTerm*cutchars: \\'`"´()*;<>[]{|}   !' extra quote for broken Xdefaults parser
+!' Here's a good test url:
+! http://bugzilla.mozilla.org/show_bug.cgi?id=40340&user=akkana@netscape.com
+
+! Xterm font agonization:
+!
+! This is my favorite font -- I wish I could get it in a 70 width,
+! since 60 (available in 12-point) is too narrow and 80 is too wide:
+!XTerm*font: -schumacher-clean-bold-r-normal--14-*-*-*-*-*-*-*
+!
+!' Here's one that works on Dapper through Hardy at 1280x1024:
+! not as nice as schumacher clean, but it has some smartquote characters.
+! The 'c' is important -- m and c give very slightly different fonts!
+! XTerm*font: -bitstream-bitstream vera sans mono-bold-r-normal-*-12-*-*-*-c-*-iso10646-1
+! but Ubuntu removed the vera fonts in Karmic!
+!XTerm*font: -*-clean-*-r-*-*-13-*-*-*-c-*-*-*
+XTerm*font: -misc-fixed-bold-r-normal-*-*-130-*-*-c-*-iso8859-15
+!XTerm*font: xft:Inconsolata
+!XTerm*faceName: Inconsolata bold
+!XTerm*faceSize: 10
+!XTerm*faceWeight: bold
+
+!' Haven't been able to get inconsolata to display via the X font mechanism:
+!XTerm*font: -inconsolata-*-*-*-*-*-14-*-*-*-*-*-*
+
+! Separate font for urxvt:
+!' Here's an attempt to use dejavu to get more characters:
+urxvt*font: -dejavu-dejavu sans mono-bold-r-normal-*-*-m-*-*-*-*-iso8859-15
+!' and here's one for breezy at 1024x768 or edgy at 1280x1024:
+!XTerm*font: -misc-fixed-bold-r-normal-*-*-130-*-*-c-*-iso10646-1
+
+!! Multiple fonts in xterm
+*XTerm*VT100*Font2:            5x7
+*XTerm*fontMenu*font2*Label:   Tiny
+*XTerm*VT100*Font3:            9x15
+*XTerm*fontMenu*font3*Label:   Big
+
+*XTerm*VT100.Translations: #override \n\
+    Hyper<Key>1:       set-vt-font(d) \n\
+    Hyper<Key>2:       set-vt-font(1) \n\
+    Hyper<Key>3:       set-vt-font(2) \n
+
+!*XmScrollBar.width: 10
+
+! Unsuccessful attempts to change the default Tk menu font:
+!tik*Button*fontList: -*-helvetica-bold-i-normal-*-*-140-*-*-p-*-iso8859-2
+!tik*Menu*font: -*-helvetica-bold-i-normal-*-*-140-*-*-p-*-iso8859-2
+!tik*font: -*-helvetica-bold-i-normal-*-*-140-*-*-p-*-iso8859-2
+!tik*fontList: -*-helvetica-bold-i-normal-*-*-140-*-*-p-*-iso8859-2
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!    GNU emacs, epoch, and xemacs resources
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!' This works most places but doesn't exist on edgy:
+!Emacs*font: -bitstream-bitstream vera sans mono-bold-r-normal-*-12-*-*-*-m-*-*
+! But this works even on edgy:
+!emacs*font: -misc-fixed-bold-r-normal-*-*-130-*-*-c-*-iso8859-15
+!Emacs.italic.attributeFont: -schumacher-clean-medium-i-normal-*-*-120-*-*-*-*-*
+!Emacs*font: 7x14
+
+! but not on karmic. Try this instead:
+!Emacs.font: Monospace-9:bold
+! That worked on oneiric but not on pangolin
+!Emacs.font: clean-10:bold
+!Emacs.font: -schumacher-clean-bold-r-normal--13-*-*-*-*-*-*-*
+!emacs.FontBackend: xft
+Emacs23.font: DejaVu Sans Mono-9:bold
+!Emacs23.font: Liberation Mono-10:bold
+
+! Special case for emacs with big fonts:
+bigemacs*font: -*-bitstream vera sans mono-bold-r-normal-*-*-*-*-*-c-*-iso8859-15
+bigemacs*geometry: 80x40+0+0
+
+! colors ...
+! Emacs*foreground: white
+! Emacs*background: dark slate gray
+! Emacs*cursorColor: magenta
+! Emacs*pointerColor: yellow
+! Emacs*pointerColorForeground: white
+!' For some reason, Netscape's emacs and xemacs both think this is
+! an invalid geometry specifier;
+Emacs23*geometry: 80x50
+!!
+Emacs*foreground: black
+Emacs*background: grey80
+! Emacs cursor color now set in the color scheme.
+!Emacs*cursorColor: magenta
+Emacs*pointerColor: blue
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!! Make xconsole less hard on the eyes
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+xconsole*foreground: black
+xconsole*background: grey75
+xconsole*geometry: 566x173+0-0
+!' This is documented to work, but doesn't:
+!xconsole*scrollHorizontal: XawtextScrollAlways
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!! gmemusage
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Gmemusage*geometry: 550x600
+Gmemusage*color1: yellow
+Gmemusage*color2: magenta
+Gmemusage*color3: lightblue
+
+!! Linux Motif has removed the longstanding editing bindings from text controls
+!! -- put them back!
+*XmTextField.translations:              #override                       \n\
+        ~Meta ~Alt Ctrl<Key>a:          beginning-of-line()             \n\
+        ~Meta ~Alt Ctrl<Key>b:          backward-character()            \n\
+        ~Meta ~Alt Ctrl<Key>d:          delete-next-character()         \n\
+        ~Meta ~Alt Ctrl<Key>e:          end-of-line()                   \n\
+        ~Meta ~Alt Ctrl<Key>f:          forward-character()             \n\
+        ~Meta ~Alt Ctrl<Key>g:          process-cancel()                \n\
+        ~Meta ~Alt Ctrl<Key>h:          delete-previous-character()     \n\
+        ~Meta ~Alt Ctrl<Key>k:          delete-to-end-of-line()         \n\
+        ~Meta ~Alt Ctrl<Key>u:		beginning-of-line() delete-to-end-of-line() \n\
+        ~Meta ~Alt Ctrl<Key>w:          delete-previous-word()          \n\
+        <Key>Delete:			delete-previous-character()     \n\
+        <Key>BackSpace:			delete-previous-character()     \n\
+        Meta ~Ctrl<Key>b:               backward-word()                 \n\
+         Alt ~Ctrl<Key>b:               backward-word()                 \n\
+        Meta ~Ctrl<Key>d:               delete-next-word()              \n\
+         Alt ~Ctrl<Key>d:               delete-next-word()              \n\
+        Meta ~Ctrl<Key>f:               forward-word()                  \n\
+         Alt ~Ctrl<Key>f:               forward-word()                  \n\
+        Meta ~Ctrl<Key>w:               copy-clipboard()                \n\
+         Alt ~Ctrl<Key>w:               copy-clipboard()                \n\
+        Meta ~Ctrl<Key>Left:		backward-word()                 \n\
+         Alt ~Ctrl<Key>Left:		backward-word()                 \n\
+        Meta ~Ctrl<Key>Right:		forward-word()                  \n\
+         Alt ~Ctrl<Key>Right:		forward-word()                  \n\
+        Meta ~Ctrl<Key>BackSpace:	delete-previous-word()          \n\
+         Alt ~Ctrl<Key>BackSpace:	delete-previous-word()          \n\
+        Meta ~Ctrl<Key>Delete:		delete-next-word()              \n\
+         Alt ~Ctrl<Key>Delete:		delete-next-word()              \n
+
+*XmText.translations:                   #override                       \n\
+        ~Meta ~Alt Ctrl<Key>a:          beginning-of-line()             \n\
+        ~Meta ~Alt Ctrl<Key>b:          backward-character()            \n\
+        ~Meta ~Alt Ctrl<Key>d:          delete-next-character()         \n\
+        ~Meta ~Alt Ctrl<Key>e:          end-of-line()                   \n\
+        ~Meta ~Alt Ctrl<Key>f:          forward-character()             \n\
+        ~Meta ~Alt Ctrl<Key>g:          process-cancel()                \n\
+        ~Meta ~Alt Ctrl<Key>h:          delete-previous-character()     \n\
+        ~Meta ~Alt Ctrl<Key>k:          delete-to-end-of-line()         \n\
+        ~Meta ~Alt Ctrl<Key>u:		beginning-of-line() delete-to-end-of-line() \n\
+        ~Meta ~Alt Ctrl<Key>w:          delete-previous-word()          \n\
+        <Key>Delete:			delete-previous-character()     \n\
+        <Key>BackSpace:			delete-previous-character()     \n\
+        Meta ~Ctrl<Key>b:               backward-word()                 \n\
+         Alt ~Ctrl<Key>b:               backward-word()                 \n\
+        Meta ~Ctrl<Key>d:               delete-next-word()              \n\
+         Alt ~Ctrl<Key>d:               delete-next-word()              \n\
+        Meta ~Ctrl<Key>f:               forward-word()                  \n\
+         Alt ~Ctrl<Key>f:               forward-word()                  \n\
+        Meta ~Ctrl<Key>w:               copy-clipboard()                \n\
+         Alt ~Ctrl<Key>w:               copy-clipboard()                \n\
+        Meta ~Ctrl<Key>Left:		backward-word()                 \n\
+         Alt ~Ctrl<Key>Left:		backward-word()                 \n\
+        Meta ~Ctrl<Key>Right:		forward-word()                  \n\
+         Alt ~Ctrl<Key>Right:		forward-word()                  \n\
+        Meta ~Ctrl<Key>BackSpace:	delete-previous-word()          \n\
+         Alt ~Ctrl<Key>BackSpace:	delete-previous-word()          \n\
+        Meta ~Ctrl<Key>Delete:		delete-next-word()              \n\
+         Alt ~Ctrl<Key>Delete:		delete-next-word()              \n\
+        ~Meta ~Alt Ctrl<Key>n:          next-line()                     \n\
+        ~Meta ~Alt Ctrl<Key>p:          previous-line()                 \n\
+        ~Meta ~Alt Ctrl<Key>v:          next-page()                     \n\
+         Meta ~Ctrl<Key>v:              previous-page()                 \n\
+         Alt ~Ctrl<Key>v:               previous-page()                 \n
+
