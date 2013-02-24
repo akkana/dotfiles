@@ -449,6 +449,7 @@
   ;(local-set-key "\C-ci" (lambda () (interactive) (iimage-mode-buffer t)))
   (local-set-key "\C-ci" 'refresh-iimages)
   (local-set-key "\C-cs" 'screenshot)
+  (local-set-key "\C-cr" 'repeat-screenshot)
   )
 
 ;; Call up mypaint to insert a new image
@@ -461,6 +462,8 @@
   ))
 
 ;; Call up scrot to insert a new screenshot
+;; It would be nice to have autocompletion on this, or some sort of
+;; warning preventing replacing existing files.
 (defun screenshot ()
  "Prompt for a filename, then call up scrot to create an interactive screenshot"
   (interactive)
@@ -474,6 +477,24 @@
     (insert "file://" imgfile "\n" )
     (start-process "scrot" nil "/usr/bin/scrot" "-s" imgfile)
   ))
+
+;; Re-do the current screenshot
+(defun repeat-screenshot ()
+  "Re-do the screenshot following point"
+  (interactive)
+  (beginning-of-line)
+  (let* ((url (thing-at-point 'line)) ;; original file:// url
+         (filename (replace-regexp-in-string "\n" ""
+                           (replace-regexp-in-string ".*file://" "" url)))
+             ;; filename, with file:// and terminal newline removed
+         )
+    (start-process "scrot" nil "/usr/bin/scrot" "-s" filename)
+    (message "Take new screenshot")
+    )
+  ;; Would be nice to refresh images automatically,
+  ;; but we'd have to wait for the scrot process to exit.
+  ;(refresh-iimages)
+  )
 
 ;; Re-load the cached images.
 ;; http://vwood.github.com/emacs-images-in-buffer.html
