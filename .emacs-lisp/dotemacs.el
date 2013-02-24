@@ -10,7 +10,7 @@
 
 ;; Automatically uncompress .gz files
 ;; -- this seems to have stopped working unless I do it by hand.
-(auto-compression-mode)
+(auto-compression-mode 1)
 
 ;; Disable all version control handling
 (setq vc-handled-backends nil)
@@ -62,7 +62,36 @@
 (define-key minibuffer-local-completion-map " " 'minibuffer-complete)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Turning off annoyances
+;; Custom colors
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Color themes: search for color-theme.el
+;(load "color-theme-akk.el")
+;(color-theme-akk)
+  ;;  C-u C-x = or customize-face will let you customize whatever's at point,
+  ;; and will add whatever it is to your .emacs.
+  ;; However, it adds it with this caveat:
+  ;;   If there is more than one, they won't work right.
+  ;; so I don't yet know what happens if you need to change more than one.
+  ;; It may be that it's okay as long as you put all your face customizations
+  ;; inside this one custom-set-faces call.
+  ;;
+;(set-background-color "grey90")
+; Some decent colors: grey90, Alice Blue, light cyan, mint cream
+(set-background-color "light cyan")
+(custom-set-faces
+ '(flyspell-duplicate ((((class color))
+                        (:foreground "red" :underline t :weight bold))))
+ '(font-lock-comment-face ((((class color) (min-colors 88)
+                             (background light)) (:foreground "blue"))))
+ )
+
+(set-face-foreground 'modeline "yellow")
+(set-face-background 'modeline "purple")
+(set-face-background 'modeline-inactive "light blue")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; turning off annoyances
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (setq mouse-wheel-progressive-speed nil)
@@ -365,6 +394,8 @@
 ;; In text mode, I don't want it auto-indenting for the first
 ;; line in the file, or lines following blank lines.
 ;; Everywhere else is okay.
+;; XXX This works fine except that it stomps the X selection.
+;; XXX Maybe because of (kill-line 0) ?
 (defun newline-and-text-indent ()
   "Insert a newline, then indent the next line sensibly for text"
   (interactive)
@@ -408,7 +439,54 @@
   )
 (setq sgml-mode-hook 'html-hook)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Mixed text and image mode using iimage -- this is so cool!
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(define-derived-mode text-img-mode text-mode "Image display mode"
+  (auto-fill-mode)
+  (turn-on-iimage-mode)
+  (iimage-mode-buffer t)
+  ;(local-set-key "\C-ci" (lambda () (interactive) (iimage-mode-buffer t)))
+  (local-set-key "\C-ci" 'refresh-iimages)
+  (local-set-key "\C-cs" 'screenshot)
+  )
 
+;; Call up mypaint to insert a new image
+(defun img ()
+  "Prompt for a filename, then call up mypaint to create an image"
+  (interactive)
+  (let ((imgfile (read-string "Filename? " "xxx.jpg" 'my-history)))
+    (insert "\nfile://" imgfile "\n" )
+    (start-process "mypaint" nil "/usr/bin/mypaint" imgfile)
+  ))
+
+;; Call up scrot to insert a new screenshot
+(defun screenshot ()
+ "Prompt for a filename, then call up scrot to create an interactive screenshot"
+  (interactive)
+  (let* ((imgfile (read-string "Filename? " "img/" 'my-history))
+         (imgfile (if (string-match "\\." imgfile)
+                      imgfile
+                      ;; (mapconcat 'identity '(imgfile "jpg") ".")
+                      (concat imgfile ".jpg")
+                      ))
+         )
+    (insert "file://" imgfile "\n" )
+    (start-process "scrot" nil "/usr/bin/scrot" "-s" imgfile)
+  ))
+
+;; Re-load the cached images.
+;; http://vwood.github.com/emacs-images-in-buffer.html
+(defun refresh-iimages ()
+  "Only way I've found to refresh iimages (without also recentering)"
+  (interactive)
+  (clear-image-cache nil)
+  (iimage-mode nil)
+  (iimage-mode t)
+  (message "Refreshed images")
+  )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Long lines mode: emacs doesn't have a way comparable to
 ;; vim's "set linebreak" to show long lines as wrapped visually,
 ;; without changing the file.  longlines-mode adds a minor mode
@@ -456,14 +534,16 @@
       (cons '("\\.blx$" . html-wrap-mode)
       (cons '("\\.html$" . html-wrap-mode)
       (cons '("\\.js$" . javascript-mode)
+      (cons '("\\.r$" . r-mode)
       (cons '("blogstuff/" . html-wrap-mode)
       (cons '("Docs/gimp/book/notes" . text-wrap-mode)
-;; Next two were longlines-mode
-      (cons '("Docs/bio14/" . text-wrap-mode)
+      (cons '("README" . text-wrap-mode)
+;; Book used to be longlines mode, but that was too flaky.
       (cons '("Docs/gimp/book/" . text-wrap-mode)
+      (cons '("Docs/classes/" . text-img-mode)
       (cons '("Docs/" . text-wrap-mode)
       (cons '("linux-.*/" . linux-c-mode)
-            auto-mode-alist) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) )
+            auto-mode-alist) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Autocomplete stuff
@@ -503,6 +583,7 @@
 (autoload 'objc-mode   "cc-mode" "Objective-C Editing Mode" t)
 (autoload 'java-mode   "cc-mode" "Java Editing Mode" t)
 (autoload 'archive-mode "arc-mode" "Zip and Jar Mode" t)
+(autoload 'iimage-mode "iimage-mode" "Iimage Mode" t)
 
 ;; Style stuff for the old c-mode, now outmoded:
 ;(c-add-style "akkana"
@@ -659,7 +740,9 @@ a man entry window pops up." t)
 ;; it's just in java mode where it doesn't work right,
 ;; because java and javascript modes are so aggressive about
 ;; indenting whenever you type a comma, semicolon etc.
-;;(setq-default c-electric-flag nil)
+;; Sadly, no: it's aggressive in c-mode too. Try putting a //
+;; in front of a brace, for example.
+(setq-default c-electric-flag nil)
 
 ;; Earlier attempt to do this:
 ;; (defun no-electric (keymap)
@@ -714,10 +797,6 @@ a man entry window pops up." t)
 	(t (self-insert-command (or arg 1)))))
 (global-set-key "\C-x%" 'match-paren)
 
-;; Color themes: search for color-theme.el
-(load "color-theme-akk.el")
-(color-theme-akk)
-
 ;;
 ;; tramp-mode is lovely for remote editing, but it sure does take a
 ;; lot of hand-holding. Thanks, Val.
@@ -750,10 +829,4 @@ a man entry window pops up." t)
   ;; If there is more than one, they won't work right.
  '(inhibit-startup-screen t)
  '(safe-local-variable-values (quote ((flyspell-mode) (encoding . utf-8) (auto-fill-mode) (wrap-mode)))))
-(custom-set-faces
-  ;; custom-set-faces was added by Custom.
-  ;; If you edit it by hand, you could mess it up, so be careful.
-  ;; Your init file should contain only one such instance.
-  ;; If there is more than one, they won't work right.
- )
 (put 'upcase-region 'disabled nil)
