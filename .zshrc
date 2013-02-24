@@ -78,6 +78,8 @@ export primes=${primes}\'
 # Print time on the right
 #RPS1='%~%w %t'
 RPS1="%F{red}%~%t%f%k"
+# Cool happy/sad face right prompt from saz, from a friend of hers:
+# RPS1=''%(?,"$(print '%{\e[1;35m%}:-)%{\e[0m%}')","$(print '%{\e[1;31m%}:-(%{\e[0m%}')")''
 
 # Bash defaults to a really short timeout, and exits on inactivity.
 # Not sure if zsh needs this as well.
@@ -163,7 +165,7 @@ alias ap="man -k"
 alias screenshot="scrot -b -s screenshot.jpg"
 alias thes="dict -h localhost -d moby-thesaurus"
 
-alias newbg='hsetroot -fill `find -L $HOME/Backgrounds -name "*.*" | randomline`'
+# alias newbg='hsetroot -fill `find -L $HOME/Backgrounds -name "*.*" | randomline`'
 
 alias akk='play ~/.xchat2/sounds/akk.wav'
 
@@ -218,6 +220,21 @@ idagr() {
 }
 alias igr=idagr
 
+# Search for spam subjects or from lines in Spam/saved,
+# for purposes of telling which patterns should be added to procmail filters.
+spams() {
+    #grep Subject ~/Spam/saved ~/Spam/trained/saved | egrep -i "$*"
+    decodemail -a Subject: ~/Spam/trained/saved ~/Spam/saved | egrep -a -i "$*"
+}
+spamf() {
+    grep -a -h '^From:' ~/Spam/trained/saved ~/Spam/saved | egrep -a -i "$*"
+    #decodemail -a From: ~/Spam/saved ~/Spam/trained/saved | egrep -a -i "$*"
+}
+spamff() {
+    grep -a -h '^From' ~/Spam/trained/saved ~/Spam/saved | egrep -a -i "$*"
+    #decodemail -a From ~/Spam/saved ~/Spam/trained/saved | egrep -a -i "$*"
+}
+
 # halt and reboot don't always work on the Vaio,
 # and can't be run suid.
 alias off="sudo shutdown -h now"
@@ -226,21 +243,21 @@ alias reboot="sudo shutdown -r now"
 
 # blog stuff -- helpers for pyblosxom
 blogupdate() {
-  cd ~/web/blogfiles
+  pushd ~/web/blogfiles
   setopt localoptions errreturn
   pyblosxom-cmd staticrender --incremental
   ~/bin/blogtopics
   mv ../blog/topics.html ../blog/oldtopics.html
   mv ../blog/newtopics.html ../blog/topics.html
   blog-tag-index
-  cd
+  popd
 }
 
 blogup() {
-  cd ~/web/blogfiles
+  pushd ~/web/blogfiles
   setopt localoptions errreturn
   pyblosxom-cmd staticrender --incremental
-  cd
+  popd
 }
 
 # Sync new blog files back to the server:
@@ -706,9 +723,84 @@ datediff() {
     echo $(( (d1 - d2) / 86400 / 7 )) weeks $(( (d1 - d2) / 86400 % 7 )) days
 }
 
+nextper() {
+    d=$( grep H: ~/Docs/Lists/health | grep -w P | tail -1 | cut -b -10 )
+    echo Last: $d
+    # d is format yyyy-mm-dd
+    echo -n 'Next: '
+    date --date=$d'+28 days' +'%Y-%m-%d'
+}
+
 # Tell aptitude not to limit descriptions to the terminal width
 alias aptitude='aptitude --disable-columns'
 
 # Adjust for day or nighttime monitor modes
 alias day="xrandr --output HDMI1 --brightness 1.0"
 alias night="xrandr --output HDMI1 --brightness .8"
+
+alias kindle="wine ~/.wine/drive_c/Program\ Files/Amazon/Kindle/Kindle.exe"
+alias adobeDE="wine ~/.wine/drive_c/Program\ Files/Adobe/Adobe\ Digital\ Editions/digitaleditions.exe"
+
+# R has no way to tell it not to prompt annoyingly to save the environment
+# every time you quit, except as a commandline flag:
+alias R="/usr/bin/R --no-save"
+
+# Convert temperatures between F and C, because units' stupid syntax
+# is impossible to remember.
+c2f() {
+    units "tempC($1)" tempF
+}
+f2c() {
+    units "tempF($1)" tempC
+}
+
+# Spast checks spam with e.g. echo $subj | grep -i -f $patfile
+# How do we find out from $subj which line in $patfile matched the grep?
+# Sample Usage: whichspam 'subject-line' subject
+whichspam() {
+  # to print each line before executing, for debugging purposes:
+  #set -o xtrace
+  whichfile=$2
+  if [[ x$whichfile == x ]]; then
+    whichfile=subjectRejects
+  fi
+  cat ~/Procmail/spast/$whichfile | while read line ; do
+    echo "$1" | egrep -i "$line" >/dev/null
+    if [[ $? == 0 ]]; then
+      echo $line
+    fi
+  done
+  #set +o xtrace
+}
+
+# Linux has a lovely list of all compose key sequences.
+composekey() {
+  grep $1 /usr/share/X11/locale/en_US.UTF-8/Compose
+}
+
+# Display a postscript calendar some number of months (default 2)
+# using my remind database:
+mycal() {
+    days=$1
+    if [[ x$days == x ]]; then
+        days=2
+    fi
+    remind -p$days ~/Docs/Lists/remind  | rem2ps -e -l >/tmp/mycal.ps; gv /tmp/mycal.ps &
+}
+
+# Full backup to the specified host
+fullbackup() {
+    # Copy new files
+    rsync -av --exclude Cache --exclude Spam --exclude log ./ $1:./
+    # Show which files would be deleted:
+    rsync -avn --delete --exclude Cache --exclude Spam --exclude log ./ $1:./
+}
+
+# Something is writing to recently-used.xbel and I'm not sure what.
+# This might help to monitor it.
+alias recent='ls -l ~/recently-used.xbel*(.N) ~/.local/share/recently-used.xbel*'
+
+# Torikun says this might work for talking to the raspberry pi.
+# It has something to do with openvpn and might require running a DHCP
+# server on the local machine.
+alias piroute='iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o eth0 -j MASQUERADE'
