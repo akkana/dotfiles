@@ -45,7 +45,10 @@ cleanup=1
 
 # Number of days to keep files.   Cleanup will remove anything 
 # older than this.
-cleanup_days=14
+# I'm getting quite a backlog, so sadly that means we have to keep a
+# huge backlog to avoid re-downloading old stuff.
+# Might want to run a separate app to zero out some of the older files.
+cleanup_days=90
 
 # Filename Cleanup: For FAT32 filename compatability (Feature Request #1378956)
 # Tested with the following characters: !@#$%^&*()_-+=||{[}]:;"'<,>.?/

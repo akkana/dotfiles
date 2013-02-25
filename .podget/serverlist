@@ -12,15 +12,15 @@ http://americanpublicmedia.publicradio.org/podcasts/xml/prairie_home_companion/n
 http://feeds.themoth.org/themothpodcast Humor The_Moth
 http://feeds.wnyc.org/radiolab?utm_source=rssbottom&utm_medium=hp&utm_campaign=radiolab Science Radiolab
 http://www.npr.org/rss/podcast.php?id=510208 Humor Car_Talk
-http://www.quickanddirtytips.com/xml/speaker.xml Other Public_Speaker
+# http://www.quickanddirtytips.com/xml/speaker.xml Other Public_Speaker
 # http://www.abc.net.au/science/k2/podcast/drk_rss.xml Science Dr_Karl
 http://www.abc.net.au/rn/podcast/feeds/mind.xml Science All_in_the_Mind
-http://www.abc.net.au/rn/podcast/feeds/ockham.xml Science Ockhams_Razor
+# http://www.abc.net.au/rn/podcast/feeds/ockham.xml Science Ockhams_Razor
 http://feeds.thisamericanlife.org/talpodcast Other This_American_Life
 http://downloads.bbc.co.uk/podcasts/radio4/moreorless/rss.xml Science More_or_Less
 #http://www.npr.org/rss/podcast.php?id=510200 Other Story_Corps
 #http://www.thestory.org/archive/podcast.xml Other The_Story
-http://downloads.wired.com/podcasts/xml/Storyboard.xml Science Wired
+#http://downloads.wired.com/podcasts/xml/Storyboard.xml Science Wired
 
 #http://thelinuxlink.net/tllts/tllts.rss LINUX The Linux Link
 #http://www.lugradio.org/episodes.rss Linux LUG Radio
@@ -33,10 +33,11 @@ http://www.sciencefriday.com/audio/scifriaudio.xml Science Science_Friday
 #http://audio.commonwealthclub.org/audio/podcast/weekly.xml Other Commonwealth_Club
 #http://www.wtfpod.com/podcast/rss Other WTF_podcast
 http://feeds.feedburner.com/TheStoryCollider?format=xml Science Story_Collider
-http://feeds.feedburner.com/freakonomicsradio?format=xml Science Freakonomics
+#http://feeds.feedburner.com/freakonomicsradio?format=xml Science Freakonomics
 # None of the current scienceline podcasts actually has mp3 links.
 #http://scienceline.org/feed/atom/ Science Scienceline
 #http://scienceline.org/topic/blogs/the-scienceline-podcast/feed/ Science Scienceline
 http://feeds.feedburner.com/SlateLexiconValley Other Lexicon_Valley
 http://feeds.feedburner.com/CleverApesPodcast?format=xml Science Clever_Apes
-http://www.kcrw.com/etc/programs/sg/RSS Humor Strangers
+#http://www.kcrw.com/etc/programs/sg/RSS Humor Strangers
+http://downloads.bbc.co.uk/podcasts/radio4/thpop/rss.xml Science Pop-Up-Economics
