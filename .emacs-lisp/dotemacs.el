@@ -652,6 +652,25 @@
 ;;     )
 ;; )
 
+;; adapted from
+;; http://stackoverflow.com/questions/92971/how-do-i-set-the-size-of-emacs-window
+(defun set-frame-size-according-to-resolution ()
+  (interactive)
+  (if (display-graphic-p)    ; window-system
+  (progn
+    ;; Always use a width of 80
+    (add-to-list 'default-frame-alist (cons 'width 80))
+           
+    ;; for the height, subtract a couple hundred pixels
+    ;; from the screen height (for panels, menubars and
+    ;; whatnot), then divide by the height of a char to
+    ;; get the height we want
+    (add-to-list 'default-frame-alist 
+         (cons 'height (/ (- (x-display-pixel-height) 100)
+                             (frame-char-height)))))))
+
+(set-frame-size-according-to-resolution)
+
 (put 'eval-expression 'disabled nil)
 
 ; (autoload 'pmodify "ptools" "ptools utilities" t)
@@ -851,3 +870,31 @@ a man entry window pops up." t)
  '(inhibit-startup-screen t)
  '(safe-local-variable-values (quote ((flyspell-mode) (encoding . utf-8) (auto-fill-mode) (wrap-mode)))))
 (put 'upcase-region 'disabled nil)
+
+;;
+;; Some useful tips on testing/evaluating elisp:
+;; http://www.masteringemacs.org/articles/2010/11/29/evaluating-elisp-emacs/
+;; eval-buffer  eval-region   C-x C-e does eval-last-sexp
+;; eval-defun (with point anywhere inside the defun)
+;; typing a C-u first invokes edebug which lets you step through, etc.
+;; M-; is eval-expression
+;; In the scratch buffer, put point at the end of an expression and C-j
+;; M-x ielm -- interactive emacs lisp mode
+;; which even has some command completion with TAB
+(defun ielm-auto-complete ()
+  "Enables `auto-complete' support in \\[ielm]."
+  (setq ac-sources '(ac-source-functions
+                     ac-source-variables
+                     ac-source-features
+                     ac-source-symbols
+                     ac-source-words-in-same-mode-buffers))
+  (add-to-list 'ac-modes 'inferior-emacs-lisp-mode)
+  (auto-complete-mode 1))
+(add-hook 'ielm-mode-hook 'ielm-auto-complete)
+
+;;
+;; A few other useful elisp tutorials:
+;; http://ergoemacs.org/emacs/elisp_basics.html
+;; http://cjohansen.no/an-introduction-to-elisp
+;; http://ergoemacs.org/emacs/elisp.html
+;;
