@@ -665,9 +665,12 @@
     ;; from the screen height (for panels, menubars and
     ;; whatnot), then divide by the height of a char to
     ;; get the height we want
-    (add-to-list 'default-frame-alist 
-         (cons 'height (/ (- (x-display-pixel-height) 100)
-                             (frame-char-height)))))))
+    (add-to-list 'default-frame-alist
+                 ; was    (- (x-display-pixel-height) 100)
+                 ; That produces an int, but with * we must convert
+                 ; from float to int with floor.
+         (cons 'height (floor (/ (* (x-display-pixel-height) 0.85)
+                                 (frame-char-height))))))))
 
 (set-frame-size-according-to-resolution)
 
