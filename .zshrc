@@ -33,8 +33,8 @@ setopt RM_STAR_SILENT
 setopt globcomplete
 
 # zsh docs say it should be colon separated, but that doesn't work.
-mailpath=($HOME/Msgs/in/Inbox /var/mail/akkana)
-MAIL=(0 $HOME/Msgs/in/Inbox /var/mail/akkana)
+mailpath=($HOME/Msgs/in/Inbox $HOME/Msgs/in/whitelist)
+MAIL=(0 $HOME/Msgs/in/Inbox $HOME/Msgs/in/whitelist)
 
 # Set path
 export PATH=$HOME/bin:$HOME/bin/linux:/usr/local/bin:/usr/sbin:/usr/bin:/bin:/usr/bin/X11:.:/sbin:/usr/games:$HOME/android/android-sdk-linux_x86/tools:$HOME/android/android-sdk-linux_x86/platform-tools
@@ -311,6 +311,7 @@ alias ratings='links -dump "http://www.amazon.com/gp/product/1590595874" | grep 
 
 # For presentations
 alias bigterm="rxvt -geometry 80x33 -fn '-*-lucidatypewriter-*-*-*-*-19-*-*-*-*-*-*-*'"
+alias noteterm="xterm -geometry 30x34+1025+0 -fn '-*-terminus-bold-*-*-*-22-*-*-*-*-*-*-*'"
 
 # Some whizzy commands you can set to do various things,
 # only most of them don't seem to work reliably:
@@ -478,6 +479,7 @@ alias uncrypt='cryptunmount crypt'
 #alias plug='minicom -D /dev/ttyUSB1 -b 115200'
 alias plug='screen /dev/ttyUSB1 115200'
 alias guru='screen /dev/ttyUSB0 115200'
+alias piconsole='screen /dev/ttyUSB0 115200'
 
 # Connect/disconnect from a docking station. Obsoleted by shell script.
 #alias dock='xrandr --output VGA1 --mode 1600x900; hsetroot -center `find -L $HOME/Backgrounds -name "*.*" | randomline`; xrandr --output LVDS1 --off'
@@ -634,6 +636,7 @@ function ppjson()
 alias idamail='mutt -F ~/.mutt/ideascopic'
 alias shallowimap='mutt -F ~/.mutt/shallowimap'
 alias patmail='mutt -F ~/.mutt/patimap'
+alias znet='mutt -F ~/.mutt/znet'
 
 # Text to speech:
 # From commandlinefu:
@@ -728,7 +731,8 @@ nextper() {
     echo Last: $d
     # d is format yyyy-mm-dd
     echo -n 'Next: '
-    date --date=$d'+28 days' +'%Y-%m-%d'
+    # date --date=$d'+28 days' +'%Y-%m-%d'
+    date --date=$d'+28 days' +'%b %d'
 }
 
 # Tell aptitude not to limit descriptions to the terminal width
@@ -788,12 +792,21 @@ mycal() {
     remind -p$days ~/Docs/Lists/remind  | rem2ps -e -l >/tmp/mycal.ps; gv /tmp/mycal.ps &
 }
 
-# Full backup to the specified host
+# Full or nearly-full backup to the specified host:path or directory:
 fullbackup() {
-    # Copy new files
-    rsync -av --exclude Cache --exclude Spam --exclude log ./ $1:./
-    # Show which files would be deleted:
-    rsync -avn --delete --exclude Cache --exclude Spam --exclude log ./ $1:./
+    pushd ~
+    # Copy new files, delete old ones
+    rsync -av --delete --exclude Cache --exclude Spam --exclude log ./ $1
+    popd
+}
+
+# Same as full backup but exclude some additional large files.
+# I can't seem to find any way to get zsh to share these lists
+# instead of defining them separately.
+minibackup() {
+    pushd ~
+    rsync -av --delete --exclude Cache --exclude Spam --exclude log --exclude '*.mp4' --exclude '*.img' --exclude '*.iso' --exclude DVD --exclude outsrc ./ $1
+    popd
 }
 
 # Something is writing to recently-used.xbel and I'm not sure what.
@@ -804,3 +817,10 @@ alias recent='ls -l ~/recently-used.xbel*(.N) ~/.local/share/recently-used.xbel*
 # It has something to do with openvpn and might require running a DHCP
 # server on the local machine.
 alias piroute='iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o eth0 -j MASQUERADE'
+
+alias znetspam="; echo -n '    Caught by znet: ' ; grep -h Subject ~/Spam/* | fgrep '[SPAM]' | wc -l; echo -n 'Not caught by znet: ' ; grep -h Subject ~/Spam/* | fgrep -v '[SPAM]' | wc -l"
+
+alias pygrep="langgrep python"
+
+alias tcolors='printf "\e[%dm%d dark\e[0m  \e[%d;1m%d bold\e[0m\n" {30..37}{,,,}'
+
