@@ -407,8 +407,10 @@
    ((and (eolp)
          (save-excursion (re-search-backward "^\\(\\s \\)*$"
                                              (line-beginning-position) t)))
-    ;; ... delete the whitespace, then add another newline:
-    (kill-line 0)
+    ;; ... delete the whitespace, then add another newline.
+    ;; Don't use (kill-line 0) here because that saves the whitespace
+    ;; to the kill ring and stomps the X selection.
+    (delete-region (line-beginning-position) (line-end-position))
     (newline))
 
    ;; Else (not on whitespace-only) insert a newline,
@@ -669,8 +671,10 @@
                  ; was    (- (x-display-pixel-height) 100)
                  ; That produces an int, but with * we must convert
                  ; from float to int with floor.
-         (cons 'height (floor (/ (* (x-display-pixel-height) 0.85)
-                                 (frame-char-height))))))))
+         (cons 'height (+ 2 (floor (/ (* (x-display-pixel-height) 0.85)
+                                      (frame-char-height)))))))))
+;; To set initial window position too:
+;; (set-frame-position (selected-frame) 10 30)
 
 (set-frame-size-according-to-resolution)
 
@@ -901,3 +905,32 @@ a man entry window pops up." t)
 ;; http://cjohansen.no/an-introduction-to-elisp
 ;; http://ergoemacs.org/emacs/elisp.html
 ;;
+
+;; http://www.emacswiki.org/emacs/AutoEncryption
+
+;; (defvar pgg-gpg-user-id "akkana@shallowsky.com")
+;; (autoload 'pgg-make-temp-file "pgg" "PGG")
+;; (autoload 'pgg-gpg-decrypt-region "pgg-gpg" "PGG GnuPG")
+;; (define-generic-mode 'gpg-file-mode
+;;   (list ?#) 
+;;   nil nil
+;;   '(".gpg\\'" ".gpg-encrypted\\'")
+;;   (list (lambda ()
+;; 	    (add-hook 'before-save-hook
+;;                       (lambda () 
+;;                         (let ((pgg-output-buffer (current-buffer)))
+;;                           (pgg-gpg-encrypt-region (point-min) (point-max)
+;;                                                   (list pgg-gpg-user-id))))
+;;                       nil t)
+;; 	    (add-hook 'after-save-hook 
+;; 		      (lambda ()
+;;                         (let ((pgg-output-buffer (current-buffer)))
+;;                           (pgg-gpg-decrypt-region (point-min) (point-max)))
+;; 			(set-buffer-modified-p nil)
+;; 			(auto-save-mode nil))
+;; 		      nil t)
+;;             (let ((pgg-output-buffer (current-buffer)))
+;;               (pgg-gpg-decrypt-region (point-min) (point-max)))
+;; 	    (auto-save-mode nil)
+;; 	    (set-buffer-modified-p nil)))
+;;   "Mode for gpg encrypted files")
