@@ -39,7 +39,6 @@
 (global-set-key "\C-r" 'isearch-backward)
 (global-set-key "\C-c\C-r" 'revert-buffer)
 (global-set-key "\C-x\C-i" 'indent-region)
-(global-set-key "\C-c\C-i" 'indent-region)
 
 ;; Use home/end to go to beginning/end of file, not line;
 ;; because ^A/^E are easy to hit but M-<> are not
@@ -86,9 +85,9 @@
                              (background light)) (:foreground "blue"))))
  )
 
-(set-face-foreground 'modeline "yellow")
-(set-face-background 'modeline "purple")
-(set-face-background 'modeline-inactive "light blue")
+(set-face-foreground 'mode-line "yellow")
+(set-face-background 'mode-line "purple")
+(set-face-background 'mode-line-inactive "light blue")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; turning off annoyances
@@ -934,3 +933,22 @@ a man entry window pops up." t)
 ;; 	    (auto-save-mode nil)
 ;; 	    (set-buffer-modified-p nil)))
 ;;   "Mode for gpg encrypted files")
+
+;; http://ergoemacs.org/emacs/elisp_datetime.html
+(defun insert-date ()
+  "Insert current date yyyy-mm-dd."
+  (interactive)
+  (when (region-active-p)
+    (delete-region (region-beginning) (region-end) )
+    )
+  (insert (format-time-string "%Y-%m-%d"))
+  )
+;; For some reason you can't use "C-;" directly: "Invalid modifier in string".
+;; For workarounds, see Keith Rogers' replies on this thread:
+;; http://emacs.1067599.n5.nabble.com/Problems-binding-odd-C-amp-M-keys-in-Elisp-td57770.html
+;; The three options are [?\C-;]   (control ?;)   (kbd "C-;")
+;; See also the [Customizing] Key Bindings node of the Emacs manual,
+;; in the section Init Rebinding (aka Rebinding Keys in Your Init File).
+(global-set-key (kbd "C-;") 'insert-date)
+
+
