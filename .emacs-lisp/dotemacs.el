@@ -383,7 +383,12 @@
 ;; So define two derived modes for that, and we'll use auto-mode-alist
 ;; to choose them based on filename.
 (define-derived-mode html-wrap-mode html-mode "HTML wrap mode"
-  (auto-fill-mode))
+  (auto-fill-mode)
+  ;; New annoyance in emacs24: every time you save an html file,
+  ;; it calls a browser on it, replacing whatever's in your current
+  ;; browser window.
+  (html-autoview-mode -1)
+)
 (define-derived-mode text-wrap-mode text-mode "Text wrap mode"
   (auto-fill-mode))
 
@@ -788,25 +793,29 @@ a man entry window pops up." t)
 ;; indenting whenever you type a comma, semicolon etc.
 ;; Sadly, no: it's aggressive in c-mode too. Try putting a //
 ;; in front of a brace, for example.
-(setq-default c-electric-flag nil)
+;; But if you turn it off, C mode is unusable: when you type a { or }
+;; it doesn't go to the right place. Sigh!
+;; (setq-default c-electric-flag nil)
 
 ;; Earlier attempt to do this:
-;; (defun no-electric (keymap)
-;;   (progn
-;;     (define-key keymap ";" 'self-insert-command)
-;;     (define-key keymap "/" 'self-insert-command)
-;;     (define-key keymap "*" 'self-insert-command)
-;;     (define-key keymap "{" 'self-insert-command)
-;; ;    (define-key keymap "}" 'self-insert-command)
-;;     (define-key keymap "," 'self-insert-command)
-;;  ))
+(defun no-electric (keymap)
+  (progn
+    (define-key keymap ";" 'self-insert-command)
+    (define-key keymap "/" 'self-insert-command)
+    (define-key keymap "*" 'self-insert-command)
+    (define-key keymap "(" 'self-insert-command)
+    (define-key keymap ")" 'self-insert-command)
+;    (define-key keymap "{" 'self-insert-command)
+;    (define-key keymap "}" 'self-insert-command)
+    (define-key keymap "," 'self-insert-command)
+ ))
 
 ;; But these stopped working, maybe because the names for the maps
 ;; are wrong. thunk on #emacs points to:
 ;; ,,df current-local-map and ,,df local-unset-key
-;; (add-hook 'c-mode-hook (lambda () (no-electric c-mode-map)))
-;; (add-hook 'c++-mode-hook (lambda () (no-electric c-mode-map)))
-;; (add-hook 'java-mode-hook (lambda () (no-electric java-mode-map)))
+(add-hook 'c-mode-hook (lambda () (no-electric c-mode-map)))
+(add-hook 'c++-mode-hook (lambda () (no-electric c-mode-map)))
+(add-hook 'java-mode-hook (lambda () (no-electric java-mode-map)))
 
 (add-hook 'js-mode-hook (lambda ()
   (define-key js-mode-map "," 'self-insert-command)
