@@ -1,69 +1,20 @@
 # .xinitrc for Openbox
 
-# Figure out whether we're in a docking station or not, and adjust
-# the display accordingly.
-# http://www.linuxquestions.org/questions/slackware-14/automating-xorg-randr-turning-laptop-screen-off-if-external-monitor-is-connected-779386/
-# http://it-tactics.blogspot.com/2010/08/ubuntu-1004-with-docking-station.html
+# All the things I used to run here have moved to ~/.config/openbox/autostart.
+# dbus-launch doesn't play well with anything left here.
 
-# Check whether the external monitor is connected: returns 0 on success
-hostname=$(hostname)
-if [ $hostname=hesiodus ]; then
-  # Make the F1 key another Escape
-  xmodmap -e 'keycode 67 = Escape'
+#openbox
 
-  xrandr | grep HDMI | grep " connected "
-  if [ $? -eq 0 ]; then
-    xrandr --output VGA1 --off
-    xrandr --output LVDS1 --off
-    xrandr --output HDMI1 --mode 1680x1050
-    geom=80x60-0-0
-  else
-    xrandr | grep VGA | grep " connected "
-    if [ $? -eq 0 ]; then
-      xrandr --output HDMI1 --off
-      xrandr --output LVDS1 --off
-      xrandr --output VGA1 --mode 1680x1050
-      geom=80x60-0-0
-    else
-      # Fall back on the built-in laptop display, LVDS1
-      # and trust it (fingers crossed!) to get the resolution right.
-      xrandr --output VGA1 --off
-      xrandr --output HDMI1 --off
-#      xrandr --output LVDS1 --mode 1280x800
-      xrandr --output LVDS1
-      geom=80x51+0-0
-    fi
-  fi
-else
-  geom=80x60-0-0
-fi
+#/usr/bin/dbus-launch --exit-with-session openbox-session
 
-# xemacs -geometry 80x66+146-0 &
-#
-# Spare terminal: start it early, so it won't end up with focus.
-#(LANG=C rxvt -geometry 80x39-0+0) &
+# Here's what Mikachu says he does:
+# eval $(dbus-launch --sh-syntax)
+# But then you can get extraneous dbus daemons running,
+# since they don't exit with the X session.
+# The advantage is that if openbox crashes (which might happen if you're
+# testing experimental openbox features), your session dbus doesn't
+# crash with it -- though it looks like dbus --exit-with-session might
+# actually be tied to the X session, not to the program it runs directly.
 
-# For window managers that don't have image support:
-#(xsetbg -fullscreen -border black `find -L $HOME/Backgrounds -name "*.*" | randomline`) &
-#(hsetroot -center `find -L $HOME/Backgrounds -name "*.*" | randomline`) &
-randombg &
-
-#xrdb -l .Xdefaults
-
-#xmodmap .Xmodmap
-#xhost +moon &
-
-# Use a UTF-8 terminal for mail.
-# Put it last so it gets focus.
-(LANG=en_US.UTF-8 xterm -geometry $geom) &
-
-# Disable touchpad types when typing:
-# Too annoying!
-#syndaemon -d -i 2
-
-# More reliable way. man synaptics for the list of available options:
-if [ $hostname=io ]; then
-  synclient TapButton1=0 HorizEdgeScroll=1
-fi
-
-openbox
+# But this also seems to work:
+/usr/bin/dbus-launch --exit-with-session openbox --startup $HOME/.config/openbox/autostart
