@@ -36,8 +36,11 @@ setopt globcomplete
 mailpath=($HOME/Msgs/in/Inbox $HOME/Msgs/in/whitelist)
 MAIL=(0 $HOME/Msgs/in/Inbox $HOME/Msgs/in/whitelist)
 
+# Prevent any repeated entries in $PATH
+typeset -U PATH
+
 # Set path
-export PATH=$HOME/bin:$HOME/bin/linux:/usr/local/bin:/usr/sbin:/usr/bin:/bin:/usr/bin/X11:.:/sbin:/usr/games:$HOME/android/android-sdk-linux_x86/tools:$HOME/android/android-sdk-linux_x86/platform-tools
+export PATH=$HOME/bin:$HOME/bin/linux:/usr/local/bin:/usr/sbin:/usr/bin:/bin:/usr/bin/X11:.:/sbin:/usr/games:$HOME/android/android-sdk-linux_x86/tools:$HOME/android/android-sdk-linux_x86/platform-tools:/usr/local/bin
 
 # Need to add android paths for both user AND root in order to use adb.
 # SO annoying!
@@ -479,7 +482,7 @@ alias uncrypt='cryptunmount crypt'
 #alias plug='minicom -D /dev/ttyUSB1 -b 115200'
 alias plug='screen /dev/ttyUSB1 115200'
 alias guru='screen /dev/ttyUSB0 115200'
-alias piconsole='screen /dev/ttyUSB0 115200'
+alias rpi='screen /dev/ttyUSB0 115200'
 
 # Connect/disconnect from a docking station. Obsoleted by shell script.
 #alias dock='xrandr --output VGA1 --mode 1600x900; hsetroot -center `find -L $HOME/Backgrounds -name "*.*" | randomline`; xrandr --output LVDS1 --off'
