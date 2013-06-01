@@ -122,6 +122,11 @@
         <string>=======================================================</string>
       </action>
     </keybind>
+    <keybind key="C-apostrophe">
+      <action name="Execute">
+        <execute>/usr/bin/xterm</execute>
+      </action>
+    </keybind>
     <keybind key="W-F9">
       <action name="ShowMenu">
         <menu>root-menu</menu>
@@ -164,11 +169,13 @@
       </action>
     </keybind>
 
+    <!-- disabled because I keep hitting this intending on alt-F12
     <keybind key="W-F12">
       <action name="Execute">
         <execute>/home/akkana/bin/screenoff</execute>
       </action>
     </keybind>
+     -->
     <keybind key="A-F11">
       <action name="Execute">
         <execute>/home/akkana/bin/crikey/sayshortpw</execute>
@@ -183,6 +190,21 @@
     <keybind key="W-t">
       <action name="Execute">
         <execute>/home/akkana/bin/countsel</execute>
+      </action>
+    </keybind>
+
+    <!-- Define C-Insert to always insert the primary selection,
+         regardless of what any particular app (cough firefox cough) may do.
+      -->
+    <keybind key="C-Insert">
+      <action name="Execute">
+        <execute>/bin/sh -c 'xsel -o -p | xsel -i -b; /home/akkana/bin/linux/crikey -s 1 "^V"'</execute>
+      </action>
+    </keybind>
+
+    <keybind key="A-Insert">
+      <action name="Execute">
+        <execute>/bin/sh -c 'xsel -o -p | xsel -i -b; /home/akkana/bin/linux/crikey -s 1 "^L^V\\n"'</execute>
       </action>
     </keybind>
 
