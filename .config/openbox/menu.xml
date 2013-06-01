@@ -15,25 +15,27 @@
   </item>
   -->
   <separator />
-  <item label="Firefox 15">
-    <action name="Execute"><execute>/usr/local/firefox/firefox -P masterprofile</execute></action>
-    <!-- after firefox 11, add -new-instance instead of -no-remote -->
+  <item label="Firefox">
+    <action name="Execute"><execute>/home/akkana/local/firefox/firefox -P masterprofile</execute></action>
   </item>
   <menu id="browser-menu" label="Other browsers">
+  <!-- after firefox 11, add -new-instance instead of -no-remote -->
   <item label="Social Firefox">
-    <action name="Execute"><execute>/usr/local/firefox/firefox -no-remote -P facebook</execute></action>
+    <action name="Execute"><execute>/home/akkana/local/firefox/firefox -new-instance -P facebook</execute></action>
+  </item>
+  <item label="Midori">
+    <action name="Execute"><execute>midori</execute></action>
   </item>
   <item label="Default Firefox">
-    <action name="Execute"><execute>/usr/local/firefox/firefox -no-remote -P Default</execute></action>
+    <action name="Execute"><execute>/home/akkana/local/firefox/firefox -new-instance -P Default</execute></action>
+  </item>
+  <item label="Ubuntu Firefox">
+    <action name="Execute"><execute>/usr/bin/firefox -P ubuprofile</execute></action>
+  </item>
+  <item label="Firefox in safe mode">
+    <action name="Execute"><execute>/home/akkana/local/firefox/firefox -safe-mode -P masterprofile</execute></action>
   </item>
   <separator />
-  <item label="Firefox 13">
-    <action name="Execute"><execute>/usr/local/firefox13/firefox -P firefox13</execute></action>
-    <!-- after firefox 11, add -new-instance instead of -no-remote -->
-  </item>
-  <item label="Social Firefox 13">
-    <action name="Execute"><execute>/usr/local/firefox13/firefox -no-remote -P facebook13</execute></action>
-  </item>
   <item label="open selection in Firefox">
     <action name="Execute"><execute>sh -c 'firefox `pyclip`'</execute></action>
   </item>
@@ -42,24 +44,6 @@
   </item>
 <!-- Here's how to do an extended comment that can even allow double-dashes: -->
 <![CDATA[
-  <item label="Facebook Firefox 4">
-    <action name="Execute"><execute>/usr/bin/firefox -no-remote -P facebook4</execute></action>
-  </item>
-  <item label="Firefox 4 (system)">
-    <action name="Execute"><execute>firefox -no-remote -P firefox4</execute></action>
-  </item>
-  <item label="Firefox 3.5 (system)">
-    <action name="Execute"><execute>firefox -no-remote -P Firefox3.5</execute></action>
-  </item>
-  <item label="Facebook Firefox">
-    <action name="Execute"><execute>firefox -no-remote -P facebook</execute></action>
-  </item>
-  <item label="Firefox 3.5 (Mozilla.org)">
-    <action name="Execute"><execute>/usr/local/firefox3.5/firefox -P Firefox3.5</execute></action>
-  </item>
-  <item label="Firefox 3">
-    <action name="Execute"><execute>firefox -no-remote -P akkana</execute></action>
-  </item>
 ]]> <!-- -->
   <item label="Chromium">
     <action name="Execute"><execute>chromium-browser</execute></action>
@@ -85,6 +69,10 @@
   </item>
  -->
   </menu>
+  <item label="Shorten URL">
+    <action name="Execute"><execute>shorturl</execute></action>
+  </item>
+  <separator />
   <item label="emacs">
     <action name="Execute"><execute>emacs</execute></action>
   </item>
@@ -125,6 +113,9 @@
   <item label="Fritzing">
     <action name="Execute"><execute>Fritzing</execute></action>
   </item>
+  <item label="Music (audavious)">
+    <action name="Execute"><execute>audacious /home/akkana/Music</execute></action>
+  </item>
   <item label="Music (vlc)">
     <action name="Execute"><execute>vlc --random /home/akkana/Music</execute></action>
   </item>
@@ -159,6 +150,8 @@
   <separator />
 
   <!-- 
+  <menu id="pipe-wifi" label="Test Pipe menu..."
+   execute="/home/akkana/.config/openbox/testpipe.py" />
   <menu id="pipe-wifi" label="Wifi..."
    execute="/home/akkana/.config/openbox/wifi-pipe.py eth0" />
    -->
