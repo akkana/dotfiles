@@ -13,12 +13,43 @@ else
   return
 fi
 
+# If EDITOR is vim, zsh will try to be "smart" and switch to vi mode.
+# This switches bindings back to emacs:
+bindkey -e
+
 # Allow pasting functions with comments
 # However, this interferes with being able to use # on the commandline.
 setopt interactivecomments
 # Also, you can't use # on the commandline because it's a special zsh global.
-# To use it: (except this doesn't help)
+# To use it:
 # unsetopt extendedglob
+
+# But really, the only reason I want to use # on the commandline
+# is for the stupid xchatlogs. And even aside from the \#, they're
+# a pain to complete. Why not make a key binding to pre-type most of it?
+# This puts it on F8:
+# bindkey -s '\e[20~' '~/.xchat2/xchatlogs/ \\\#^B^B^B'
+
+# This would be better,
+# bindkey -s '.xx' '~/.xchat2/xchatlogs/ \\\#^B^B^B'
+# but you can't type it interactively because
+# you end up with recursion and it inserts
+# ~/~/.xchat2/xchatlogs/hat2/xchatlogs/ \# \#
+
+# Here's an even better way that doesn't require using a function key:
+# it puts it on .xc (when typed quickly).
+# The LBUFFER/RBUFFER stuff are to avoid recursion:
+# they modify the strings before and after the cursor.
+# See http://zsh.sourceforge.net/Guide/zshguide04.html
+# under 4.7.4: Special parameters: normal text
+# Or http://stackoverflow.com/questions/6673280/avoid-recursion-in-zsh-command-line
+function autoxchat()
+{
+    LBUFFER+="~/.xchat2/xchatlogs/"
+    RBUFFER=" \\#$RBUFFER"
+}
+zle -N autoxchat
+bindkey ".xc" autoxchat
 
 # Source global definitions
 if [[ -f /etc/zshrc ]]; then
@@ -95,9 +126,7 @@ export LESS="-EerX"
 export LC_COLLATE=C
 
 export EDITOR=vim
-# If EDITOR is vim, zsh will try to be "smart" and switch to vi mode.
-# This switches bindings back to emacs:
-bindkey -e
+# Be sure to set bindkey -e -- done above with the other bindkey stuff.
 
 # See http://www.linux-sxs.org/housekeeping/lscolors.html
 export LS_COLORS='ex=1;31:ln=1;35'
@@ -115,7 +144,7 @@ show_symlinks() {
     for f in $*; do
         # Remove terminal slash.
         f=${f%/}
-        # Mikachu: if you have extentedglob set you can use %{f%%/#}
+        # Mikachu: if you have extendedglob set you can use %{f%%/#}
         # to remove all trailing slashes
         #f=`echo $f | sed 's/\/$//'`
         # zsh is supposed to be able to do this with globbing,
@@ -367,12 +396,24 @@ not_accept_command() {
 ###################################################
 ######## zsh completion stuff #####################
 
+# Place to add custom completion scripts
+fpath=(~/.config/zsh/completion $fpath)
+
+# When feeling that zsh completion is just too annoying and too buggy,
+# you can turn it off by commenting out these two lines:
+autoload -Uz compinit
+compinit
+
 WORDCHARS=$WORDCHARS:s,/,,
 # See also http://mika.l3ib.org/s/dot-delete-to
 
+#
+# Slash removal:
+#
 # If annoyed by tab-completion including slashes too much, try this:
 # Mika: the slash thing is ZLE_REMOVE_SUFFIX_CHARS and ZLE_SPACE_SUFFIX_CHARS
-# also AUTO_REMOVE_SLASH
+# Or this:
+unsetopt AUTO_REMOVE_SLASH
 
 # Mikachu's clever hack to avoid having the slashes disappear
 # when I type a line like rsync -av dir/ /back/dir/
@@ -381,9 +422,23 @@ WORDCHARS=$WORDCHARS:s,/,,
 # Dana notes that you can also type an extra slash
 # to make the autocompleted slashes stay there
 # (but you can't tell visually whether a slash is "real" or not).
-function accept-line() { zle auto-suffix-retain; zle .$WIDGET }
-zle -N accept-line
-ZLE_REMOVE_SUFFIX_CHARS=
+#
+# function accept-line() {
+#   zle auto-suffix-retain
+#   zle .$WIDGET
+# }
+# zle -N accept-line
+# ZLE_REMOVE_SUFFIX_CHARS=
+#
+# But doing that messes up autocompletion on symlinks:
+# zsh addsj / at the end of autocompleted symlinks to directories
+# (e.g. mv path/to/symlink<TAB> path/to/otherplace files with
+# "Not a directory") but it doesn't help.
+#
+# The solution is probably to set up a special completion for rm
+# that checks whether its argument is a directory.
+# Start with /usr/share/zsh/functions/Completion/Unix/_rm
+# also http://zsh.sourceforge.net/Doc/Release/Completion-System.html
 
 # /usr/share/zsh/functions/Completion/Unix/_hosts autocompletes hosts
 # case-insensitively, which means that any rule (like rsync) that
@@ -391,16 +446,42 @@ ZLE_REMOVE_SUFFIX_CHARS=
 # might match. Ideally I should just remove that and make it complete
 # case-sensitively; but until I learn how to do that, just turn off
 # hostname completion entirely, since I don't actually use it:
-_hosts() { }
+#_hosts() { }
+
+# Turning off completions that are too smart for their own good:
+if [ -n "$_comps" ]; then
+  # zsh has some kind of smart git completion that doesn't autocomplete file
+  # or directory names. I ask you, how smart is that?
+  # But blah! compdef doesn't exist in the zsh in Debian squeeze.
+  # I hope they don't have the smart completion either.
+  #compdef _files git
+
+  # By default (no CLASSPATH SET), autocompletion for java searches
+  # recursively starting from .  Don't try it in your homedir!
+  # Not sure if this really turns it off, though -- had a typo.
+  #compdef _files java
+
+  # loadkeys also has "smart" (* un-smart) completion.
+  compdef _files loadkeys
+
+  # Other things that have broken autocomplete, so tell it to just
+  # look for filenames like a normal well-behaved shell:
+  # Actually unrar completion may not be broken after all, wait and see.
+  #compdef _files unrar
+fi
+
+#
+# Autocompletion related key bindings:
+#
 
 # Don't autofill the first match of a list of ambiguous matches:
 #setopt noautomenu
 # bind "menu behavior" (i.e. complete to the first match, then to
 # successive matches upon repeat use) to another key:
-bindkey '\e\e' menu-complete
+bindkey '\e\t' menu-complete
 
-# If you need to know what rules zsh is using for a completion,
-# type <ESC><Tab>:
+# If you need to know what rules zsh is using for a completion.
+# This only works if you've run compinit.
 #bindkey '\e\d' _complete_help
 bindkey '\e\t' _complete_help
 
@@ -418,30 +499,6 @@ bindkey '^X^R' redo
 bindkey '^X^W' where-is
 bindkey '^X^D' describe-key-briefly
 
-# zsh completion is just too annoying and too buggy.
-# so turn it off until I understand it well enough to control it:
-#autoload -Uz compinit
-#compinit
-
-if [ -n "$_comps" ]; then
-  # zsh has some kind of smart git completion that doesn't autocomplete file
-  # or directory names. I ask you, how smart is that?
-  # But blah! compdef doesn't exist in the zsh in Debian squeeze.
-  # I hope they don't have the smart completion either.
-  #compdef _files git
-
-  # By default (no CLASSPATH SET), autocompletion for java searches
-  # recursively starting from .  Don't try it in your homedir!
-  compdef _files git
-
-  # loadkeys also has "smart" (* un-smart) completion.
-  compdef _files loadkeys
-
-  # Other things that have broken autocomplete, so tell it to just
-  # look for filenames like a normal well-behaved shell:
-  # Actually unrar completion may not be broken after all, wait and see.
-  #compdef _files unrar
-fi
 ######## end zsh completion #######################
 ###################################################
 
@@ -827,3 +884,22 @@ alias pygrep="langgrep python"
 
 alias tcolors='printf "\e[%dm%d dark\e[0m  \e[%d;1m%d bold\e[0m\n" {30..37}{,,,}'
 
+alias chase='fincompare.py ~/bin/chase.py SRCMX FMAGX FUSVX LDLAX VSCGX IRCAX SCAL'
+
+# rsync a local web directory to shallowsky.
+toshallow() {
+    localdir=$1
+    # Make sure directories have a terminal slash,
+    # whether or not the user provided one.
+    if [ -d $localdir ]; then
+        # Remove terminal slash.
+        # ## requires extendedglob, so make sure it's set locally.
+        setopt localoptions extendedglob
+        localdir=${localdir%%/##}/
+    fi
+    plaindir=${localdir#~/}
+    cmd="rsync -av $localdir shallowsky.com:$plaindir"
+    # We'll went --delete here too, but let's hold off until it's known working.
+    echo $cmd
+    #eval $cmd
+}
