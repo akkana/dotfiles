@@ -404,6 +404,24 @@ fpath=(~/.config/zsh/completion $fpath)
 autoload -Uz compinit
 compinit
 
+# Don't autofill the first match of a list of ambiguous matches:
+setopt noautomenu
+
+# When showing menu help, include descriptions:
+zstyle ":completion:*:descriptions" format "%B%d%b"
+
+# Much more verbose info (while learning/debugging compdefs).
+# But these don't actually work, no matches found: ‘:completion:*’
+zstyle ":completion:*" verbose yes
+zstyle ":completion:*:descriptions" format '%B%d%b'
+zstyle ":completion:*:messages" format '%d'
+zstyle ":completion:*:warnings" format 'No matches for: %d'
+zstyle ":completion:*" group-name
+
+# Some tuts on writing custom completions:
+# http://askql.wordpress.com/2011/01/11/zsh-writing-own-completion/
+# http://www.linux-mag.com/id/1106/
+
 WORDCHARS=$WORDCHARS:s,/,,
 # See also http://mika.l3ib.org/s/dot-delete-to
 
@@ -412,11 +430,21 @@ WORDCHARS=$WORDCHARS:s,/,,
 #
 # If annoyed by tab-completion including slashes too much, try this:
 # Mika: the slash thing is ZLE_REMOVE_SUFFIX_CHARS and ZLE_SPACE_SUFFIX_CHARS
-# Or this:
+
+# Or this, which is supposed to prevent removing the slashes -- but that means
+# it still leaves them in place on symlinks to directories.
+# And in any case it doesn't work: ls /tmp<tab> adds a slash,
+# then typing a space makes the slash disappear, even with this.
 unsetopt AUTO_REMOVE_SLASH
+
+# But doing that messes up autocompletion on symlinks:
+# zsh addsj / at the end of autocompleted symlinks to directories
+# (e.g. mv path/to/symlink<TAB> path/to/otherplace files with
+# "Not a directory") but it doesn't help.
 
 # Mikachu's clever hack to avoid having the slashes disappear
 # when I type a line like rsync -av dir/ /back/dir/
+# I'm not sure this is actually any better than unsetopt AUTO_REMOVE_SLASH, tho.
 # <Mikachu> the . means to run the builtin widget, not whatever function is overloading it
 # <Mikachu> so without it, it would just recurse forever
 # Dana notes that you can also type an extra slash
@@ -429,11 +457,6 @@ unsetopt AUTO_REMOVE_SLASH
 # }
 # zle -N accept-line
 # ZLE_REMOVE_SUFFIX_CHARS=
-#
-# But doing that messes up autocompletion on symlinks:
-# zsh addsj / at the end of autocompleted symlinks to directories
-# (e.g. mv path/to/symlink<TAB> path/to/otherplace files with
-# "Not a directory") but it doesn't help.
 #
 # The solution is probably to set up a special completion for rm
 # that checks whether its argument is a directory.
@@ -474,16 +497,16 @@ fi
 # Autocompletion related key bindings:
 #
 
-# Don't autofill the first match of a list of ambiguous matches:
-#setopt noautomenu
 # bind "menu behavior" (i.e. complete to the first match, then to
 # successive matches upon repeat use) to another key:
+# Normally this is on \t\t, which is super annoying, so unbind that:
+bindkey -r '\t\t'
 bindkey '\e\t' menu-complete
 
 # If you need to know what rules zsh is using for a completion.
 # This only works if you've run compinit.
 #bindkey '\e\d' _complete_help
-bindkey '\e\t' _complete_help
+bindkey '\e\e' _complete_help
 
 # zsh sometimes replaces a command with the completions when you hit tab.
 # But you can undo that and go back to what you were typing.
