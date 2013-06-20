@@ -924,5 +924,5 @@ toshallow() {
     cmd="rsync -av $localdir shallowsky.com:$plaindir"
     # We'll went --delete here too, but let's hold off until it's known working.
     echo $cmd
-    #eval $cmd
+    eval $cmd
 }
