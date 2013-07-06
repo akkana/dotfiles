@@ -49,7 +49,7 @@ function autoxchat()
     RBUFFER=" \\#$RBUFFER"
 }
 zle -N autoxchat
-bindkey ".xc" autoxchat
+bindkey "=xc" autoxchat
 
 # Source global definitions
 if [[ -f /etc/zshrc ]]; then
@@ -174,14 +174,15 @@ ll() {
 llt() { /bin/ls -laSHFLt $* ; }
 llth() { /bin/ls -lFSHLt $* | head -20 ; }
 
-lsdirs() { env ls -1FH "$1" | sed -n 's|/$||p' | column; }
+# There are lots of ways to list only directories. Here are some:
+#lsdirs1() { env ls -1FH "$1" | sed -n 's|/$||p' | column; }
+#
+#lsdirs2() {
+#  (cd $1; /bin/ls -d `/bin/ls -1F | grep / | sed 's_/$__'`)
+#}
 
-lsdirs1() {
-  (cd $1; /bin/ls -d `/bin/ls -1F | grep / | sed 's_/$__'`)
-}
-
-lsdirs2() { 
-  echo `/bin/ls -1F $@ | grep / | sed 's_/$__'` 
+lsdirs() { 
+  echo `/bin/ls -1F $@ | grep / | sed 's_/$__'`| tr -s ' ' '\n' | paste - - - | column -x -t -c3
 }
 
 alias j=jobs
@@ -564,6 +565,8 @@ alias plug='screen /dev/ttyUSB1 115200'
 alias guru='screen /dev/ttyUSB0 115200'
 alias rpi='screen /dev/ttyUSB0 115200'
 
+alias beagleroute='sudo iptables -A POSTROUTING -t nat -j MASQUERADE; echo 1 | sudo tee /proc/sys/net/ipv4/ip_forward > /dev/null'
+
 # Connect/disconnect from a docking station. Obsoleted by shell script.
 #alias dock='xrandr --output VGA1 --mode 1600x900; hsetroot -center `find -L $HOME/Backgrounds -name "*.*" | randomline`; xrandr --output LVDS1 --off'
 #alias undock='xrandr --output LVDS1 --mode 1280x800; hsetroot -center `find -L $HOME/Backgrounds -name "*.*" | randomline`'
@@ -649,15 +652,13 @@ feed() {
   # but we want to list the new feeds whether or not syncing succeeds:
   setopt localoptions noerrreturn
   echo "Syncing back to the server"
-  if [[ $HOST == 'imbrium' || $HOST == 'clavius' ]]; then
-    rsync -av ~/.cache/feedme/ moon:.cache/feedme/
-  else
-    rsync -av ~/.cache/feedme/ timocharis.com:.cache/feedme/
-  fi
+  rsync -av ~/.cache/feedme/ shallowsky.com:.cache/feedme/
 
   echo "New feeds:"
   /bin/ls ~/feeds/$curdate
 }
+
+alias syncfeeds='rsync -av ~/.cache/feedme/ shallowsky.com:.cache/feedme/'
 
 # Remove podcast files except recent ones:
 # Fancy zsh method, but I must have a typo in it 'cause it doesn't work:
@@ -878,7 +879,7 @@ mycal() {
 # Full or nearly-full backup to the specified host:path or directory:
 fullbackup() {
     pushd ~
-    # Copy new files, delete old ones
+    # Copy new files, delete old ones, excluding unimportant dirs
     rsync -av --delete --exclude Cache --exclude Spam --exclude log ./ $1
     popd
 }
@@ -888,7 +889,7 @@ fullbackup() {
 # instead of defining them separately.
 minibackup() {
     pushd ~
-    rsync -av --delete --exclude Cache --exclude Spam --exclude log --exclude '*.mp4' --exclude '*.img' --exclude '*.iso' --exclude DVD --exclude outsrc ./ $1
+    rsync -av --delete --exclude Cache --exclude Spam --exclude log --exclude '*.mp4' --exclude '*.img' --exclude '*.iso' --exclude DVD --exclude POD --exclude .config/chromium --exclude .cache/chromium --exclude outsrc ./ $1
     popd
 }
 
