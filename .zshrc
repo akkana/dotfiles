@@ -64,8 +64,11 @@ setopt RM_STAR_SILENT
 setopt globcomplete
 
 # zsh docs say it should be colon separated, but that doesn't work.
-mailpath=($HOME/Msgs/in/Inbox $HOME/Msgs/in/whitelist)
-MAIL=(0 $HOME/Msgs/in/Inbox $HOME/Msgs/in/whitelist)
+# Or sometimes it does -- only on the laptop, for some reason,
+# when I'm not reading mail (maybe it's affected by mutt changing
+# the atime?) and it's super annoying there.
+#mailpath=($HOME/Msgs/in/Inbox $HOME/Msgs/in/whitelist)
+#MAIL=(0 $HOME/Msgs/in/Inbox $HOME/Msgs/in/whitelist)
 
 # Prevent any repeated entries in $PATH
 typeset -U PATH
@@ -135,6 +138,8 @@ export RSYNC_RSH=ssh
 export PHO_ARGS=-p
 
 # aliases
+
+alias sss="ssh shallowsky.com"
 
 #ls() { /bin/ls -F --color $* ; }
 #ll() { /bin/ls -laF --color $* ; }
@@ -889,7 +894,7 @@ fullbackup() {
 # instead of defining them separately.
 minibackup() {
     pushd ~
-    rsync -av --delete --exclude Cache --exclude Spam --exclude log --exclude '*.mp4' --exclude '*.img' --exclude '*.iso' --exclude DVD --exclude POD --exclude .config/chromium --exclude .cache/chromium --exclude outsrc ./ $1
+    rsync -av --delete --exclude Cache --exclude Spam --exclude log --exclude '*.mp4' --exclude '*.img' --exclude '*.iso' --exclude DVD --exclude POD --exclude .config/chromium --exclude .cache/chromium --exclude outsrc --exclude .VirtualBox --exclude 'VirtualBox VMs' --exclude VaioWin ./ $1
     popd
 }
 
@@ -927,3 +932,7 @@ toshallow() {
     echo $cmd
     eval $cmd
 }
+
+# I can never remember the ever-changing CUPS commands to talk to
+# printers from the cmdline.
+alias printers='lpstat -s; echo; echo You can print with lp -d printername'
