@@ -665,6 +665,13 @@ feed() {
 
 alias syncfeeds='rsync -av ~/.cache/feedme/ shallowsky.com:.cache/feedme/'
 
+# Now that we're running feeds on shallowsky.com,
+# local/xtra urls have to be saved there too.
+# Run with e.g. localurl http://blahblah
+localurl() {
+    echo $* | ssh shallowsky.com 'cat >> web/feedme/feeds/localurls'
+}
+
 # Remove podcast files except recent ones:
 # Fancy zsh method, but I must have a typo in it 'cause it doesn't work:
 #alias prunepod='rm $HOME/POD/**/*(.mw+2)'
@@ -857,8 +864,11 @@ whichspam() {
   if [[ x$whichfile == x ]]; then
     whichfile=subjectRejects
   fi
+  echo Searching in ~/Procmail/spast/$whichfile
   cat ~/Procmail/spast/$whichfile | while read line ; do
-    echo "$1" | egrep -i "$line" >/dev/null
+    echo echo "$1" '| egrep -i --' "$line" '>/dev/null'
+    #echo "$1" | egrep -i -- "$line" >/dev/null
+    echo "$1" | egrep -i -- "$line"
     if [[ $? == 0 ]]; then
       echo $line
     fi
@@ -885,7 +895,7 @@ mycal() {
 fullbackup() {
     pushd ~
     # Copy new files, delete old ones, excluding unimportant dirs
-    rsync -av --delete --exclude Cache --exclude Spam --exclude log ./ $1
+    rsync -av --delete --exclude Cache --exclude .cache/mozilla --exclude Spam --exclude log --exclude Tarballs --exclude VaioWin --exclude 'Bitlbee' ./ $1
     popd
 }
 
@@ -894,13 +904,15 @@ fullbackup() {
 # instead of defining them separately.
 minibackup() {
     pushd ~
-    rsync -av --delete --exclude Cache --exclude Spam --exclude log --exclude '*.mp4' --exclude '*.img' --exclude '*.iso' --exclude DVD --exclude POD --exclude .config/chromium --exclude .cache/chromium --exclude outsrc --exclude .VirtualBox --exclude 'VirtualBox VMs' --exclude VaioWin ./ $1
+    rsync -av --delete --exclude Cache --exclude .cache/mozilla --exclude Spam --exclude log --exclude '*.mp4' --exclude '*.img' --exclude '*.iso' --exclude DVD --exclude POD --exclude .config/chromium --exclude .cache/chromium --exclude outsrc --exclude .VirtualBox --exclude 'VirtualBox VMs' --exclude .thumbnails --exclude droidsd-old --exclude Tarballs ./ $1
     popd
 }
 
 # Something is writing to recently-used.xbel and I'm not sure what.
 # This might help to monitor it.
 alias recent='ls -l ~/recently-used.xbel*(.N) ~/.local/share/recently-used.xbel*'
+
+alias sss='ssh shallowsky.com'
 
 # Torikun says this might work for talking to the raspberry pi.
 # It has something to do with openvpn and might require running a DHCP
@@ -913,7 +925,7 @@ alias pygrep="langgrep python"
 
 alias tcolors='printf "\e[%dm%d dark\e[0m  \e[%d;1m%d bold\e[0m\n" {30..37}{,,,}'
 
-alias chase='fincompare.py ~/bin/chase.py SRCMX FMAGX FUSVX LDLAX VSCGX IRCAX SCAL'
+alias chase='fincompare.py ~/bin/chase.py SRCMX FMAGX FPURX FUSVX LDLAX VSCGX IRCAX SCAL'
 
 # rsync a local web directory to shallowsky.
 toshallow() {
@@ -936,3 +948,67 @@ toshallow() {
 # I can never remember the ever-changing CUPS commands to talk to
 # printers from the cmdline.
 alias printers='lpstat -s; echo; echo You can print with lp -d printername'
+
+# Quick-jump to deeply nested directories
+# http://jeroenjanssens.com/2013/08/16/quickly-navigate-your-filesystem-from-the-command-line.html
+export MARKPATH=$HOME/.marks
+function jump { 
+    cd -P "$MARKPATH/$1" 2>/dev/null || echo "No such mark: $1"
+}
+function mark { 
+    mkdir -p "$MARKPATH"; ln -s "$(pwd)" "$MARKPATH/$1"
+}
+function unmark { 
+    rm -i "$MARKPATH/$1"
+}
+function marks {
+    ls -l "$MARKPATH" | sed 's/  / /g' | cut -d' ' -f9- | sed 's/ -/\t-/g' && echo
+}
+function marks2 {
+    ls -l "$MARKPATH" | sed 's:  : :g; s:->:|->:' | cut -d' ' -f9- | column -ts'|'  && echo
+}
+
+function _completemarks {
+  reply=($(ls $MARKPATH))
+}
+
+compctl -K _completemarks jump
+compctl -K _completemarks unmark
+
+#### end quick-jump
+
+# Connect to an already established network manager connection
+# (alas, there's no way to define a new connection from the cli)
+# using the old Ubuntu Pangolin nmcli syntax, which has since changed:
+nmcon() {
+    nmcli con up id $1
+}
+
+# Android adb logcat is supposed to accept a filter argument to show only
+# logs from a single program, but it doesn't work and I have to use grep.
+# But just grepping for the program name gets tons of extra lines from
+# every tap or other event delivered to the program;
+# and piping grep to grep makes grep buffer its output
+# unless the --line-buffered flag is specified.
+# --line-buffered probably isn't needed on the last grep.
+alias adbfeed='adb logcat | grep --line-buffered FeedViewer | grep -v --line-buffered Delivering'
+
+phof () {
+    pho `fotogr $1`
+}
+
+cleanspam() {
+    for folder in $HOME/Spam/*; do
+        if [[ -f $folder ]]; then
+            echo $folder
+            cat $folder >> $HOME/Spam/trained/$(basename $folder)
+            cp /dev/null $folder
+        else
+            echo $folder is not a file
+        fi
+    done
+}
+
+# Two good pages on zsh scripting:
+# http://www.rayninfo.co.uk/tips/zshtips.html
+# http://www.linux-mag.com/id/1079/
