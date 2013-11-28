@@ -669,7 +669,7 @@ alias syncfeeds='rsync -av ~/.cache/feedme/ shallowsky.com:.cache/feedme/'
 # local/xtra urls have to be saved there too.
 # Run with e.g. localurl http://blahblah
 localurl() {
-    echo $* | ssh shallowsky.com 'cat >> web/feedme/feeds/localurls'
+    ( for url in $* ; echo $url ) | ssh shallowsky.com 'cat >> web/feedme/feeds/localurls'
 }
 
 # Remove podcast files except recent ones:
@@ -893,9 +893,13 @@ mycal() {
 
 # Full or nearly-full backup to the specified host:path or directory:
 fullbackup() {
+    if [ $# -eq 0 ]; then
+        echo "Back up to where?"
+        return
+    fi
     pushd ~
     # Copy new files, delete old ones, excluding unimportant dirs
-    rsync -av --delete --exclude Cache --exclude .cache/mozilla --exclude Spam --exclude log --exclude Tarballs --exclude VaioWin --exclude 'Bitlbee' ./ $1
+    sudo rsync -av --delete --exclude Cache --exclude .cache/mozilla --exclude Spam --exclude log --exclude Tarballs --exclude VaioWin --exclude 'Bitlbee' --exclude core --exclude outsrc ./ $1
     popd
 }
 
@@ -903,8 +907,12 @@ fullbackup() {
 # I can't seem to find any way to get zsh to share these lists
 # instead of defining them separately.
 minibackup() {
+    if [ $# -eq 0 ]; then
+        echo "Mini back up to where?"
+        return
+    fi
     pushd ~
-    rsync -av --delete --exclude Cache --exclude .cache/mozilla --exclude Spam --exclude log --exclude '*.mp4' --exclude '*.img' --exclude '*.iso' --exclude DVD --exclude POD --exclude .config/chromium --exclude .cache/chromium --exclude outsrc --exclude .VirtualBox --exclude 'VirtualBox VMs' --exclude .thumbnails --exclude droidsd-old --exclude Tarballs ./ $1
+    sudo rsync -av --delete --exclude Cache --exclude .cache/mozilla --exclude Spam --exclude log --exclude '*.mp4' --exclude '*.img' --exclude '*.iso' --exclude DVD --exclude POD --exclude .config/chromium --exclude .cache/chromium --exclude outsrc --exclude .VirtualBox --exclude 'VirtualBox VMs' --exclude .thumbnails --exclude droidsd-old --exclude Tarballs --exclude core ./ --exclude .googleearth $1
     popd
 }
 
