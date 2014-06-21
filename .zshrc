@@ -207,9 +207,12 @@ alias thes="dict -h localhost -d moby-thesaurus"
 
 alias akk='play ~/.xchat2/sounds/akk.wav'
 
-# Newer versions of xterm no longer support this titlebar setting, sadly.
+# Newer versions of xterm no longer support titlebar setting with
+# the documented sequence of \e]2. But \e]0 works, as long as you
+# don't set XTerm*allowSendEvents.
 titlebar() {
-  echo ']]2;$*'
+  # echo ']]2;$*'
+  echo -e "\033]0; $* \007"
 }
 
 # Spelling check
@@ -220,7 +223,7 @@ sp() {
 ###############################
 # Recursive greps
 gr() {
-  find . \( -type f -and -not -name '*.o' -and -not -name '*.so' -and -not -name '*.a' -and -not -name '*.pyc' -or -name '.metadata' -prune \) -print0 | xargs -0 grep $* /dev/null | fgrep -v .svn | fgrep -v .git
+  find . \( -type f -and -not -name '*.o' -and -not -name '*.so' -and -not -name '*.a' -and -not -name '*.pyc' -and -not -name '*.jpg' -and -not -name '*.JPG' -and -not -name '*.png' -and -not -name '*.xcf*' -and -not -name 'po' -and -not -name '*.tar*' -and -not -name '*.zip' -or -name '.metadata' -prune \) -print0 | xargs -0 grep $* /dev/null | fgrep -v .svn | fgrep -v .git
 }
 cgr() {
   find . \( -name '*.[CchH]' -or -name '*.cpp' -or -name '*.cc' \) -print0 | xargs -0 grep $* /dev/null
@@ -668,8 +671,12 @@ alias syncfeeds='rsync -av ~/.cache/feedme/ shallowsky.com:.cache/feedme/'
 # Now that we're running feeds on shallowsky.com,
 # local/xtra urls have to be saved there too.
 # Run with e.g. localurl http://blahblah
+remove_newlines() {
+    # #" expands escape sequences like \n
+    echo ${1/$'\n'/}
+}
 localurl() {
-    ( for url in $* ; echo $url ) | ssh shallowsky.com 'cat >> web/feedme/feeds/localurls'
+    ( for url in $* ; remove_newlines $url ) | ssh shallowsky.com 'cat >> web/feedme/feeds/localurls'
 }
 
 # Remove podcast files except recent ones:
@@ -733,6 +740,18 @@ alias idamail='mutt -F ~/.mutt/ideascopic'
 alias shallowimap='mutt -F ~/.mutt/shallowimap'
 alias patmail='mutt -F ~/.mutt/patimap'
 alias znet='mutt -F ~/.mutt/znet'
+alias moonmail='mutt -F ~/.mutt/moon'
+
+# Figure out whether we're home or away.
+# if ping -c 1 -q -W 1 moon ; then
+#     echo "We're at home"
+#     alias m='mutt -F ~/.mutt/moon'
+# else
+#     echo "We're traveling"
+#     alias m=mutt
+# fi
+# But we're not doing that right now:
+alias m=mutt
 
 # Text to speech:
 # From commandlinefu:
@@ -798,9 +817,19 @@ alias playdvd="mplayer dvd://1 -alang en"
 
 # Making a PDF from a bunch of slides
 alias talk2pdf='qhtmlprint $( fgrep .html navigate.js  | grep -v // | sed -e "s/\",/\"/" -e "s/\"//g" ) '
+alias talk2pdf1024='qhtmlprint -1024 $( fgrep .html navigate.js  | grep -v // | sed -e "s/\",/\"/" -e "s/\"//g" ) '
 
 # Controlling printers: lpstat -a will list queue names
-alias lpbrother lp -d Brother_HP_LaserJet_4050_Series
+alias lpbrother='lp -d Brother_HP_LaserJet_4050_Series'
+
+# Which printers are available? lpstat -p -d also works.
+alias whichprinters='lpstat -a'
+
+# lp inconsistently decides to use zero margins. When it does, this helps.
+# (In theory, adding -o page-top=17 should add a top margin, but in
+# 2014 this seems to make a negative margin, dropping the first few
+# lines. All hail Linux printing!)
+alias lpp='lp -o page-left=38'
 
 # Mirror a website on a directory. Be sure to include an end slash
 # on the URL!
@@ -811,6 +840,17 @@ mirror() {
     else
         echo "$d needs to end with a slash"
     fi
+}
+
+# What's the current time in UT / GMT?
+ut() {
+    date -u $*
+}
+
+# Convert a fixed date (e.g. for a meeting) from UT/GMT.
+# date -d 'Tue November 12 18:00 UTC' or date -d '18:00 UTC next Friday'
+fromut() {
+    date -d $*
 }
 
 # Subtract dates
@@ -866,7 +906,7 @@ whichspam() {
   fi
   echo Searching in ~/Procmail/spast/$whichfile
   cat ~/Procmail/spast/$whichfile | while read line ; do
-    echo echo "$1" '| egrep -i --' "$line" '>/dev/null'
+    #echo echo "$1" '| egrep -i --' "$line" '>/dev/null'
     #echo "$1" | egrep -i -- "$line" >/dev/null
     echo "$1" | egrep -i -- "$line"
     if [[ $? == 0 ]]; then
@@ -884,22 +924,25 @@ composekey() {
 # Display a postscript calendar some number of months (default 2)
 # using my remind database:
 mycal() {
-    days=$1
-    if [[ x$days == x ]]; then
-        days=2
+    months=$1
+    if [[ x$months == x ]]; then
+        months=2
     fi
-    remind -p$days ~/Docs/Lists/remind  | rem2ps -e -l >/tmp/mycal.ps; gv /tmp/mycal.ps &
+    remind -p$months ~/Docs/Lists/remind  | rem2ps -e -l >/tmp/mycal.ps; gv /tmp/mycal.ps &
 }
 
 # Full or nearly-full backup to the specified host:path or directory:
 fullbackup() {
+    excludes=( --exclude Cache --exclude .cache/mozilla --exclude Spam --exclude log olog --exclude Tarballs --exclude VaioWin --exclude Bitlbee --exclude core --exclude outsrc --exclude .imap POD )
     if [ $# -eq 0 ]; then
         echo "Back up to where?"
         return
     fi
     pushd ~
     # Copy new files, delete old ones, excluding unimportant dirs
-    sudo rsync -av --delete --exclude Cache --exclude .cache/mozilla --exclude Spam --exclude log --exclude Tarballs --exclude VaioWin --exclude 'Bitlbee' --exclude core --exclude outsrc ./ $1
+    echo sudo rsync -av --delete $excludes ./ $1
+    sleep 2
+    sudo rsync -av --delete "${excludes[@]}" ./ $1
     popd
 }
 
@@ -907,12 +950,15 @@ fullbackup() {
 # I can't seem to find any way to get zsh to share these lists
 # instead of defining them separately.
 minibackup() {
+    excludes=( --exclude Cache --exclude .cache/mozilla --exclude Spam --exclude log --exclude '*.mp4' --exclude '*.img' --exclude '*.iso' --exclude DVD --exclude POD --exclude .config/chromium --exclude .cache/chromium --exclude outsrc --exclude .VirtualBox --exclude 'VirtualBox VMs' --exclude .thumbnails --exclude droidsd-old --exclude Tarballs --exclude core exclude .googleearth --exclude .imap )
     if [ $# -eq 0 ]; then
         echo "Mini back up to where?"
         return
     fi
     pushd ~
-    sudo rsync -av --delete --exclude Cache --exclude .cache/mozilla --exclude Spam --exclude log --exclude '*.mp4' --exclude '*.img' --exclude '*.iso' --exclude DVD --exclude POD --exclude .config/chromium --exclude .cache/chromium --exclude outsrc --exclude .VirtualBox --exclude 'VirtualBox VMs' --exclude .thumbnails --exclude droidsd-old --exclude Tarballs --exclude core ./ --exclude .googleearth $1
+    echo sudo rsync -av --delete $excludes ./ $1
+    sleep 2
+    sudo rsync -av --delete "${excludes[@]}" ./ $1
     popd
 }
 
@@ -933,7 +979,11 @@ alias pygrep="langgrep python"
 
 alias tcolors='printf "\e[%dm%d dark\e[0m  \e[%d;1m%d bold\e[0m\n" {30..37}{,,,}'
 
-alias chase='fincompare.py ~/bin/chase.py SRCMX FMAGX FPURX FUSVX LDLAX VSCGX IRCAX SCAL'
+alias chase='fincompare.py ~/bin/chase.py SRCMX FMAGX FPURX BFLAX LDLAX FUSVX VSCGX IRCAX SCAL'
+
+alias moontrade='sshfs moon:/back/trade ~/moontrade'
+alias unmoontrade='fusermount -u ~/moontrade'
+alias remoontrade='sshfs -o reconnect moon:/back/trade ~/moontrade'
 
 # rsync a local web directory to shallowsky.
 toshallow() {
@@ -985,6 +1035,26 @@ compctl -K _completemarks unmark
 
 #### end quick-jump
 
+# Mirror a specific ftp website:
+ftpmirror() {
+list_commands=""
+for dir in thisdir thatdir theotherdir
+do
+  list_commands="$list_commands
+mirror --only-newer -vvv -X '*.ppt' -X '*.doc*' -X '*.pdf' htdocs/$dir $HOME/web/ftpmirror/$dir"
+done
+
+echo Commands to be run:
+echo $list_commands
+echo
+
+lftp <<EOF
+open -u 'user,passwd' ftp.example.com
+$list_commands
+bye
+EOF
+}
+
 # Connect to an already established network manager connection
 # (alas, there's no way to define a new connection from the cli)
 # using the old Ubuntu Pangolin nmcli syntax, which has since changed:
@@ -1011,8 +1081,6 @@ cleanspam() {
             echo $folder
             cat $folder >> $HOME/Spam/trained/$(basename $folder)
             cp /dev/null $folder
-        else
-            echo $folder is not a file
         fi
     done
 }
