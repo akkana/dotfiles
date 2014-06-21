@@ -9,7 +9,7 @@ colorscheme akk
 " set t_ti= t_te=
 
 " Reduce the delay on inserting with O.
-" Another possibility is to turn of esckeys.
+" Another possibility is to turn off esckeys.
 " http://stackoverflow.com/questions/2158516/vim-delay-before-o-opens-a-new-line
 set ttimeoutlen=100
 
@@ -57,18 +57,40 @@ nmap <Nul> <Nop>
 " From the vim list: tag-ify the previous word
 inoremap <leader>, <esc>diwi<<esc>pa><cr></<esc>pa><esc>kA
 
-" Stuff for mail
-" autocmd FileType mail source ~/.vimmailrc
-
 " Case fold searches by default, unless they contain some capital letters.
 set ignorecase
 set smartcase
 
-" textwidth slightly narrower than the default
-set textwidth=70
+" Set wrapping/textwidth according to file location and type.
+function! SetupEnvironment()
+  let l:path = expand('%:p')
+  if (l:path =~ '/home/akkana/Procmail')
+    " When editing spam filters or web databases, disable wrapping:
+    setlocal textwidth=0
+  elseif (&ft == 'python' || &ft == 'c' || &ft == 'html' || &ft == 'php')
+    setlocal textwidth=0
+  " File extensions vim should know about, but doesn't
+  " unless you download special filetype extensions:
+  elseif (l:path =~ '.csv')
+  elseif (&ft == 'mail')
+    " Slightly narrower width for mail (and override mutt's override):
+    setlocal textwidth=68
+  else
+    " default textwidth slightly narrower than the default
+    setlocal textwidth=70
+  endif
+endfunction
+autocmd! BufReadPost,BufNewFile * call SetupEnvironment()
 
+" Indent specifically for the current filetype
+filetype indent on
+" Set indent level to 4, using spaces, not tabs
+set expandtab shiftwidth=4
+
+" Stuff for mail
+" autocmd FileType mail source ~/.vimmailrc
 " Mutt overrides textwidth for mail, unless I override it again:
-autocmd FileType mail set textwidth=68
+" autocmd FileType mail set textwidth=68
 
 " Turn off the 'thanks for flying vim' messages
 set notitle
