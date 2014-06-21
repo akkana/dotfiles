@@ -18,6 +18,10 @@
 ;; Don't prompt for y-e-s-\n
 (fset 'yes-or-no-p 'y-or-n-p)
 
+;; Copy selected text into X CLIPBOARD selection so clueness new apps
+;; (like GIMP now, sigh, bug 730315) can use it.
+(setq x-select-enable-clipboard t)
+
 ;;
 ;; Basic key bindings
 ;;
@@ -60,6 +64,10 @@
 ;; NOT stopping at punctuation:
 (define-key minibuffer-local-completion-map " " 'minibuffer-complete)
 
+;; better handling of duplicate filenames
+(require 'uniquify)
+(setq uniquify-buffer-name-style 'forward)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Custom colors
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -78,6 +86,8 @@
 ;(set-background-color "grey90")
 ; Some decent colors: grey90, Alice Blue, light cyan, mint cream
 (set-background-color "light cyan")
+;(set-background-color "Alice Blue")
+;(set-background-color "#eeeeff")
 (custom-set-faces
  '(flyspell-duplicate ((((class color))
                         (:foreground "red" :underline t :weight bold))))
@@ -379,6 +389,8 @@
 ;; Special code for html and text files
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(setq sentence-end-double-space nil)
+
 ;; Want auto-fill-mode for some text and html files, but not all.
 ;; So define two derived modes for that, and we'll use auto-mode-alist
 ;; to choose them based on filename.
@@ -441,6 +453,9 @@
   (local-set-key "\C-ci" (lambda () (interactive) (sgml-tag "i")))
   (local-set-key "\C-cp" (lambda () (interactive) (sgml-tag "pre")))
   (local-set-key "\C-m" (lambda () (interactive) (insert "\n")))
+  ;; Would be nice if this would fix the horked dash handling in sgml-mode,
+  ;; but alas it has zero effect that I can find.
+  ;;(setq sgml-specials nil)
   (flyspell-mode 1)
   )
 (setq sgml-mode-hook 'html-hook)
@@ -456,16 +471,41 @@
   (local-set-key "\C-ci" 'refresh-iimages)
   (local-set-key "\C-cs" 'screenshot)
   (local-set-key "\C-cr" 'repeat-screenshot)
+  (local-set-key "\C-cp" 'mypaint)
   )
 
+(defun get-and-insert-image (progname imgdir flags)
+  "Prompt for a filename, prepend img/ and append .jpg if needed, then insert a URL for it into the buffer and run a program"
+  (interactive)
+  (let* ((imgfile (read-string "Filename? " imgdir 'my-history))
+         (imgfile (if (string-match "\\." imgfile)
+                      imgfile
+                      ;; (mapconcat 'identity '(imgfile "jpg") ".")
+                      (concat imgfile ".jpg")
+                      ))
+         (excpath (concat "/usr/bin/" progname))
+         )
+    (when (not (file-exists-p imgdir))
+      ;; Make the img directory if it's not there yet
+      (make-directory imgdir t))
+    (insert "file://" imgfile "\n" )
+
+    ;; (if flags
+    ;;     (start-process progname nil excpath flags imgfile)
+    ;;     (start-process progname nil excpath imgfile))
+
+    ;; Make a list of the arguments, including flags only if it's non-nil.
+    (let ((arglist (if flags
+                       (list progname nil excpath flags imgfile)
+                       (list progname nil excpath imgfile))))
+      (apply 'start-process arglist)
+    )))
+
 ;; Call up mypaint to insert a new image
-(defun img ()
+(defun mypaint ()
   "Prompt for a filename, then call up mypaint to create an image"
   (interactive)
-  (let ((imgfile (read-string "Filename? " "xxx.jpg" 'my-history)))
-    (insert "\nfile://" imgfile "\n" )
-    (start-process "mypaint" nil "/usr/bin/mypaint" imgfile)
-  ))
+  (get-and-insert-image "mypaint" "img/" nil))
 
 ;; Call up scrot to insert a new screenshot
 ;; It would be nice to have autocompletion on this, or some sort of
@@ -473,13 +513,27 @@
 (defun screenshot ()
  "Prompt for a filename, then call up scrot to create an interactive screenshot"
   (interactive)
-  (let* ((imgfile (read-string "Filename? " "img/" 'my-history))
+  (get-and-insert-image "scrot" "img/" "-s"))
+
+
+
+;; Call up scrot to insert a new screenshot
+;; It would be nice to have autocompletion on this, or some sort of
+;; warning preventing replacing existing files.
+(defun screenshot-old ()
+ "Prompt for a filename, then call up scrot to create an interactive screenshot"
+  (interactive)
+  (let* ((imgdir "img/")
+         (imgfile (read-string "Filename? " imgdir 'my-history))
          (imgfile (if (string-match "\\." imgfile)
                       imgfile
                       ;; (mapconcat 'identity '(imgfile "jpg") ".")
                       (concat imgfile ".jpg")
                       ))
          )
+    (when (not (file-exists-p imgdir))
+      ;; Make the img directory if it's not there yet
+      (make-directory imgdir t))
     (insert "file://" imgfile "\n" )
     (start-process "scrot" nil "/usr/bin/scrot" "-s" imgfile)
   ))
@@ -550,7 +604,11 @@
   )
 (add-hook 'ruby-mode-hook 'ruby-stuff-hook)
 
+;; Modes to use on specific files:
 (setq auto-mode-alist
+
+;; file types -- too bad emacs doesn't handle most of these automatically.
+      (cons '("\\.epub$" . archive-mode)
       (cons '("\\.pde$" . c-mode)
       (cons '("\\.ino$" . c-mode)
       (cons '("\\.py$" . python-mode)
@@ -560,17 +618,30 @@
       (cons '("\\.scm$" . scheme-mode)
       (cons '("\\.blx$" . html-wrap-mode)
       (cons '("\\.html$" . html-wrap-mode)
+      (cons '("\\.xml$" . xml-mode)
       (cons '("\\.js$" . javascript-mode)
       (cons '("\\.r$" . r-mode)
+      (cons '("\\.img$" . text-img-mode)
+
+;; A few special settings by location or name,
+;; for files that may not have type-specific extensions:
+      (cons '("Docs/Lists" . text-mode)
       (cons '("blogstuff/" . html-wrap-mode)
       (cons '("Docs/gimp/book/notes" . text-wrap-mode)
       (cons '("README" . text-wrap-mode)
 ;; Book used to be longlines mode, but that was too flaky.
       (cons '("Docs/gimp/book/" . text-wrap-mode)
-      (cons '("Docs/classes/" . text-img-mode)
-      (cons '("Docs/" . text-wrap-mode)
       (cons '("linux-.*/" . linux-c-mode)
-            auto-mode-alist) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) )
+
+;; iimage mode is so cool!
+      (cons '("Docs/classes/" . text-img-mode)
+      (cons '("Docs/Notes/househunt/houses" . text-img-mode)
+      (cons '("Docs/Notes/househunt/sold" . text-img-mode)
+
+;; A default for Docs/, must be after the competing Docs/* definitions:
+      (cons '("Docs/" . text-wrap-mode)
+
+            auto-mode-alist) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Autocomplete stuff
