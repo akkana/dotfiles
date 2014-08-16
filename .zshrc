@@ -139,7 +139,8 @@ export PHO_ARGS=-p
 
 # aliases
 
-alias sss="ssh shallowsky.com"
+alias sss="titlebar D N A; ssh shallowsky.com; titlebar local"
+alias ssm="ssh moon"
 
 #ls() { /bin/ls -F --color $* ; }
 #ll() { /bin/ls -laF --color $* ; }
@@ -268,19 +269,25 @@ spams() {
     decodemail -a Subject: ~/Spam/trained/saved ~/Spam/saved | egrep -a -i "$*"
 }
 spamf() {
-    grep -a -h '^From:' ~/Spam/trained/saved ~/Spam/saved | egrep -a -i "$*"
-    #decodemail -a From: ~/Spam/saved ~/Spam/trained/saved | egrep -a -i "$*"
+    #grep -a -h '^From:' ~/Spam/trained/saved ~/Spam/saved | egrep -a -i "$*"
+    decodemail -a From: ~/Spam/saved ~/Spam/trained/saved | egrep -a -i "$*"
 }
 spamff() {
-    grep -a -h '^From' ~/Spam/trained/saved ~/Spam/saved | egrep -a -i "$*"
-    #decodemail -a From ~/Spam/saved ~/Spam/trained/saved | egrep -a -i "$*"
+    #grep -a -h '^From' ~/Spam/trained/saved ~/Spam/saved | egrep -a -i "$*"
+    decodemail -a From ~/Spam/saved ~/Spam/trained/saved | egrep -a -i "$*"
 }
 
-# halt and reboot don't always work on the Vaio,
-# and can't be run suid.
-alias off="sudo shutdown -h now"
-alias halt="sudo shutdown -h now"
-alias reboot="sudo shutdown -r now"
+# Don't accidentally halt on server machines.
+hostname=$(hostname)
+if [[ $hostname == 'moon' || $hostname == 'dna' ]]; then
+  alias off="echo This is $hostname, you fool!"
+  alias halt="echo This is $hostname, you fool!"
+  alias reboot="echo This is $hostname, you fool!"
+else
+  alias off="sudo shutdown -h now"
+  alias halt="sudo shutdown -h now"
+  alias reboot="sudo shutdown -r now"
+fi
 
 # blog stuff -- helpers for pyblosxom
 blogupdate() {
@@ -933,7 +940,7 @@ mycal() {
 
 # Full or nearly-full backup to the specified host:path or directory:
 fullbackup() {
-    excludes=( --exclude Cache --exclude .cache/mozilla --exclude Spam --exclude log olog --exclude Tarballs --exclude VaioWin --exclude Bitlbee --exclude core --exclude outsrc --exclude .imap POD )
+    excludes=( --exclude Cache --exclude .cache/mozilla --exclude Spam --exclude LOG --exclude log --exclude olog --exclude Tarballs --exclude VaioWin --exclude Bitlbee --exclude core --exclude outsrc --exclude .imap --exclude POD )
     if [ $# -eq 0 ]; then
         echo "Back up to where?"
         return
@@ -950,7 +957,7 @@ fullbackup() {
 # I can't seem to find any way to get zsh to share these lists
 # instead of defining them separately.
 minibackup() {
-    excludes=( --exclude Cache --exclude .cache/mozilla --exclude Spam --exclude log --exclude '*.mp4' --exclude '*.img' --exclude '*.iso' --exclude DVD --exclude POD --exclude .config/chromium --exclude .cache/chromium --exclude outsrc --exclude .VirtualBox --exclude 'VirtualBox VMs' --exclude .thumbnails --exclude droidsd-old --exclude Tarballs --exclude core exclude .googleearth --exclude .imap )
+    excludes=( --exclude Cache --exclude .cache/mozilla --exclude Spam --exclude LOG --exclude log --exclude olog --exclude '*.mp4' --exclude '*.img' --exclude '*.iso' --exclude DVD --exclude POD --exclude .config/chromium --exclude .cache/chromium --exclude outsrc --exclude .VirtualBox --exclude 'VirtualBox VMs' --exclude .thumbnails --exclude droidsd-old --exclude Tarballs --exclude core --exclude .googleearth --exclude .imap )
     if [ $# -eq 0 ]; then
         echo "Mini back up to where?"
         return
@@ -965,8 +972,6 @@ minibackup() {
 # Something is writing to recently-used.xbel and I'm not sure what.
 # This might help to monitor it.
 alias recent='ls -l ~/recently-used.xbel*(.N) ~/.local/share/recently-used.xbel*'
-
-alias sss='ssh shallowsky.com'
 
 # Torikun says this might work for talking to the raspberry pi.
 # It has something to do with openvpn and might require running a DHCP
@@ -1072,7 +1077,7 @@ nmcon() {
 alias adbfeed='adb logcat | grep --line-buffered FeedViewer | grep -v --line-buffered Delivering'
 
 phof () {
-    pho `fotogr $1`
+    pho `fotogr $*`
 }
 
 cleanspam() {
