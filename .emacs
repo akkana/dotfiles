@@ -40,8 +40,9 @@
 ;; (global-set-key "\M-/" 'apropos)
 (global-set-key "\C-c\C-c" 'kill-emacs)
 (global-set-key "\C-r" 'isearch-backward)
-(global-set-key "\C-c\C-r" 'revert-buffer)
 (global-set-key "\C-x\C-i" 'indent-region)
+
+(global-set-key "\C-x%" 'match-paren)
 
 ;; Use home/end to go to beginning/end of file, not line;
 ;; because ^A/^E are easy to hit but M-<> are not
@@ -49,8 +50,39 @@
 (global-set-key [home] 'beginning-of-buffer)
 (global-set-key [end] 'end-of-buffer)
 
-(load "web-mode")
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Set a few key bindings that override everything and can't get
+;; overridden by minor modes.
+;; http://stackoverflow.com/questions/683425/globally-override-key-binding-in-emacs
+;; but that doesn't have all the details.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defvar global-keys-minor-mode-map (make-sparse-keymap)
+  "global-keys-minor-mode keymap.")
 
+(define-key global-keys-minor-mode-map "\C-c\C-r" 'revert-buffer)
+(define-key global-keys-minor-mode-map (kbd "C-;") 'insert-date)
+
+(define-minor-mode global-keys-minor-mode
+  "A minor mode so that global key settings override annoying major modes."
+  t "global-keys" 'global-keys-minor-mode-map)
+
+(global-keys-minor-mode 1)
+
+;; A keymap that's supposed to be consulted before the first
+;; minor-mode-map-alist.
+(defconst global-minor-mode-alist (list (cons 'global-keys-minor-mode
+                                              global-keys-minor-mode-map)))
+(setf emulation-mode-map-alists '(global-minor-mode-alist))
+
+;; Not sure if this part is actually needed.
+;; It might depend on what key bindings are in global-keys-minor-mode-map.
+(defun my-minibuffer-setup-hook ()
+  (global-keys-minor-mode 0))
+(add-hook 'minibuffer-setup-hook 'my-minibuffer-setup-hook)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;; end global-keys code ;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;; Undo handling ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; I keep hitting ^Z accidentally, and at the same time I can
 ;; never remember what undo is normally bound to.
 ;; Unfortunately this will suck if I run emacs from the shell,
@@ -69,10 +101,18 @@
 ;; with emacs-installed packages. Then you have to read the comments
 ;; at the beginning of undo-tree.el to figure out how to use it since
 ;; there's no online documentation. *eyeroll*
-(package-initialize)
-(undo-tree-mode 1)
-(global-set-key "\C-z" 'undo-tree-undo)
-(global-set-key "\M-z" 'undo-tree-redo)
+(if (>= emacs-major-version 24)
+    (progn
+        (package-initialize)
+        (undo-tree-mode 1)
+        (global-set-key "\C-z" 'undo-tree-undo)
+        (global-set-key "\M-z" 'undo-tree-redo)
+        )
+    (progn
+        (load "redo.el")
+        (global-set-key "\M-z" 'redo)
+        ) )
+;;;;;;;;;;;;;;;;;;;;;;;; end Undo ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Make space do what tab does when autocompleting,
 ;; NOT stopping at punctuation:
@@ -214,10 +254,6 @@
 ;; See also http://www.oreillynet.com/onlamp/blog/2005/01/quick_tip_for_linux_users_havi.html
 ;(setq x-select-enable-clipboard nil)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; End annoyances
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 ;(setq default-case-fold-search nil)
 (setq delete-auto-save-files t)
 (setq make-backup-files nil)
@@ -226,6 +262,10 @@
 
 ;; stop prompting me when I try to edit a link to an svn file
 (setq vc-follow-symlinks t)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; End annoyances
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;(setq default-major-mode 'text-mode)
 (setq fill-column 75)
@@ -241,7 +281,15 @@
 ;; Useful utilities
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; This one works -- thanks to ggole on #emacs
+;; Match paren.  from http://grok2.tripod.com/
+(defun match-paren (arg)
+  "Go to the matching paren if on a paren; otherwise insert %."
+  (interactive "p")
+  (cond ((looking-at "\\s\(") (forward-list 1) (backward-char 1))
+	((looking-at "\\s\)") (forward-char 1) (backward-list 1))
+	(t (self-insert-command (or arg 1)))))
+
+;; Run this on a buffer inside a <pre> to convert chars like < into entities.
 (defun unhtml (start end)
   (interactive "r")
   (save-excursion
@@ -254,34 +302,6 @@
       (goto-char (point-min))
       (replace-string ">" "&gt;")
       )))
-
-;; These two don't work -- suggestions from other #emacs folks.
-(defun unhtml2 ()
-  "Eliminate HTML special characters < > & within the region."
-  (interactive)
-  (narrow-to-region (region-beginning) (region-end))
-  (goto-char (region-beginning))
-  (replace-string "&" "&amp;")
-  (goto-char (region-beginning))
-  (replace-string "<" "&lt;")
-  (goto-char (region-beginning))
-  (replace-string ">" "&gt;")
-  (widen)
-)
-
-(defun unhtml3 ()
-  "Eliminate HTML special characters < > & within the region."
-  (interactive)
-  (goto-char (region-beginning))
-  ;(while (search-forward "&" (region-end))
-  ;  (replace-match "&amp;"))
-  (while (search-forward "<" (region-end))
-    (replace-match "&lt;"))
-  (goto-char (region-beginning))
-  (while (search-forward ">" (region-end))
-    (replace-match "&gt;"))
-  (goto-char (region-beginning))
-)
 
 ;; Create a basic HTML page template -- I get tired of typing this all the time.
 ;; Strangely, you have to have some text in the file already --
@@ -328,17 +348,6 @@
     )
   )
 
-;; For mac files
-(defun showmac () "Show the file with mac newline encoding" (interactive)
-  (let ((coding-system-for-read 'mac)) (revert-buffer nil t)))
-
-;; Call lxr on an identifier
-;;Select an identifier as the region, then C-c C-l i
-(defun lxr-ident (start end) (interactive "r")
-  (let ((ident (buffer-substring start end)))
-    (shell-command (concat "mozilla-remote --newwin http://lxr.mozilla.org/seamonkey/ident\?i=" ident))))
-(global-set-key "\C-c\C-li" 'lxr-ident)
-
 ;; Kill All Buffers without prompting.
 ;; Modified from kill-some-buffers in files.el, which prompts too much.
 (defun kill-all-buffers ()
@@ -383,37 +392,6 @@
     (set-fill-column save-fill-column)
     ))
 
-(defun flashcard () "Create flashcard lines from ed2go vocab"
-  (interactive)
-  ;; series of separate save-excursions because each replace
-  ;; needs to run from point to the end of the file.
-
-  ;; eliminate whitespace at BOL
-  (save-excursion
-    (replace-regexp "^\s*" ""))
-
-  ;; combine any multiple lines:
-  ;; another way to do this would be to loop over lines,
-  ;; do some sort of looking-at trick then call join-lines.
-  (save-excursion
-    (let ((save-fill-column fill-column))
-      (set-fill-column 1000000)
-      (fill-individual-paragraphs (point) (point-max))
-      (delete-matching-lines "^$")
-      (set-fill-column save-fill-column)))
-
-  (save-excursion
-    (delete-matching-lines "^$"))
-
-  ;; add python-ish stuff
-  (save-excursion
-    (replace-regexp "^\\([^]].*?\\) *= *\\(.*\\) *" "    \[ \"\\1\", \"\\2\" \],"))
-
-  ;; Leave in "Dialog #" as comments
-  (save-excursion
-    (replace-regexp "^[\s-]*Dialog" "    # Dialog"))
-)
-
 ;;
 ;; Derived C modes, setting different styles for different files.
 ;;
@@ -421,6 +399,40 @@
   (c-set-style "gnu"))
 (define-derived-mode linux-c-mode c-mode "GNU C mode"
   (c-set-style "linux"))
+
+(defun indent-whole-buffer ()
+      "indent whole buffer and untabify it"
+      (interactive)
+      (delete-trailing-whitespace)
+      (indent-region (point-min) (point-max) nil)
+      (untabify (point-min) (point-max)))
+
+;; Disable obnoxious "Electric" re-indenting in c- and java-modes.
+;; It's useful on some characters, but awful when you can't add a comment
+;; without re-indenting the line.
+(defun no-electric (keymap)
+  (progn
+    (define-key keymap ";" 'self-insert-command)
+    (define-key keymap "/" 'self-insert-command)
+    (define-key keymap "*" 'self-insert-command)
+    (define-key keymap "(" 'self-insert-command)
+    (define-key keymap ")" 'self-insert-command)
+;    (define-key keymap "{" 'self-insert-command)
+;    (define-key keymap "}" 'self-insert-command)
+    (define-key keymap "," 'self-insert-command)
+ ))
+
+;; But these stopped working, maybe because the names for the maps
+;; are wrong. thunk on #emacs points to:
+;; ,,df current-local-map and ,,df local-unset-key
+(add-hook 'c-mode-hook (lambda () (no-electric c-mode-map)))
+(add-hook 'c++-mode-hook (lambda () (no-electric c-mode-map)))
+(add-hook 'java-mode-hook (lambda () (no-electric java-mode-map)))
+
+(add-hook 'js-mode-hook (lambda ()
+  (define-key js-mode-map "," 'self-insert-command)
+  (define-key js-mode-map ";" 'self-insert-command)
+ ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Special code for html and text files
@@ -437,6 +449,7 @@
   ;; it calls a browser on it, replacing whatever's in your current
   ;; browser window.
   (html-autoview-mode -1)
+
 )
 (define-derived-mode text-wrap-mode text-mode "Text wrap mode"
   (auto-fill-mode))
@@ -479,6 +492,8 @@
   (local-set-key "\C-m" 'newline-and-text-indent)
   (flyspell-mode 1)
   (flyspell-buffer)
+  (local-set-key (kbd "C-;") 'insert-date)
+  (global-set-key (kbd "C-;") 'insert-date)
   )
 (setq text-mode-hook 'text-indent-hook)
 
@@ -489,6 +504,11 @@
   (local-set-key "\C-cb" (lambda () (interactive) (sgml-tag "b")))
   (local-set-key "\C-ci" (lambda () (interactive) (sgml-tag "i")))
   (local-set-key "\C-cp" (lambda () (interactive) (sgml-tag "pre")))
+  (local-set-key "\C-cc" (lambda () (interactive) (sgml-tag "code")))
+  (local-set-key "\C-c1" (lambda () (interactive) (sgml-tag "h1")))
+  (local-set-key "\C-c2" (lambda () (interactive) (sgml-tag "h2")))
+  (local-set-key "\C-c3" (lambda () (interactive) (sgml-tag "h3")))
+  (local-set-key "\C-c4" (lambda () (interactive) (sgml-tag "h4")))
   (local-set-key "\C-m" (lambda () (interactive) (insert "\n")))
   ;; Would be nice if this would fix the horked dash handling in sgml-mode,
   ;; but alas it has zero effect that I can find.
@@ -496,6 +516,27 @@
   (flyspell-mode 1)
   )
 (setq sgml-mode-hook 'html-hook)
+
+;; A mode for editing tab-separated tables, or any other file
+;; where you want TAB to insert a tab. (You wouldn't think that
+;; would be difficult, but it is! indent-tabs-mode doesn't do it,
+;; lines inserted at the beginning of the file are still untabified.)
+(define-derived-mode tabbed-mode text-mode "Tab separated mode"
+  (local-set-key (kbd "TAB") 'self-insert-command)
+  )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Insert the current date into the buffer.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; http://ergoemacs.org/emacs/elisp_datetime.html
+(defun insert-date ()
+  "Insert current date yyyy-mm-dd."
+  (interactive)
+  (when (region-active-p)
+    (delete-region (region-beginning) (region-end) )
+    )
+  (insert (format-time-string "%Y-%m-%d"))
+  )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Mixed text and image mode using iimage -- this is so cool!
@@ -601,103 +642,25 @@
   (iimage-mode t)
   (message "Refreshed images")
   )
+;;;;;;;;;;;;;;;;;;;;; end iimage-mode helpers ;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Long lines mode: emacs doesn't have a way comparable to
-;; vim's "set linebreak" to show long lines as wrapped visually,
-;; without changing the file.  longlines-mode adds a minor mode
-;; to change the file upon reading it in, then change it back
-;; when it's saved.  Ick, but that's apparently all emacs can do.
-;; http://www.emacswiki.org/elisp/longlines.el
-;(autoload 'longlines-mode
-;  "longlines.el"
-;  "Minor mode for automatically wrapping long lines." t)
+;; Coding helpers
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;(setq longlines-wrap-follows-window-size t)
-;(setq longlines-show-hard-newlines t)
+;; Make Python files executable. It would be nice if this ran
+;; only on Python files, but I haven't figured out how.
+;; Hopefully it doesn't take too long to do it everywhere.
+(add-hook 'after-save-hook 'executable-make-buffer-file-executable-if-script-p)
 
-;; A mode for editing tab-separated tables, or any other file
-;; where you want TAB to insert a tab. (You wouldn't think that
-;; would be difficult, but it is! indent-tabs-mode doesn't do it,
-;; lines inserted at the beginning of the file are still untabified.)
-(define-derived-mode tabbed-mode text-mode "Tab separated mode"
-  (local-set-key (kbd "TAB") 'self-insert-command)
-  )
+;; Mode for editing HTML/PHP files. It's not great but better than nothing.
+(load "web-mode")
 
-;; Some modes, like Python, override my "\C-c\C-r" 'revert-buffer binding
-;; (for older emacsen, try py-mode-map instead of python- )
-(defun reset-revert-buffer ()
-  (define-key python-mode-map "\C-c\C-r" 'revert-buffer)
- )
-(setq python-mode-hook 'reset-revert-buffer)
-
-; Ruby
-(autoload 'ruby-mode "ruby-mode" "Load ruby-mode")
-(defun ruby-stuff-hook ()
-  (local-set-key "\C-m" 'newline-and-text-indent)
-  (turn-on-font-lock)
-  )
-(add-hook 'ruby-mode-hook 'ruby-stuff-hook)
-
-;; Modes to use on specific files:
-(setq auto-mode-alist
-
-;; file types -- too bad emacs doesn't handle most of these automatically.
-      (cons '("\\.epub$" . archive-mode)
-      (cons '("\\.pde$" . c-mode)
-      (cons '("\\.ino$" . c-mode)
-      (cons '("\\.py$" . python-mode)
-      (cons '("\\.rb$" . ruby-mode)
-      (cons '("\\.R$" . R-mode)
-      (cons '("\\.m$" . octave-mode)
-      (cons '("\\.scm$" . scheme-mode)
-      (cons '("\\.blx$" . html-wrap-mode)
-      (cons '("\\.html$" . html-wrap-mode)
-      (cons '("\\.xml$" . xml-mode)
-      (cons '("\\.js$" . javascript-mode)
-      (cons '("\\.r$" . r-mode)
-      (cons '("\\.img$" . text-img-mode)
-      (cons '("\\.php" . web-mode)
-
-;; Make sure changelogs don't use text-wrap-mode -- they're too long,
-;; and spellcheck takes forever.
-      (cons '("ChangeLog" . fundamental-mode)
-
-;; A few special settings by location or name,
-;; for files that may not have type-specific extensions:
-      (cons '("Docs/Lists" . text-mode)
-      (cons '("blogstuff/" . html-wrap-mode)
-      (cons '("Docs/gimp/book/notes" . text-wrap-mode)
-      (cons '("README" . text-wrap-mode)
-;; Book used to be longlines mode, but that was too flaky.
-      (cons '("Docs/gimp/book/" . text-wrap-mode)
-      (cons '("linux-.*/" . linux-c-mode)
-      (cons '("web/peec" . web-mode)
-
-;; iimage mode is so cool!
-      (cons '("Docs/classes/" . text-img-mode)
-      (cons '("Docs/Notes/househunt/houses" . text-img-mode)
-      (cons '("Docs/Notes/househunt/sold" . text-img-mode)
-
-;; A default for Docs/, must be after the competing Docs/* definitions:
-      (cons '("Docs/" . text-wrap-mode)
-
-            auto-mode-alist))))))))))))))))))))))))))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Autocomplete stuff
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(setq completion-ignored-extensions
-      '(".xpt" ".a" ".so" ".o" ".d" ".elc" ".class" "~" ".ckp" ".bak" ".imp" ".lpt" ".bin" ".otl" ".err" ".lib" ".x9700" ".aux" ".elf" ))
-
-;; make command completion complete as far as possible, not just first word
-;; unfortunately, this doesn't work
-;(define-key minibuffer-local-must-match-map " " minibuffer-complete)
-
-;; This is supposed to prevent the excessive making of local backup files.
-;; http://jamesthornton.com/emacs/chapter/emacs_16.html#SEC150
-(setq vc-cvs-stay-local nil)
+(defun my-web-mode-hook ()
+  "Hooks for Web mode."
+  (setq web-mode-code-indent-offset 4)
+)
+(add-hook 'web-mode-hook 'my-web-mode-hook)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; C and related modes
@@ -755,22 +718,73 @@
 
 (setq octave-block-offset 4)
 
-;; Recent Emacsen have a bug where the block cursor disappears sometimes,
-;; like if you go to the beginning of an existing line and delete backward.
-;; Changing to a bar cursor fixes it.  Hope you like a bar cursor!
-;; See http://6v8.gamboni.org/Emacs-and-OS-X.html (happens on linux too).
-;; (setq initial-frame-alist
-;;   (cons '(cursor-type . bar)
-;;         (copy-alist initial-frame-alist)
-;;    )
-;; )
-;; (setq default-frame-alist
-;;    (cons '(cursor-type . bar)
-;;          (copy-alist default-frame-alist)
-;;     )
-;; )
+; Ruby
+(autoload 'ruby-mode "ruby-mode" "Load ruby-mode")
+(defun ruby-stuff-hook ()
+  (local-set-key "\C-m" 'newline-and-text-indent)
+  (turn-on-font-lock)
+  )
+(add-hook 'ruby-mode-hook 'ruby-stuff-hook)
 
-;; adapted from
+;; Modes to use on specific files.
+;; Kinda weird that programming modes can't sort this out themselves.
+(setq auto-mode-alist
+
+;; file types -- too bad emacs doesn't handle most of these automatically.
+      (cons '("\\.epub$" . archive-mode)
+      (cons '("\\.pde$" . c-mode)
+      (cons '("\\.ino$" . c-mode)
+      (cons '("\\.py$" . python-mode)
+      (cons '("\\.rb$" . ruby-mode)
+      (cons '("\\.R$" . R-mode)
+      (cons '("\\.m$" . octave-mode)
+      (cons '("\\.scm$" . scheme-mode)
+      (cons '("\\.blx$" . html-wrap-mode)
+      (cons '("\\.html$" . html-wrap-mode)
+      (cons '("\\.xml$" . xml-mode)
+      (cons '("\\.js$" . javascript-mode)
+      (cons '("\\.r$" . r-mode)
+      (cons '("\\.img$" . text-img-mode)
+      (cons '("\\.php" . web-mode)
+
+;; Make sure changelogs don't use text-wrap-mode -- they're too long,
+;; and text-mode invokes spellcheck which takes forever.
+      (cons '("ChangeLog" . fundamental-mode)
+
+;; A few special settings by location or name,
+;; for files that may not have type-specific extensions:
+      (cons '("Docs/Lists" . text-mode)
+      (cons '("blogstuff/" . html-wrap-mode)
+      (cons '("Docs/gimp/book/notes" . text-wrap-mode)
+      (cons '("README" . text-wrap-mode)
+;; Book used to be longlines mode, but that was too flaky.
+      (cons '("Docs/gimp/book/" . text-wrap-mode)
+      (cons '("linux-.*/" . linux-c-mode)
+      (cons '("web/peec" . web-mode)
+
+;; iimage mode is so cool!
+      (cons '("Docs/classes/" . text-img-mode)
+      (cons '("Docs/Notes/househunt/houses" . text-img-mode)
+      (cons '("Docs/Notes/househunt/sold" . text-img-mode)
+
+;; A default for Docs/, must be after the competing Docs/* definitions:
+      (cons '("Docs/" . text-wrap-mode)
+
+            auto-mode-alist))))))))))))))))))))))))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Autocomplete stuff
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(setq completion-ignored-extensions
+      '(".xpt" ".a" ".so" ".o" ".d" ".elc" ".class" "~" ".ckp" ".bak"
+        ".imp" ".lpt" ".bin" ".otl" ".err" ".lib" ".x9700" ".aux" ".elf" ))
+
+;; This is supposed to prevent the excessive making of local backup files.
+;; http://jamesthornton.com/emacs/chapter/emacs_16.html#SEC150
+(setq vc-cvs-stay-local nil)
+
+;; Change window size on smaller screens. Adapted from
 ;; http://stackoverflow.com/questions/92971/how-do-i-set-the-size-of-emacs-window
 (defun set-frame-size-according-to-resolution ()
   (interactive)
@@ -794,35 +808,16 @@
 
 (set-frame-size-according-to-resolution)
 
-(put 'eval-expression 'disabled nil)
-
-; (autoload 'pmodify "ptools" "ptools utilities" t)
-
-; Load a better man package
-(autoload 'manual-entry "man-background"
-	  "Run UNIX man in the background.  When it's finished,
-a man entry window pops up." t)
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Turn debugging back off.  Put any questionable code after these lines!
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (setq debug-on-error nil)
 (setq stack-trace-on-error nil)
-
-; (load-library "paren")
+(put 'eval-expression 'disabled nil)
 
 ;;;
-;;; KEYPAD BINDINGS:
-;;; Argh!  The names of the keypad keys change with every emacs release!!
-;;; Put this at END of .emacs so that if it bombs, at least it won't
-;;; put us in error-debug mode.
-;;;
-;;; I think the most common reason for it bombing is changing
-;;; keyboard maps.  Judicious control over the keymap used at boot
-;;; time helps this quite a bit.
-;;;
-
+;;; KEYPAD BINDINGS
 ;;
 ;; How this works:
 ;; The keypad arrow keys let you move in the four directions.
@@ -893,102 +888,6 @@ a man entry window pops up." t)
 ;; End keypad bindings
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; Is this really required any more? Apparently not.
-;;(require 'mwheel)
-;;(mwheel-install)
-
-;; Disable obnoxious "Electric" re-indenting in c- and java-modes.
-;; http://www.gnu.org/software/emacs/manual/html_mono/ccmode.html
-;; XXX But really we probably want this in C mode;
-;; it's just in java mode where it doesn't work right,
-;; because java and javascript modes are so aggressive about
-;; indenting whenever you type a comma, semicolon etc.
-;; Sadly, no: it's aggressive in c-mode too. Try putting a //
-;; in front of a brace, for example.
-;; But if you turn it off, C mode is unusable: when you type a { or }
-;; it doesn't go to the right place. Sigh!
-;; (setq-default c-electric-flag nil)
-
-;; Earlier attempt to do this:
-(defun no-electric (keymap)
-  (progn
-    (define-key keymap ";" 'self-insert-command)
-    (define-key keymap "/" 'self-insert-command)
-    (define-key keymap "*" 'self-insert-command)
-    (define-key keymap "(" 'self-insert-command)
-    (define-key keymap ")" 'self-insert-command)
-;    (define-key keymap "{" 'self-insert-command)
-;    (define-key keymap "}" 'self-insert-command)
-    (define-key keymap "," 'self-insert-command)
- ))
-
-;; Balancing parens:
-;; <josteink> akk: my favourite way of getting that sorted out is (indent-whole-buffer)
-;; <josteink> makes it obvious where the error is introduced when scanning from top to bottom
-;; <mr_snowf1ake> akk: rainbow-delimeters also can help
-;; <mr_snowf1ake> akk: and i think it might have been auto-highlight-symbols that highlights the matching paren?
-;; <josteink> akk: http://pastebin.com/KBa6zhhX
-;; <mr_snowf1ake> i have so many plugins haha.. can't keep track of them...
-;; <JordiGH> ,plugin
-;; <fsbot> Emacs doesn't have plugins, it has elisp packages
-;; <mr_snowf1ake> sorry
-;; <mr_snowf1ake> i meant packages
-;; <c3w> there is show-paren-mode
-;; <c3w> I use paredit to balance parens, it's very proactive
-;; <c3w> akk: also hl-sexp-mode
-
-(defun indent-whole-buffer ()
-      "indent whole buffer and untabify it"
-      (interactive)
-      (delete-trailing-whitespace)
-      (indent-region (point-min) (point-max) nil)
-      (untabify (point-min) (point-max)))
-
-;; But these stopped working, maybe because the names for the maps
-;; are wrong. thunk on #emacs points to:
-;; ,,df current-local-map and ,,df local-unset-key
-(add-hook 'c-mode-hook (lambda () (no-electric c-mode-map)))
-(add-hook 'c++-mode-hook (lambda () (no-electric c-mode-map)))
-(add-hook 'java-mode-hook (lambda () (no-electric java-mode-map)))
-
-(add-hook 'js-mode-hook (lambda ()
-  (define-key js-mode-map "," 'self-insert-command)
-  (define-key js-mode-map ";" 'self-insert-command)
- ))
-
-;;(defun my-c-mode-hook ()
-;;  (no-electric c-mode-map))
-;;(defun my-js-mode-hook ()
-;;  (no-electric java-mode-map))
-
-;;
-;;     ;;(setq font-lock-keywords 
-;;     ;;      (append moz-font-lock-keywords 
-;;     ;;              c-font-lock-keywords-2))
-;;     ;; Turn off obnoxious electric-indent modes:
-;;     (define-key c-mode-map ";" 'self-insert-command)
-;;     (define-key c-mode-map "/" 'self-insert-command)
-;;     (define-key c-mode-map "*" 'self-insert-command)
-;;     (define-key c-mode-map "{" 'self-insert-command)
-;; ;    (define-key c-mode-map "}" 'self-insert-command)
-;;     (define-key c-mode-map "," 'self-insert-command)
-;;  ))
-
-;(setq c-mode-hook 'my-c-mode-hook)
-;(setq c++-mode-hook 'my-c-mode-hook)
-
-;; Match paren.  from http://grok2.tripod.com/
-(defun match-paren (arg)
-  "Go to the matching paren if on a paren; otherwise insert %."
-  (interactive "p")
-  (cond ((looking-at "\\s\(") (forward-list 1) (backward-char 1))
-	((looking-at "\\s\)") (forward-char 1) (backward-list 1))
-	(t (self-insert-command (or arg 1)))))
-(global-set-key "\C-x%" 'match-paren)
-
-; (require 'icicles)
-; (icy-mode 1)
-
 ;; Open recent files
 (require 'recentf)
 (recentf-mode 1)
@@ -1001,39 +900,6 @@ a man entry window pops up." t)
 (load "recent-minibuffer")
 (setq enable-recursive-minibuffers t)
 (global-set-key "\C-cr" 'recentf-minibuffer-dialog)
-
-;; ;(defun recentf-open-files-compl ()
-;; (defun foorecent ()
-;;   "Show a menu of recent files ... or something"
-;;   (interactive)
-;;   (let* ((all-files recentf-list)
-;;          (tocpl (mapcar (function
-;;                          (lambda (x) (cons (file-name-nondirectory x) x)))
-;;                         all-files))
-;;          (prompt (append ‘(“File name: “) tocpl))
-;;          (fname (completing-read (car prompt) (cdr prompt) nil nil)))
-;;     (find-file (cdr (assoc-string fname tocpl)))))
-;; ;(global-set-key [(control x)(control r)] ‘recentf-open-files-compl)
-;; ;(global-set-key "C-xC-r" ‘recentf-open-files-compl)
-;; (global-set-key "C-xC-r" ‘foorecent)
-
-;; ;; http://www.masteringemacs.org/articles/2011/01/27/find-files-faster-recent-files-package/
-;; ;; get rid of `find-file-read-only' and replace it with something
-;; ;; more useful.
-;; (global-set-key (kbd "C-x C-r") 'ido-recentf-open)
-
-;; ;; enable recent files mode.
-;; (recentf-mode t)
-
-;; ; 50 files ought to be enough.
-;; (setq recentf-max-saved-items 50)
-
-;; (defun ido-recentf-open ()
-;;   "Use `ido-completing-read' to \\[find-file] a recent file"
-;;   (interactive)
-;;   (if (find-file (ido-completing-read "Find recent file: " recentf-list))
-;;       (message "Opening file...")
-;;     (message "Aborting")))
 
 ;;
 ;; tramp-mode is lovely for remote editing, but it sure does take a
@@ -1095,51 +961,3 @@ a man entry window pops up." t)
 ;; http://cjohansen.no/an-introduction-to-elisp
 ;; http://ergoemacs.org/emacs/elisp.html
 ;;
-
-;; http://www.emacswiki.org/emacs/AutoEncryption
-
-;; (defvar pgg-gpg-user-id "akkana@shallowsky.com")
-;; (autoload 'pgg-make-temp-file "pgg" "PGG")
-;; (autoload 'pgg-gpg-decrypt-region "pgg-gpg" "PGG GnuPG")
-;; (define-generic-mode 'gpg-file-mode
-;;   (list ?#) 
-;;   nil nil
-;;   '(".gpg\\'" ".gpg-encrypted\\'")
-;;   (list (lambda ()
-;; 	    (add-hook 'before-save-hook
-;;                       (lambda () 
-;;                         (let ((pgg-output-buffer (current-buffer)))
-;;                           (pgg-gpg-encrypt-region (point-min) (point-max)
-;;                                                   (list pgg-gpg-user-id))))
-;;                       nil t)
-;; 	    (add-hook 'after-save-hook 
-;; 		      (lambda ()
-;;                         (let ((pgg-output-buffer (current-buffer)))
-;;                           (pgg-gpg-decrypt-region (point-min) (point-max)))
-;; 			(set-buffer-modified-p nil)
-;; 			(auto-save-mode nil))
-;; 		      nil t)
-;;             (let ((pgg-output-buffer (current-buffer)))
-;;               (pgg-gpg-decrypt-region (point-min) (point-max)))
-;; 	    (auto-save-mode nil)
-;; 	    (set-buffer-modified-p nil)))
-;;   "Mode for gpg encrypted files")
-
-;; http://ergoemacs.org/emacs/elisp_datetime.html
-(defun insert-date ()
-  "Insert current date yyyy-mm-dd."
-  (interactive)
-  (when (region-active-p)
-    (delete-region (region-beginning) (region-end) )
-    )
-  (insert (format-time-string "%Y-%m-%d"))
-  )
-;; For some reason you can't use "C-;" directly: "Invalid modifier in string".
-;; For workarounds, see Keith Rogers' replies on this thread:
-;; http://emacs.1067599.n5.nabble.com/Problems-binding-odd-C-amp-M-keys-in-Elisp-td57770.html
-;; The three options are [?\C-;]   (control ?;)   (kbd "C-;")
-;; See also the [Customizing] Key Bindings node of the Emacs manual,
-;; in the section Init Rebinding (aka Rebinding Keys in Your Init File).
-(global-set-key (kbd "C-;") 'insert-date)
-
-
