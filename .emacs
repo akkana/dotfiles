@@ -64,7 +64,8 @@
 
 (define-minor-mode global-keys-minor-mode
   "A minor mode so that global key settings override annoying major modes."
-  t "global-keys" 'global-keys-minor-mode-map)
+  t "" 'global-keys-minor-mode-map)
+;; name is set to "" since it gets shoved into the modeline for everything.
 
 (global-keys-minor-mode 1)
 
@@ -72,7 +73,8 @@
 ;; minor-mode-map-alist.
 (defconst global-minor-mode-alist (list (cons 'global-keys-minor-mode
                                               global-keys-minor-mode-map)))
-(setf emulation-mode-map-alists '(global-minor-mode-alist))
+;; Next line used to use setf but emacs23 doesn't have setf.
+(setq emulation-mode-map-alists '(global-minor-mode-alist))
 
 ;; Not sure if this part is actually needed.
 ;; It might depend on what key bindings are in global-keys-minor-mode-map.
@@ -110,6 +112,7 @@
         )
     (progn
         (load "redo.el")
+        (global-set-key "\C-z" 'undo)
         (global-set-key "\M-z" 'redo)
         ) )
 ;;;;;;;;;;;;;;;;;;;;;;;; end Undo ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -272,7 +275,7 @@
 
 ;;; Set the mode format at the bottom
 ;;; Used to be "%*%*%* " emacs-version " %b  %M %[(%m)%] line=%5l %3p %-"
-;(setq default-modeline-format 
+;(setq default-modeline-format
 ;      (list "%*%*%* %b  %M %[(%m)%] line=%5l %3p %-"))
 (setq line-number-mode t)
 ;(setq mode-line-format default-mode-line-format)
@@ -726,51 +729,56 @@
   )
 (add-hook 'ruby-mode-hook 'ruby-stuff-hook)
 
-;; Modes to use on specific files.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; auto-mode-alist: Modes to use on specific files.
 ;; Kinda weird that programming modes can't sort this out themselves.
-(setq auto-mode-alist
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(mapc (apply-partially 'add-to-list 'auto-mode-alist)
+      '(
 
 ;; file types -- too bad emacs doesn't handle most of these automatically.
-      (cons '("\\.epub$" . archive-mode)
-      (cons '("\\.pde$" . c-mode)
-      (cons '("\\.ino$" . c-mode)
-      (cons '("\\.py$" . python-mode)
-      (cons '("\\.rb$" . ruby-mode)
-      (cons '("\\.R$" . R-mode)
-      (cons '("\\.m$" . octave-mode)
-      (cons '("\\.scm$" . scheme-mode)
-      (cons '("\\.blx$" . html-wrap-mode)
-      (cons '("\\.html$" . html-wrap-mode)
-      (cons '("\\.xml$" . xml-mode)
-      (cons '("\\.js$" . javascript-mode)
-      (cons '("\\.r$" . r-mode)
-      (cons '("\\.img$" . text-img-mode)
-      (cons '("\\.php" . web-mode)
+        ("\\.epub$" . archive-mode)
+        ("\\.pde$" . c-mode)
+        ("\\.ino$" . c-mode)
+        ("\\.py$" . python-mode)
+        ("\\.rb$" . ruby-mode)
+        ("\\.R$" . R-mode)
+        ("\\.m$" . octave-mode)
+        ("\\.scm$" . scheme-mode)
+        ("\\.blx$" . html-wrap-mode)
+        ("\\.html$" . html-wrap-mode)
+        ("\\.xml$" . xml-mode)
+        ("\\.js$" . javascript-mode)
+        ("\\.r$" . r-mode)
+        ("\\.img$" . text-img-mode)
+
+;; Use web-mode by default for PEEC files except PHP ones:
+        ("web/peec" . web-mode)
+        ("\\.php" . php-mode)
 
 ;; Make sure changelogs don't use text-wrap-mode -- they're too long,
 ;; and text-mode invokes spellcheck which takes forever.
-      (cons '("ChangeLog" . fundamental-mode)
+        ("ChangeLog" . fundamental-mode)
 
 ;; A few special settings by location or name,
 ;; for files that may not have type-specific extensions:
-      (cons '("Docs/Lists" . text-mode)
-      (cons '("blogstuff/" . html-wrap-mode)
-      (cons '("Docs/gimp/book/notes" . text-wrap-mode)
-      (cons '("README" . text-wrap-mode)
+        ("Docs/Lists" . text-mode)
+        ("blogstuff/" . html-wrap-mode)
+        ("Docs/gimp/book/notes" . text-wrap-mode)
+        ("README" . text-wrap-mode)
 ;; Book used to be longlines mode, but that was too flaky.
-      (cons '("Docs/gimp/book/" . text-wrap-mode)
-      (cons '("linux-.*/" . linux-c-mode)
-      (cons '("web/peec" . web-mode)
+        ("Docs/gimp/book/" . text-wrap-mode)
+        ("linux-.*/" . linux-c-mode)
+
+;; A default for Docs/, must be before the competing Docs/* definitions:
+        ("Docs/" . text-wrap-mode)
 
 ;; iimage mode is so cool!
-      (cons '("Docs/classes/" . text-img-mode)
-      (cons '("Docs/Notes/househunt/houses" . text-img-mode)
-      (cons '("Docs/Notes/househunt/sold" . text-img-mode)
+        ("Docs/classes/" . text-img-mode)
+        ("Docs/Notes/househunt/houses" . text-img-mode)
+        ("Docs/Notes/househunt/sold" . text-img-mode)
 
-;; A default for Docs/, must be after the competing Docs/* definitions:
-      (cons '("Docs/" . text-wrap-mode)
-
-            auto-mode-alist))))))))))))))))))))))))))))
+        ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Autocomplete stuff
@@ -792,7 +800,7 @@
   (progn
     ;; Always use a width of 80
     (add-to-list 'default-frame-alist (cons 'width 80))
-           
+
     ;; for the height, subtract a couple hundred pixels
     ;; from the screen height (for panels, menubars and
     ;; whatnot), then divide by the height of a char to
@@ -908,7 +916,7 @@
 (setq tramp-debug-buffer t)
 
 ;(setq tramp-default-method "scp")
-(setq tramp-rcp-program "scp") 
+(setq tramp-rcp-program "scp")
 
 ;; Orig nonworking pattern
 ;;(setq tramp-shell-prompt-pattern
