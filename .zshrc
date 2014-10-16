@@ -140,7 +140,8 @@ export PHO_ARGS=-p
 # aliases
 
 alias sss="titlebar D N A; ssh shallowsky.com; titlebar local"
-alias ssm="ssh moon"
+alias ssm="titlebar Moooooooooon; ssh moon; titlebar local"
+alias ssp="titlebar Raspberry Pi; ssh pi@pi; titlebar local"
 
 #ls() { /bin/ls -F --color $* ; }
 #ll() { /bin/ls -laF --color $* ; }
@@ -928,9 +929,19 @@ composekey() {
   grep $1 /usr/share/X11/locale/en_US.UTF-8/Compose
 }
 
-# Display a postscript calendar some number of months (default 2)
+# Display a text calendar some number of months (default 2)
 # using my remind database:
 mycal() {
+    months=$1
+    if [[ x$months == x ]]; then
+        months=2
+    fi
+    remind -c$months ~/Docs/Lists/remind
+}
+
+# Display a postscript calendar some number of months (default 2)
+# using my remind database:
+mycalp() {
     months=$1
     if [[ x$months == x ]]; then
         months=2
@@ -938,35 +949,59 @@ mycal() {
     remind -p$months ~/Docs/Lists/remind  | rem2ps -e -l >/tmp/mycal.ps; gv /tmp/mycal.ps &
 }
 
-# Full or nearly-full backup to the specified host:path or directory:
-fullbackup() {
-    excludes=( --exclude Cache --exclude .cache/mozilla --exclude Spam --exclude LOG --exclude log --exclude olog --exclude Tarballs --exclude VaioWin --exclude Bitlbee --exclude core --exclude outsrc --exclude .imap --exclude POD )
-    if [ $# -eq 0 ]; then
+####################################################################
+# Full and nearly-full backups.
+
+# Do a full backup. First argument is path to mounted backup directory.
+# Second, optional, argument is whether to do a "mini" backup:
+# if "mini" it will be a mini backup, if "full" or unset, it will be full.
+dobackup() {
+    if [[ $# -eq 0 || $1 == '' ]]; then
         echo "Back up to where?"
         return
     fi
+
+    # Exclude these from all backups, even full ones:
+    fullexcludes=( Cache .cache/mozilla Spam LOG log olog Tarballs \
+        VaioWin Bitlbee core outsrc .imap POD .cache/openbox/openbox.log \
+        .icons .thumbnails .cache/thumbnails .imap .macromedia core .histfile \
+        webapps store.json.mozlz4 .dbus/session-bus .emacs-saves )
+
+    # Exclude these from "mini-full" backups (e.g. if low on backup disk space)
+    moreexcludes=( '*.mp4' '*.img' '*.iso' DVD \
+        .config/chromium .cache/chromium outsrc .VirtualBox 'VirtualBox VMs' \
+        droidsd-old .googleearth )
+
+    # Build up the excludes list:
+    excludesflags=( )
+    for ex in $fullexcludes; do
+        excludesflags+="--exclude"
+        excludesflags+="$ex"
+    done
+
+    if [[ $# -eq 2 && $2 == "mini" ]]; then
+        echo "Mini backup to" $1
+        for ex in $moreexcludes; do
+            excludesflags+="--exclude"
+            excludesflags+="$ex"
+        done
+    else
+        echo "Full backup to" $1
+    fi
+
     pushd ~
-    # Copy new files, delete old ones, excluding unimportant dirs
-    echo sudo rsync -av --delete $excludes ./ $1
+    echo sudo rsync -av --delete "${excludesflags[@]}" ./ $1
     sleep 2
-    sudo rsync -av --delete "${excludes[@]}" ./ $1
+    sudo rsync -av --delete "${excludesflags[@]}" ./ $1
     popd
 }
 
-# Same as full backup but exclude some additional large files.
-# I can't seem to find any way to get zsh to share these lists
-# instead of defining them separately.
+fullbackup() {
+    dobackup "$1" full
+}
+
 minibackup() {
-    excludes=( --exclude Cache --exclude .cache/mozilla --exclude Spam --exclude LOG --exclude log --exclude olog --exclude '*.mp4' --exclude '*.img' --exclude '*.iso' --exclude DVD --exclude POD --exclude .config/chromium --exclude .cache/chromium --exclude outsrc --exclude .VirtualBox --exclude 'VirtualBox VMs' --exclude .thumbnails --exclude droidsd-old --exclude Tarballs --exclude core --exclude .googleearth --exclude .imap )
-    if [ $# -eq 0 ]; then
-        echo "Mini back up to where?"
-        return
-    fi
-    pushd ~
-    echo sudo rsync -av --delete $excludes ./ $1
-    sleep 2
-    sudo rsync -av --delete "${excludes[@]}" ./ $1
-    popd
+    dobackup "$1" mini
 }
 
 # Something is writing to recently-used.xbel and I'm not sure what.
@@ -1014,10 +1049,12 @@ alias printers='lpstat -s; echo; echo You can print with lp -d printername'
 
 # Quick-jump to deeply nested directories
 # http://jeroenjanssens.com/2013/08/16/quickly-navigate-your-filesystem-from-the-command-line.html
+# Now if I could just remember to use it.
 export MARKPATH=$HOME/.marks
 function jump { 
     cd -P "$MARKPATH/$1" 2>/dev/null || echo "No such mark: $1"
 }
+alias ju=jump
 function mark { 
     mkdir -p "$MARKPATH"; ln -s "$(pwd)" "$MARKPATH/$1"
 }
@@ -1058,14 +1095,39 @@ open -u 'user,passwd' ftp.example.com
 $list_commands
 bye
 EOF
+
+# lftp doesn't preserve permissions, even though -p is supposed to.
+# So change permissions back on the files that need it:
+chmod 666 $HOME/web/peec/data/*_edited.csv
+chmod 755 $HOME/web/peec/guides/save_db.cgi
 }
 
-# Connect to an already established network manager connection
-# (alas, there's no way to define a new connection from the cli)
-# using the old Ubuntu Pangolin nmcli syntax, which has since changed:
-nmcon() {
-    nmcli con up id $1
+# Copy a list of selected files up to the PEEC website using lftp.
+# Assumes we already have a bookmark with the password which puts
+# us already in htdocs.
+topeec() {
+    list_commands=""
+    for f in $*; do
+        dn=$(dirname $f)
+        # bn=$(basename $f)
+        list_commands="$list_commands
+put -O $dn $f"
+    done
+
+    echo Commands to be run:
+    echo $list_commands
+    echo
+
+    lftp peec <<EOF
+$list_commands
+bye
+EOF
 }
+
+# Mounting PEEC website over ftp with curlftpfs.
+# umount doesn't work, have to use fusermount -u.
+alias peec="mount /peecweb"
+alias unpeec="fusermount -u /peecweb"
 
 # Android adb logcat is supposed to accept a filter argument to show only
 # logs from a single program, but it doesn't work and I have to use grep.
@@ -1088,6 +1150,32 @@ cleanspam() {
             cp /dev/null $folder
         fi
     done
+    tail -7000 $HOME/Procmail/log >$HOME/Procmail/olog
+    rm $HOME/Procmail/log
+}
+
+# I get tired of all the multiple steps to update gimp now that it
+# requires three separate repositories.
+# Make sure this exits on errors!
+gimpmaster() {
+    setopt localoptions errreturn
+
+    pushd ~/outsrc/babl
+    git pull
+    make -j4
+    sudo make install
+
+    cd ~/outsrc/gegl
+    git pull
+    make -j4
+    sudo make install
+
+    cd ~/outsrc/gimp
+    git pull
+    make -j4
+    sudo make install
+
+    popd
 }
 
 # Two good pages on zsh scripting:
