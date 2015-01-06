@@ -577,7 +577,7 @@ alias serial1 screen /dev/ttyUSB1 115200
 # Meego OSC
 alias mosc 'osc -Ahttps://api.pub.meego.com --no-keyring --no-gnome-keyring \!*'
 
-# Update website blog entries -- helpers for pyblosxom.
+# Update website blog entries
 alias blogup 'cd ~/web/blogfiles; pyblosxom-cmd staticrender --incremental; cd'
 alias blogupdate 'cd ~/web/blogfiles; pyblosxom-cmd staticrender --incremental && ~/bin/blogtopics && mv ../blog/topics.html ../blog/oldtopics.html && mv ../blog/newtopics.html ../blog/topics.html && blog-tag-index; cd'
 

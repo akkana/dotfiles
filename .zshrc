@@ -141,7 +141,7 @@ export PHO_ARGS=-p
 
 alias sss="titlebar D N A; ssh shallowsky.com; titlebar local"
 alias ssm="titlebar Moooooooooon; ssh moon; titlebar local"
-alias ssp="titlebar Raspberry Pi; ssh pi@pi; titlebar local"
+alias ssp="titlebar Raspberry Pi; ssh pipi; titlebar local"
 
 #ls() { /bin/ls -F --color $* ; }
 #ll() { /bin/ls -laF --color $* ; }
@@ -193,7 +193,6 @@ lsdirs() {
 }
 
 alias j=jobs
-alias m=mutt
 alias pd=pushd
 alias s=suspend
 alias rl="telnet -r"
@@ -340,7 +339,7 @@ mov2mp3() {
 # network card, distro it's running, etc.
 cleanssh() {
   mv $HOME/.ssh/known_hosts $HOME/.ssh/known_hosts.bak
-  grep -v $1 $HOME/.ssh/known_hosts.bak >$HOME/.ssh/known_hosts
+  egrep -v "^\[?$h\]?\b" $HOME/.ssh/known_hosts.bak >$HOME/.ssh/known_hosts
 }
 
 # Get the temperature from /proc/acpi/thermal_zone/THRM/temperature
@@ -579,7 +578,7 @@ alias uncrypt='cryptunmount crypt'
 #alias plug='minicom -D /dev/ttyUSB1 -b 115200'
 alias plug='screen /dev/ttyUSB1 115200'
 alias guru='screen /dev/ttyUSB0 115200'
-alias rpi='screen /dev/ttyUSB0 115200'
+alias rpi='titlebar "Raspberry Pi"; screen /dev/ttyUSB0 115200; titlebar "local"'
 
 alias beagleroute='sudo iptables -A POSTROUTING -t nat -j MASQUERADE; echo 1 | sudo tee /proc/sys/net/ipv4/ip_forward > /dev/null'
 
@@ -929,12 +928,14 @@ composekey() {
   grep $1 /usr/share/X11/locale/en_US.UTF-8/Compose
 }
 
+alias remindme='remind ~/Docs/Lists/remind'
+
 # Display a text calendar some number of months (default 2)
 # using my remind database:
 mycal() {
     months=$1
     if [[ x$months == x ]]; then
-        months=2
+        months=1
     fi
     remind -c$months ~/Docs/Lists/remind
 }
@@ -965,11 +966,12 @@ dobackup() {
     fullexcludes=( Cache .cache/mozilla Spam LOG log olog Tarballs \
         VaioWin Bitlbee core outsrc .imap POD .cache/openbox/openbox.log \
         .icons .thumbnails .cache/thumbnails .imap .macromedia core .histfile \
-        webapps store.json.mozlz4 .dbus/session-bus .emacs-saves )
+        webapps store.json.mozlz4 .dbus/session-bus .emacs-saves \
+        .config/chromium .googleearth/Temp .googleearth/Cache )
 
     # Exclude these from "mini-full" backups (e.g. if low on backup disk space)
     moreexcludes=( '*.mp4' '*.img' '*.iso' DVD \
-        .config/chromium .cache/chromium outsrc .VirtualBox 'VirtualBox VMs' \
+        outsrc .VirtualBox 'VirtualBox VMs' \
         droidsd-old .googleearth )
 
     # Build up the excludes list:
@@ -990,9 +992,9 @@ dobackup() {
     fi
 
     pushd ~
-    echo sudo rsync -av --delete "${excludesflags[@]}" ./ $1
+    echo sudo rsync -av --delete --delete-excluded "${excludesflags[@]}" ./ $1
     sleep 2
-    sudo rsync -av --delete "${excludesflags[@]}" ./ $1
+    sudo rsync -av --delete --delete-excluded "${excludesflags[@]}" ./ $1
     popd
 }
 
@@ -1037,7 +1039,7 @@ toshallow() {
         localdir=${localdir%%/##}/
     fi
     plaindir=${localdir#~/}
-    cmd="rsync -av $localdir shallowsky.com:$plaindir"
+    cmd="rsync -av --delete $localdir shallowsky.com:$plaindir"
     # We'll went --delete here too, but let's hold off until it's known working.
     echo $cmd
     eval $cmd
@@ -1181,3 +1183,29 @@ gimpmaster() {
 # Two good pages on zsh scripting:
 # http://www.rayninfo.co.uk/tips/zshtips.html
 # http://www.linux-mag.com/id/1079/
+
+# alias dumppi='sudo tcpdump -pnvi eth0 -w ~/pi-tcpdump'
+#
+# On hesiodus:
+# tcpdump -pnvi eth0 -w ~/hesiodus.pcap
+# ping pi
+
+# Do this on the Pi:
+# tcpdump -pnvi wlan0 -w /tmp/.pcap not host 192.168.1.4
+
+# On moon:
+# tcpdump -nvi eth0 -w /back/trade/moon.pcap not host 192.168.1.3
+
+# Something keeps changing my stty settings.
+# To track it down, check them after every command:
+# precmd()
+# {
+#     stty -a | fgrep -- -ignbrk > /dev/null
+#     if [ $? -ne 0 ]; then
+#         echo
+#         echo "STTY SETTINGS HAVE CHANGED \!\!\!\!\!\!\!\!\!\!\!\!\!\!\!\!"
+#         echo
+#     fi
+# }
+
+alias newphotos='cp index.php index.php.bak; mkphplist index.php *[^T].jpg'

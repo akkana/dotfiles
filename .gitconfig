@@ -5,17 +5,45 @@
 	ui = auto
 [core]
 	pager = less -FRSX
+[color]
+        branch = auto
+        diff = auto
+        status = auto
+        ui = true
 [color "diff"]
 	frag = cyan white
 	new = magenta
 	commit = blue
 [color "branch"]
-	current = magenta
+        current = cyan bold
+        local = yellow
+        remote = green
 [color "status"]
-	updated = magenta
+       updated = magenta
+       added = green bold
+       changed = cyan bold
+       untracked = yellow bold
 [github]
 	token = 24831be70f7bd27fec0301d305723ae5
+
+# difftool needs both diff.tool and difftool.tool set to avoid prompting.
 [diff]
-	tool = meld
+    tool = tkdiff
 [difftool]
-	prompt = false
+    tool = tkdiff
+    prompt = false
+
+[rerere]
+   enabled = true
+[alias]
+	undo-commit = reset --soft HEAD^
+
+# Oh, lovely. git 1.7.11 mandates having something here, but if you
+# pick the default (simple) then your .gitconfig won'e work with
+# 1.7.10 or earlier. So you get to choose to be nagged every time
+# in the new git, or have the old git not work.
+# Apparently "matching" is sorta like "simple" and only slightly
+# less safe, deprecated in 1.7.11 but at least it actually exists
+# in both versions.
+[push]
+	default = matching
