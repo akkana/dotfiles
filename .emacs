@@ -31,8 +31,12 @@
 (global-set-key "\C-xs" 'save-buffer)
 (global-set-key "\M-w" 'kill-region)
 (global-set-key "\C-m" 'newline-and-indent)
-(global-set-key (kbd "<S-return>") 'newline)
-;(global-set-key [C-return] 'newline-and-indent)
+
+;; Electric mode has recently taken over (newline), so we have to do this:
+(if (fboundp 'electric-indent-just-newline)
+    (global-set-key (kbd "<S-return>") 'electric-indent-just-newline)
+    (global-set-key (kbd "<S-return>") 'newline))
+
 (global-set-key "\M-n" 'goto-line)
 (global-set-key "\M-N" 'what-line)
 (global-set-key "\M-?" 'help-for-help)
@@ -61,6 +65,9 @@
 
 (define-key global-keys-minor-mode-map "\C-c\C-r" 'revert-buffer)
 (define-key global-keys-minor-mode-map (kbd "C-;") 'insert-date)
+
+;; Try to disable electric mode in python, but this doesn't work:
+;(define-key global-keys-minor-mode-map (kbd "C-:") 'self-insert)
 
 (define-minor-mode global-keys-minor-mode
   "A minor mode so that global key settings override annoying major modes."
@@ -410,12 +417,15 @@
       (indent-region (point-min) (point-max) nil)
       (untabify (point-min) (point-max)))
 
-;; Disable obnoxious "Electric" re-indenting in c- and java-modes.
+;; Disable obnoxious "Electric" re-indenting in c- and java-modes
+;; (and now, python too).
 ;; It's useful on some characters, but awful when you can't add a comment
-;; without re-indenting the line.
+;; or a colon or semicolon without re-indenting the line.
 (defun no-electric (keymap)
   (progn
     (define-key keymap ";" 'self-insert-command)
+    (define-key keymap ":" 'self-insert-command)
+    (define-key keymap "L" 'self-insert-command)
     (define-key keymap "/" 'self-insert-command)
     (define-key keymap "*" 'self-insert-command)
     (define-key keymap "(" 'self-insert-command)
@@ -431,6 +441,10 @@
 (add-hook 'c-mode-hook (lambda () (no-electric c-mode-map)))
 (add-hook 'c++-mode-hook (lambda () (no-electric c-mode-map)))
 (add-hook 'java-mode-hook (lambda () (no-electric java-mode-map)))
+
+;; no-electric doesn't work for python mode -- even if : is bound
+;; to self-insert it still reindents the line.
+;(add-hook 'python-mode-hook (lambda () (electric-indent-mode -1)))
 
 (add-hook 'js-mode-hook (lambda ()
   (define-key js-mode-map "," 'self-insert-command)
@@ -729,12 +743,20 @@
   )
 (add-hook 'ruby-mode-hook 'ruby-stuff-hook)
 
+(defun archive-hook ()
+  (flyspell-mode 0)
+  )
+(add-hook 'archive-mode-hook 'archive-hook)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; auto-mode-alist: Modes to use on specific files.
 ;; Kinda weird that programming modes can't sort this out themselves.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (mapc (apply-partially 'add-to-list 'auto-mode-alist)
       '(
+
+;; A default for Docs/, must be before the competing Docs/* definitions:
+        ("Docs/" . text-wrap-mode)
 
 ;; file types -- too bad emacs doesn't handle most of these automatically.
         ("\\.epub$" . archive-mode)
@@ -755,6 +777,7 @@
 ;; Use web-mode by default for PEEC files except PHP ones:
         ("web/peec" . web-mode)
         ("\\.php" . php-mode)
+        ("web/peec/brownrice" . web-mode)
 
 ;; Make sure changelogs don't use text-wrap-mode -- they're too long,
 ;; and text-mode invokes spellcheck which takes forever.
@@ -763,15 +786,13 @@
 ;; A few special settings by location or name,
 ;; for files that may not have type-specific extensions:
         ("Docs/Lists" . text-mode)
+        ("Docs/Lists/books" . text-wrap-mode)
         ("blogstuff/" . html-wrap-mode)
         ("Docs/gimp/book/notes" . text-wrap-mode)
         ("README" . text-wrap-mode)
 ;; Book used to be longlines mode, but that was too flaky.
         ("Docs/gimp/book/" . text-wrap-mode)
         ("linux-.*/" . linux-c-mode)
-
-;; A default for Docs/, must be before the competing Docs/* definitions:
-        ("Docs/" . text-wrap-mode)
 
 ;; iimage mode is so cool!
         ("Docs/classes/" . text-img-mode)
