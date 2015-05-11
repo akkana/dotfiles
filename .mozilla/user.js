@@ -20,6 +20,7 @@ user_pref("browser.drag_out_of_frame_style", 0);
 // Set cursive and fantasy fonts
 user_pref("font.name.cursive.x-western", "Allegro");
 user_pref("font.name.fantasy.x-western", "Dragonwick");
+user_pref("font.minimum-size.x-western", 12);
 
 // Make backspace not go back to the previous page.
 // See bug 219203 and bug 262905
@@ -36,10 +37,18 @@ user_pref("browser.backspace_action", 2);
 // (why isn't that the default?):
 // http://www.googleguide.com/advanced_operators.html#allintext
 // Adding complete=0 seems to turn off Instant.
+// &nfpr=1 disables automatically going to the "did you mean? ..."
+// but allintext: disables "did you mean? ..." anyway.
 user_pref("keyword.URL", "http://www.google.com/search?complete=0&q=allintext%3A+");
 // Try providers other than google since it's running horrible UI
 // experiments on me:
 //user_pref("keyword.URL", "http://duckduckgo.com/html/?q=");
+//
+// Supposedly keyword.URL no longer exists as of firefox 23
+// https://bugzilla.mozilla.org/show_bug.cgi?id=738818
+// but they copied it tobrowser.search.defaulturl and
+// browser.search.selectedEngine and use one or the other of them
+// if keyword.enabled is set, which it is by default.
 
 // Show JS warnings:
 // Turned off for Firefox 3.5 because its JS engine has bugs
@@ -92,7 +101,10 @@ user_pref("ui.caretBlinkTime", 0);
 // This worked in the suite but not in Firefox.
 //user_pref("ui.submenuDelay", 7000);
 
-// Browser background color, because the colorpicker is too coarse:
+// Browser background color, because the colorpicker is too coarse.
+// This helps me notice when background colors aren't set and should be,
+// and also gives me a more comfortable reading background on the
+// rare web pages that don't force a color.
 user_pref("browser.display.background_color", "#EEFFFF");
 
 user_pref("browser.display.use_system_colors", false);
