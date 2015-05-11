@@ -32,8 +32,11 @@
 (global-set-key "\M-w" 'kill-region)
 
 (global-set-key "\C-m" 'newline-and-indent)
+
 ;; Electric mode has recently taken over (newline), so we have to do this:
-(global-set-key (kbd "<S-return>") 'electric-indent-just-newline)
+(if (fboundp 'electric-indent-just-newline)
+    (global-set-key (kbd "<S-return>") 'electric-indent-just-newline)
+    (global-set-key (kbd "<S-return>") 'newline))
 
 (global-set-key "\M-n" 'goto-line)
 (global-set-key "\M-N" 'what-line)
@@ -741,12 +744,20 @@
   )
 (add-hook 'ruby-mode-hook 'ruby-stuff-hook)
 
+(defun archive-hook ()
+  (flyspell-mode 0)
+  )
+(add-hook 'archive-mode-hook 'archive-hook)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; auto-mode-alist: Modes to use on specific files.
 ;; Kinda weird that programming modes can't sort this out themselves.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (mapc (apply-partially 'add-to-list 'auto-mode-alist)
       '(
+
+;; A default for Docs/, must be before the competing Docs/* definitions:
+        ("Docs/" . text-wrap-mode)
 
 ;; file types -- too bad emacs doesn't handle most of these automatically.
         ("\\.epub$" . archive-mode)
@@ -786,9 +797,6 @@
 ;; Book used to be longlines mode, but that was too flaky.
         ("Docs/gimp/book/" . text-wrap-mode)
         ("linux-.*/" . linux-c-mode)
-
-;; A default for Docs/, must be before the competing Docs/* definitions:
-        ("Docs/" . text-wrap-mode)
 
 ;; iimage mode is so cool!
         ("Docs/classes/" . text-img-mode)
