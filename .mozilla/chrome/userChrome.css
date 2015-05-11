@@ -1,0 +1,150 @@
+/* http://userstyles.org/styles/41721/firefox-make-urlbar-font-size-bigger */
+#urlbar {
+  /*
+  font-weight:bold !important;
+  */
+  height: 22px;
+  font-size:14px !important;
+  color: black !important;
+}
+
+/* */
+.urlbar-origin-label,
+.urlbar-over-origin-box,
+.urlbar-over-link-host-label, 
+.urlbar-over-link-path-label {
+margin-top: -1px !important;
+margin-bottom: -1px !important;
+}
+
+/*
+#identity-box #identity-icon-label,
+#identity-box #identity-icon-labels {
+font-size: 13px !important;
+}
+ */
+
+#omnibar-defaultEngineName {margin-top: -4px !important;}
+#omnibar-defaultEngine {margin-top: -1px !important;
+
+input, option {
+  /* Set font size and family of text fields */
+  font-family: clean !important;
+  font-size: 13px !important;
+
+  /* Set background color to something a little prettier */
+  background-color: rgb(200, 255, 220);
+}
+
+/* Hide the obnoxious click-to-play dialog that always makes you click a
+ * second time when enabling flash. Thanks Mikachu.
+ * https://addons.mozilla.org/en-US/firefox/addon/hide-plugin-notifications/reviews/548902/
+ * Sadly, this doesn't hide the dialog I'm seeing.
+ */
+notification[value="plugin-hidden"] {
+display: none !important;
+}
+
+/* Make menus big, pretty and readable (like the old SGI look):
+ * menubar isn't used any more, but was needed for NS6.
+ * This doesn't work any more in FF 6.
+menubar, menubutton, menulist, menu, menuitem, menupopup {
+  font-family: helvetica !important;
+  font-style: italic !important;
+  font-weight: bold !important;
+  font-size: 11px !important;
+}
+ */
+
+/*
+ * bug 56314 made selection color unreadable most of the time.
+ * This seems to be ignored now.
+::-moz-selection {
+  background-color: magenta;
+  color: white;
+}
+ */
+
+/* Hide chrome in fullscreen mode in Firefox */
+#toolbar-menubar[moz-collapsed=true] + #nav-bar { display: none !important; }
+/* ... and in Seamonkey */
+#main-menubar[moz-collapsed=true] + #nav-bar { display: none !important; }
+
+.tabbrowser-tab:not([pinned]) {
+  -moz-box-flex: 5;
+  max-width: 250px;
+  min-width: 5px;
+  width: 0;
+  -moz-transition: 
+                   max-width 250ms ease-out,
+                   opacity 50ms ease-out 20ms /* hide the tab for the first 20ms of the max-width transition */;
+}
+
+.tabs-newtab-button {
+    visibility: hidden;
+}
+
+
+
+
+/*
+  From bug 574654:
+
+.tabbrowser-tab:not([pinned]) {
+  max-width: 250px !important;
+  min-width: 100px !important;
+}
+
+.tabbrowser-tab:not([fadein]) {
+ max-width: 1px !important; min-width: 1px !important;
+ max-width: 1px; min-width: 1px;
+}
+
+/* Firefox 4 removed the min width setting for tabs;
+ * now it has to be set in CSS.
+ * https://bugzilla.mozilla.org/show_bug.cgi?id=574654
+ * or use extension,
+ *   https://addons.mozilla.org/en-US/firefox/addon/custom-tab-width/
+ * Unfortunately this doesn't work in FF 6.
+.tabbrowser-tab[fadein]:not([pinned]) {
+  min-width: 2px !important;
+  /* max-width: 950px !important; */
+}
+
+/* Move the tab bar to the left:
+ * http://kb.mozillazine.org/Move_the_tab_bar_%28Firefox%29
+#content > tabbox {
+  -moz-box-orient: horizontal;
+}
+
+.tabbrowser-strip {
+  -moz-box-orient: vertical;
+  /* note: you can set this to -moz-scrollbars-vertical instead,
+     but then the scrollbar will *always* be visible.  this way
+     there is never a scrollbar, so it behaves like the tab bar
+     normally does
+  overflow: -moz-scrollbars-none;
+}
+
+.tabbrowser-tabs {
+  -moz-box-orient: horizontal;
+  min-width: 10ex;   /* you may want to increase this value
+  -moz-box-align: start;
+}
+
+.tabbrowser-tabs > hbox {
+  -moz-box-orient: vertical;
+  -moz-box-align: stretch;
+}
+
+.tabbrowser-tabs > hbox > tab {
+  -moz-box-align: start;
+  -moz-box-orient: horizontal;
+}
+
+/* remove the close-tab button
+.tabbrowser-tabs > stack {
+  display: none;
+}
+
+*/

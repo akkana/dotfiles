@@ -1,0 +1,216 @@
+/*
+ * This file can be used to apply a style to all web pages you view
+ * Rules without !important are overruled by author rules if the
+ * author sets any.  Rules with !important overrule author rules.
+ */
+
+/*
+ * turns off "blink" element blinking
+ */
+blink { text-decoration: none ! important; }
+
+/* Set font size and family of text fields */
+input {
+  /* Strangely, font-family is ignored here, but at least the size works */
+  font-family: clean !important;
+  font-size: 13px !important;
+}
+
+/* https://addons.mozilla.org/en-US/firefox/addon/flashblock/reviews/
+ * claims that this makes flashblock work again:
+ */
+@namespace url(http://www.w3.org/1999/xhtml);
+@-moz-document domain("youtube.com"){
+#theater-background { display:none !important;}}
+
+/* Google is doing a horrible experiment where selecting in the
+ * search box changes the font size, voiding the selection.
+ * This fixes it:
+ */
+.gsfi, .lst {
+  font-family: inherit !important;
+  font-size: inherit !important;
+}
+
+/* Hide the annoying messages begging you to make Google your default search */
+#taw { display: none !important; }
+
+/* Turn off the "instant preview" annoying buttons in google search results */
+.vspib, .vspii { display: none !important; }
+
+/* Hide the annoying "new google maps" box on google maps classic: */
+.infoshown { display: none !important; }
+
+/* Hide the huge content-hiding thing at the top on Course Central */
+navbar-fixed-top { display: none !important; }
+
+/* use select for comboboxes */
+
+/*
+ * bug 56314 made selection color unreadable most of the time.
+::-moz-selection {
+  background-color: magenta;
+  color: white;
+}
+ */
+
+/* Wrap preformatted text :
+ http://users.tkk.fi/~tkarvine/pre-wrap-css3-mozilla-opera-ie.html
+ This works but it's turned off for a presentation.
+pre {
+ white-space: -moz-pre-wrap !important;  /* Mozilla, since 1999 */
+}
+*/
+
+/*
+ * Show links that would open a new window differently from other links:
+ * From manko@zhurnal.ru in bug 78037:
+ */
+a[target="_blank"] {
+  /* Next line: Expected end of value for propety but found 'invert'.
+     when it read: -moz-outline: 1px orange dashed invert !important;
+   */
+  -moz-outline: 1px orange dashed !important;
+  /* links to open in new window */
+}
+
+a:hover[target="_blank"] {
+  cursor: crosshair;
+  /* text-decoration: blink doesn't work.
+  text-decoration: blink;
+  color: red; background-color: yellow
+  */
+  !important
+}
+
+/*
+ * Make it really obvious when links are javascript,
+ * since middleclicking javascript links doesn't do anything
+ * except open an empty new tab that then has to be closed.
+ * ^= means "starts with".
+ * http://reference.sitepoint.com/css/css3attributeselectors
+ */
+a:hover[href^="javascript"] {
+  cursor: all-scroll; font-weight: bold;
+  text-decoration: blink;
+  color: red; background-color: yellow
+  !important
+}
+
+/*
+ * And the same for PDFs, for the same reason.
+ * Sadly, we can't catch all PDFs, just the ones where the actual
+ * filename ends in .pdf.
+ * $= means "ends with"
+ * *= means "contains"
+ * Apparently there's no way to make a selector case insensitive,
+ * so we have separate cases for .pdf and .PDFb
+ */
+a:hover[href$=".pdf"], a:hover[href$=".PDF"] {
+  cursor: crosshair !important;
+  /* text-decoration: blink; */
+  color: red !important; background-color: yellow !important;
+  font-weight: bold !important;
+}
+
+/* disable ad iframes */
+IFRAME[SRC*="ad."]  { display: none ! important }
+IFRAME[SRC*="ads."]  { display: none ! important }
+IFRAME[SRC*="/ad"]  { display: none ! important }
+IFRAME[SRC*="/A="]  { display: none ! important }
+IFRAME[SRC*="/click"]  { display: none ! important }
+IFRAME[SRC*="?click"]  { display: none ! important }
+IFRAME[SRC*="?banner"]  { display: none ! important }
+IFRAME[SRC*="=click"]  { display: none ! important }
+IFRAME[SRC*="/ar.atwo"]  { display: none ! important }
+IFRAME[SRC*="spinbox."]  { display: none ! important }
+IFRAME[SRC*="transfer.go"]  { display: none ! important }
+IFRAME[SRC*="adfarm"]  { display: none ! important }
+IFRAME[SRC*="bluestreak"]  { display: none ! important }
+IFRAME[SRC*="doubleclick"]  { display: none ! important }
+
+/* Get rid of Huffington Post bottom bar */
+div#service_bottom_bar { display: none !important; }
+/* On earthtimes.org it's called wibiyaToolbar */
+
+/* Try to make Amazon pages narrow enough to fit in 800px */
+div#productDescription div.content { max-width: 90% !important; }
+
+#customerReviews > div.content > table > tbody > tr > td { max-width: 300px; min-width: 10px !important; }
+div#customerReviews > div.content > table { margin-right: 110px !important; }
+
+/* Prevent BayRC and other PHPBB sites from having entries too wide to read:
+ * (doesn't work)
+ */
+/*table.forumline .postbody { width: 400px !important; }
+/*table.forumline tr { max-width: 500px !important; } */
+
+/* An alternate approach for phpbb, from http://userstyles.org/styles/1340
+   ... this doesn't work either.
+.postbody,
+.bodyline .code,
+.bodyline .quote {
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  display: block !important;
+}
+
+.bodyline .code,
+.bodyline .quote {
+  width: auto !important;
+  min-height: 3em !important;
+}
+
+.postbody:focus,
+.bodyline .code:focus,
+.bodyline .quote:focus {
+  outline: 0 #FFF none !important;
+}
+/* end of userstyles NoStretch code */
+/* See also http://userscripts.org/scripts/show/2679
+ * and http://userstyles.org/styles/3804
+ * and http://userscripts.org/scripts/show/12269
+ * and the Frenzyboard Post Unbreaker,
+ *   http://greasemonkey.hansv.com/scripts.html
+ */
+
+/* Show an icon for something that would open a mailer (this doesn't * work) */
+a[href*="mailto"]:hover { cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAhCAMAAAAIybBlAAADAFBMVEUAAACAAAAAgACAgAAAAICAAIAAgICAgIDAwMD%2FAAAA%2FwD%2F%2FwAAAP%2F%2FAP8A%2F%2F%2F%2F%2F%2F8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADMAAGYAAJkAAMwAAP8AMwAAMzMAM2YAM5kAM8wAM%2F8AZgAAZjMAZmYAZpkAZswAZv8AmQAAmTMAmWYAmZkAmcwAmf8AzAAAzDMAzGYAzJkAzMwAzP8A%2FwAA%2FzMA%2F2YA%2F5kA%2F8wA%2F%2F8zAAAzADMzAGYzAJkzAMwzAP8zMwAzMzMzM2YzM5kzM8wzM%2F8zZgAzZjMzZmYzZpkzZswzZv8zmQAzmTMzmWYzmZkzmcwzmf8zzAAzzDMzzGYzzJkzzMwzzP8z%2FwAz%2FzMz%2F2Yz%2F5kz%2F8wz%2F%2F9mAABmADNmAGZmAJlmAMxmAP9mMwBmMzNmM2ZmM5lmM8xmM%2F9mZgBmZjNmZmZmZplmZsxmZv9mmQBmmTNmmWZmmZlmmcxmmf9mzABmzDNmzGZmzJlmzMxmzP9m%2FwBm%2FzNm%2F2Zm%2F5lm%2F8xm%2F%2F%2BZAACZADOZAGaZAJmZAMyZAP%2BZMwCZMzOZM2aZM5mZM8yZM%2F%2BZZgCZZjOZZmaZZpmZZsyZZv%2BZmQCZmTOZmWaZmZmZmcyZmf%2BZzACZzDOZzGaZzJmZzMyZzP%2BZ%2FwCZ%2FzOZ%2F2aZ%2F5mZ%2F8yZ%2F%2F%2FMAADMADPMAGbMAJnMAMzMAP%2FMMwDMMzPMM2bMM5nMM8zMM%2F%2FMZgDMZjPMZmbMZpnMZszMZv%2FMmQDMmTPMmWbMmZnMmczMmf%2FMzADMzDPMzGbMzJnMzMzMzP%2FM%2FwDM%2FzPM%2F2bM%2F5nM%2F8zM%2F%2F%2F%2FAAD%2FADP%2FAGb%2FAJn%2FAMz%2FAP%2F%2FMwD%2FMzP%2FM2b%2FM5n%2FM8z%2FM%2F%2F%2FZgD%2FZjP%2FZmb%2FZpn%2FZsz%2FZv%2F%2FmQD%2FmTP%2FmWb%2FmZn%2Fmcz%2Fmf%2F%2FzAD%2FzDP%2FzGb%2FzJn%2FzMz%2FzP%2F%2F%2FwD%2F%2FzP%2F%2F2b%2F%2F5n%2F%2F8z%2F%2F%2F9EYrBQAAABAHRSTlP%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwD%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8A%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FYkk34QAAAIZJREFUKJGl0DESwyAMBMB7Afz%2FT%2BrEX3DFREhwMo4nTa7x3BprhFEYIB4JteJ%2FAQ6JmrIrBfUhWacAe0LEC1hrvPoSlEPqi6xlDvB9fgh3fkoS%2F%2BqLMEv0FheVwYi4DJJ0aS6b5KIEGaTMWaI9RbvNHF0pBhb7RpfM0yvqUuSWFrdombnzB3vzncAaRlEnAAAAAElFTkSuQmCC"), pointer; }
+
+/* Make marquee less painful */
+marquee {
+	-moz-binding: none;
+	overflow: auto;
+	display: block;
+}
+
+@media print {
+	marquee {
+		-moz-binding: none;
+		overflow: auto;
+		display: block;
+	}
+}
+
+/* Highlight PDF and video links */
+/* This needs tweaking, doesn't work yet:
+   Expected attribute name or namespace but found '['.
+   Ruleset ignored due to bad selector.
+a:link[href*=".pdf"][href*=".PDF"][href*=".wmv"][href*=".WMV"][href*=".mpg"][href*=".MPG"]
+{ color: yellow !important; background-color: blue !important; }
+ */
+
+/* Try to keep focus on the page on linkedin discussions,
+ * so spacebar will page down:
+form#global-search span#autocomplete-container input {
+    visibility:hidden;
+}
+ */
+
+/* I forget what this was for, but it breaks netflix, so be careful:
+form#global-search {
+    visibility:hidden;
+}
+*/
+
+
