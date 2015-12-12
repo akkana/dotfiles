@@ -370,45 +370,11 @@
 (defun fixm ()
   "Change line breaks to Unix style"
   (interactive)
-
-  ;(set-buffer-file-coding-system "utf-8-unix")
   (set-buffer-file-coding-system 'utf-8-unix t)
-  (message "fixm")
+  ;(message "fixm")
 )
 
-; (message "defining fixm")
-; (sleep-for 5)
-
-;; Replace Windows/Mac newslines in current buffer.
-;; Thanks to slamm for the original!
-;; Rewritten by Akkana to handle Mac newlines as well.
-;; Note: Mike Tsao says in his weblog that C-x [ENTER] f unix [ENTER]
-;; converts DOS line endings to Unix, but it doesn't get rid of the ^M here.
-(defun fffixm-old ()
-  "Delete ^M from buffer."
-
-  (interactive)
-  ;; Remember where we were
-  (let ((old-point (point)))
-
-    ;; Move to top
-    (set-window-point (get-buffer-window (current-buffer)) 0)
-
-    (replace-string "\r\n" "\n")
-    (replace-string "\r" "\n")
-    ;; Replace ^M's
-    ;; (while (search-forward "\r" nil t)
-    ;;   (replace-match "\r\n" "\n")
-    ;;   (replace-match "\r" "\n")
-    ;;   )
-
-    ;; Move back to the old point
-    (set-window-point (get-buffer-window (current-buffer)) old-point)
-    (message "Removed ^M")
-    )
-  )
-
-;; Kill All Buffers without prompting.
+;; Kill all Buffers without prompting.
 ;; Modified from kill-some-buffers in files.el, which prompts too much.
 (defun kill-all-buffers ()
   "Kill all buffers without prompting."
@@ -639,54 +605,47 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Text colors/styles. You can use this in conjunction with enriched-mode.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defface red-face `((t (:foreground "red")))  "Red highlight")
 
-(defun rich-style (face)
-  (put-text-property
-   (if (use-region-p) (region-beginning) (line-beginning-position))
-   (if (use-region-p) (region-end)       (line-end-position))
-   'face face))
-
-(defun rich-red () (interactive) (rich-style 'red-face))
-(defun rich-italic () (interactive) (rich-style 'italic))
-(defun rich-bold () (interactive) (rich-style 'bold))
-
-(defun rich-nostyle ()
-  (interactive)
-  (set-text-properties
-   (if (use-region-p) (region-beginning) (line-beginning-position))
-   (if (use-region-p) (region-end)       (line-end-position))
-   nil))
+;; rich-style will affect the style of either the selected region,
+;; or the current line if no region is selected.
+;; style may be an atom indicating a rich-style face,
+;; e.g. 'italic or 'bold, using
+;;   (put-text-property START END PROPERTY VALUE &optional OBJECT)
+;; or a color string, e.g. "red", using
+;;   (facemenu-set-foreground COLOR &optional START END)
+;; or nil, in which case style will be removed.
+(defun rich-style (style)
+  (let* ((start (if (use-region-p)
+                    (region-beginning) (line-beginning-position)))
+                    
+         (end   (if (use-region-p)
+                    (region-end)  (line-end-position))))
+    (cond
+     ((null style)      (set-text-properties start end nil))
+     ((stringp style)   (facemenu-set-foreground style start end))
+     (t                 (add-text-properties start end (list 'face style)))
+     )))
 
 (defun enriched-mode-keys ()
-  (define-key enriched-mode-map "\C-ci" 'rich-italic)
-  (define-key enriched-mode-map "\C-cb" 'rich-bold)
-  (define-key enriched-mode-map "\C-cr" 'rich-red)
-  (define-key enriched-mode-map (kbd "C-<backspace>") 'rich-nostyle)
+  (define-key enriched-mode-map "\C-ci"
+    (lambda () (interactive)    (rich-style 'italic)))
+  (define-key enriched-mode-map "\C-cB"
+    (lambda () (interactive)    (rich-style 'bold)))
+  (define-key enriched-mode-map "\C-cu"
+    (lambda () (interactive)    (rich-style 'underline)))
+  (define-key enriched-mode-map "\C-cr"
+    (lambda () (interactive)    (rich-style "red")))
+  (define-key enriched-mode-map "\C-cb"
+    (lambda () (interactive)    (rich-style "blue")))
+  (define-key enriched-mode-map "\C-cg"
+    (lambda () (interactive)    (rich-style "sea green")))
+  (define-key enriched-mode-map "\C-cp"
+    (lambda () (interactive)    (rich-style "purple")))
+
+  (define-key enriched-mode-map (kbd "C-c <backspace>")
+    (lambda () (interactive)    (rich-style nil)))
   )
 (add-hook 'enriched-mode-hook 'enriched-mode-keys)
-
-;; These functions work to set overlays, but it turns out overlays
-;; aren't what enriched-mode uses. Maybe they're good for something else.
-;; (defun overlay-red ()
-;;   (interactive)
-;;   (overlay-put
-;;    (make-overlay
-;;     (region-beginning)
-;;     (region-end))
-;;     'face 'redhighlight)
-;;    )
-;; (defun overlay-italic ()
-;;   (interactive)
-;;   (overlay-put
-;;    (make-overlay
-;;     (region-beginning)
-;;     (region-end))
-;;     'face 'italic)
-;;    )
-;; (defun overlay-unhighlight ()
-;;   (interactive)
-;;   (remove-overlays))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Mixed text and image mode using iimage -- this is so cool!
