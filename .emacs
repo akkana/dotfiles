@@ -2,6 +2,11 @@
 ;; Akkana's old and grizzled GNU Emacs initialization file
 ;;
 
+;; How to set a font here rather than in .Xdefaults
+;; But don't do this without checking screen size or hostname or something;
+;; we only want to do it on iridum.
+;(set-default-font "Inconsolata-12")
+
 ;;(setq load-path (cons "~/.emacs-lisp/" load-path))
 (add-to-list 'load-path "~/.emacs-lisp/")
 
@@ -9,7 +14,7 @@
 (setq debug-on-error t)
 (setq stack-trace-on-error t)
 
-(setq load-path (cons "~/.emacs-lisp/" load-path))
+; (setq load-path (cons "~/.emacs-lisp/" load-path))
 
 ;; Automatically uncompress .gz files
 ;; -- this seems to have stopped working unless I do it by hand.
@@ -30,8 +35,14 @@
 (global-set-key "\C-x\C-v" 'find-file-other-window)
 (global-set-key "\C-xs" 'save-buffer)
 (global-set-key "\M-w" 'kill-region)
-
 (global-set-key "\C-m" 'newline-and-indent)
+
+;; I seem to spend half my free time chasing after various broken
+;; electric indents in emacs. And really, the only time I ever want
+;; electric indent is for }. So maybe the answer is to turn off
+;; electrics everywhere, then rebind } to indent the current line
+;; after inserting.
+(setq electric-indent-mode nil)
 
 ;; Electric mode has recently taken over (newline), so we have to do this:
 (if (fboundp 'electric-indent-just-newline)
@@ -66,6 +77,7 @@
 
 (define-key global-keys-minor-mode-map "\C-c\C-r" 'revert-buffer)
 (define-key global-keys-minor-mode-map (kbd "C-;") 'insert-date)
+(define-key global-keys-minor-mode-map (kbd "C-:") 'insert-yesterday-date)
 
 ;; Try to disable electric mode in python, but this doesn't work:
 ;(define-key global-keys-minor-mode-map (kbd "C-:") 'self-insert)
@@ -231,39 +243,63 @@
 ;; Revert to old behavior:
 (setq line-move-visual nil)
 
-;; With these two:
-;(setq x-select-enable-clipboard t)
-;(setq interprogram-paste-function 'x-cut-buffer-or-selection-value)
-;; text in PRIMARY can be pasted into emacs with middleclick but not with ^Y.
+;;;;;;;;;;;;; X Selection / Clipboard behavior
 
-;; With these three:
-;(setq x-select-enable-clipboard t)
-;(setq interprogram-paste-function 'x-cut-buffer-or-selection-value)
-;(setq x-select-enable-primary t)
-;; C-y will also paste PRIMARY.
+;; This may be helpful: http://www.emacswiki.org/emacs/Comments_on_CopyAndPaste
 
-;; Copy selected text into X CLIPBOARD selection so clueness new apps
-;; (like GIMP now, sigh, bug 730315) can use it.
-(setq x-select-enable-clipboard t)
-;; I'm not clear what this one does, but maybe it'll help emacs be less flaky:
-(setq interprogram-paste-function 'x-cut-buffer-or-selection-value)
-;; or maybe this will -- except that would also put it in the kill ring:
-;; (setq mouse-drag-copy-region t)
+;; ;; With these two:
+;; ;(setq x-select-enable-clipboard t)
+;; ;(setq interprogram-paste-function 'x-cut-buffer-or-selection-value)
+;; ;; text in PRIMARY can be pasted into emacs with middleclick but not with ^Y.
 
-;; Non-nil means cutting and pasting uses the primary selection.
-;; But unfortunately it disables x-select-enable-clipboard.
+;; ;; With these three:
+;; ;(setq x-select-enable-clipboard t)
+;; ;(setq interprogram-paste-function 'x-cut-buffer-or-selection-value)
+;; ;(setq x-select-enable-primary t)
+;; ;; C-y will also paste PRIMARY.
+
+;; ;; Copy selected text into X CLIPBOARD selection as well as PRIMARY
+;; ;; so clueless new apps (like GIMP now, sigh, bug 730315) can use it.
+;; (setq x-select-enable-clipboard t)
+;; ;; I'm not clear what this one does, but maybe it'll help emacs be less flaky:
+;; (setq interprogram-paste-function 'x-cut-buffer-or-selection-value)
+;; ;; or maybe this will -- except that would also put it in the kill ring:
+;; ;; (setq mouse-drag-copy-region t)
+
+;; ;; Non-nil means cutting and pasting uses the primary selection.
+;; ;; But unfortunately it disables x-select-enable-clipboard.
+;; (setq x-select-enable-primary t)
+
+;; ;; Save only temporarily active regions to the primary selection
+;; (setq select-active-regions 'only)
+
+;; ;; Try to tell emacs not to put killed text into the X selection
+;; ;(setq interprogram-cut-function nil)
+;; ; Unfortunately that also prevents it from selecting highlighted text!
+;; ; Need a way to turn off just killed text.
+
+;; ;; Emacs seems to have lost the ability to do middlemouse paste of
+;; ;; PRIMARY, apparently because it's sometimes (but not always) taking
+;; ;; CLIPBOARD instead.
+;; ;; See also http://www.oreillynet.com/onlamp/blog/2005/01/quick_tip_for_linux_users_havi.html
+;; ;(setq x-select-enable-clipboard nil)
+
+;; What wgreenhouse on #emacs uses:
 (setq x-select-enable-primary t)
+(setq x-select-enable-clipboard t)
+(setq save-interprogram-paste-before-kill t)
+;; and also comments:
+;; sometimes the primary selection kill won't be top of the ring, if I've
+;; done something else meanwhile; sometimes I have to M-y
+;; and that if all else fails, (insert (x-selection 'PRIMARY))
+;; will insert the primary selection.
 
-;; Try to tell emacs not to put killed text into the X selection
-;(setq interprogram-cut-function nil)
-; Unfortunately that also prevents it from selecting highlighted text!
-; Need a way to turn off just killed text.
+;; But those settings don't do it: C-y is still inconsistent,
+;; sometimes works and sometimes doesn't.
+(global-set-key "\C-y" (lambda () (interactive)
+                         (insert (x-selection 'PRIMARY))))
 
-;; Emacs seems to have lost the ability to do middlemouse paste of
-;; PRIMARY, apparently because it's sometimes (but not always) taking
-;; CLIPBOARD instead.
-;; See also http://www.oreillynet.com/onlamp/blog/2005/01/quick_tip_for_linux_users_havi.html
-;(setq x-select-enable-clipboard nil)
+;;;;;;;;;;;;; End X Selection / Clipboard behavior
 
 ;(setq default-case-fold-search nil)
 (setq delete-auto-save-files t)
@@ -331,12 +367,24 @@
           "</html>\n")
   )
 
+(defun fixm ()
+  "Change line breaks to Unix style"
+  (interactive)
+
+  ;(set-buffer-file-coding-system "utf-8-unix")
+  (set-buffer-file-coding-system 'utf-8-unix t)
+  (message "fixm")
+)
+
+; (message "defining fixm")
+; (sleep-for 5)
+
 ;; Replace Windows/Mac newslines in current buffer.
 ;; Thanks to slamm for the original!
 ;; Rewritten by Akkana to handle Mac newlines as well.
 ;; Note: Mike Tsao says in his weblog that C-x [ENTER] f unix [ENTER]
 ;; converts DOS line endings to Unix, but it doesn't get rid of the ^M here.
-(defun fixm ()
+(defun fffixm-old ()
   "Delete ^M from buffer."
 
   (interactive)
@@ -356,6 +404,7 @@
 
     ;; Move back to the old point
     (set-window-point (get-buffer-window (current-buffer)) old-point)
+    (message "Removed ^M")
     )
   )
 
@@ -446,6 +495,9 @@
 ;; no-electric doesn't work for python mode -- even if : is bound
 ;; to self-insert it still reindents the line.
 ;(add-hook 'python-mode-hook (lambda () (electric-indent-mode -1)))
+;; But this method does work!
+;;http://stackoverflow.com/questions/21182550/how-to-turn-of-electric-indent-mode-for-specific-major-mode
+(add-hook 'python-mode-hook (lambda () (electric-indent-local-mode -1)))
 
 (add-hook 'js-mode-hook (lambda ()
   (define-key js-mode-map "," 'self-insert-command)
@@ -509,9 +561,11 @@
 (defun text-indent-hook ()
   (local-set-key "\C-m" 'newline-and-text-indent)
   (flyspell-mode 1)
-  (flyspell-buffer)
+  ;(flyspell-buffer)
   (local-set-key (kbd "C-;") 'insert-date)
   (global-set-key (kbd "C-;") 'insert-date)
+  (local-set-key (kbd "C-:") 'insert-yesterday-date)
+  (global-set-key (kbd "C-:") 'insert-yesterday-date)
   )
 (setq text-mode-hook 'text-indent-hook)
 
@@ -547,14 +601,92 @@
 ;; Insert the current date into the buffer.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; http://ergoemacs.org/emacs/elisp_datetime.html
-(defun insert-date ()
+(defun insert-date (&optional time)
   "Insert current date yyyy-mm-dd."
   (interactive)
   (when (region-active-p)
     (delete-region (region-beginning) (region-end) )
     )
-  (insert (format-time-string "%Y-%m-%d"))
+  ;(insert (format-time-string "%Y-%m-%d"))
+  (if (null time) (setq time (current-time)))
+  ; (insert (format "%s" time))
+  (insert (format-time-string "%Y-%m-%d" time))
   )
+
+;; Yesterday's date, from http://emacswiki.org/emacs/Journal
+(defun yesterday-time ()
+"Provide the date/time 24 hours before the time now in the format of current-time."
+  (setq
+   now-time (current-time)              ; get the time now
+   hi (car now-time)                    ; save off the high word
+   lo (car (cdr now-time))              ; save off the low word
+   msecs (nth 2 now-time)               ; save off the microseconds
+   psecs (nth 3 now-time)               ; save off the picoseconds
+   )
+
+  (if (< lo 20864)                      ; if the low word is too small
+      (setq hi (- hi 2)  lo (+ lo 44672)) ; take 2 from high word, add to low
+    (setq hi (- hi 1) lo (- lo 20864))  ; else, add 86400 seconds (in two parts)
+    )
+  (list hi lo msecs psecs)              ; regurgitate the new values
+  )                                     ; end of yesterday-time
+
+(defun insert-yesterday-date ()
+  "Insert yesterday's date yyyy-mm-dd."
+  (interactive)
+  (insert-date (yesterday-time)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Text colors/styles. You can use this in conjunction with enriched-mode.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defface red-face `((t (:foreground "red")))  "Red highlight")
+
+(defun rich-style (face)
+  (put-text-property
+   (if (use-region-p) (region-beginning) (line-beginning-position))
+   (if (use-region-p) (region-end)       (line-end-position))
+   'face face))
+
+(defun rich-red () (interactive) (rich-style 'red-face))
+(defun rich-italic () (interactive) (rich-style 'italic))
+(defun rich-bold () (interactive) (rich-style 'bold))
+
+(defun rich-nostyle ()
+  (interactive)
+  (set-text-properties
+   (if (use-region-p) (region-beginning) (line-beginning-position))
+   (if (use-region-p) (region-end)       (line-end-position))
+   nil))
+
+(defun enriched-mode-keys ()
+  (define-key enriched-mode-map "\C-ci" 'rich-italic)
+  (define-key enriched-mode-map "\C-cb" 'rich-bold)
+  (define-key enriched-mode-map "\C-cr" 'rich-red)
+  (define-key enriched-mode-map (kbd "C-<backspace>") 'rich-nostyle)
+  )
+(add-hook 'enriched-mode-hook 'enriched-mode-keys)
+
+;; These functions work to set overlays, but it turns out overlays
+;; aren't what enriched-mode uses. Maybe they're good for something else.
+;; (defun overlay-red ()
+;;   (interactive)
+;;   (overlay-put
+;;    (make-overlay
+;;     (region-beginning)
+;;     (region-end))
+;;     'face 'redhighlight)
+;;    )
+;; (defun overlay-italic ()
+;;   (interactive)
+;;   (overlay-put
+;;    (make-overlay
+;;     (region-beginning)
+;;     (region-end))
+;;     'face 'italic)
+;;    )
+;; (defun overlay-unhighlight ()
+;;   (interactive)
+;;   (remove-overlays))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Mixed text and image mode using iimage -- this is so cool!
@@ -644,6 +776,7 @@
          )
     (start-process "scrot" nil "/usr/bin/scrot" "-s" filename)
     (message "Take new screenshot")
+    ;(message (concat "scrot -s" filename))
     )
   ;; Would be nice to refresh images automatically,
   ;; but we'd have to wait for the scrot process to exit.
@@ -701,9 +834,10 @@
 (autoload 'c++-mode    "cc-mode" "C++ Editing Mode" t)
 (autoload 'c-mode      "cc-mode" "C Editing Mode" t)
 (autoload 'objc-mode   "cc-mode" "Objective-C Editing Mode" t)
-(autoload 'java-mode   "cc-mode" "Java Editing Mode" t)
+;(autoload 'java-mode   "cc-mode" "Java Editing Mode" t)
 (autoload 'archive-mode "arc-mode" "Zip and Jar Mode" t)
-(autoload 'iimage-mode "iimage-mode" "Iimage Mode" t)
+;; iimage-mode used to work with a filename of iimage-mode, now it needs iimage.
+(autoload 'iimage-mode "iimage" "Iimage Mode" t)
 
 ;; Style stuff for the old c-mode, now outmoded:
 ;(c-add-style "akkana"
@@ -775,17 +909,21 @@
         ("\\.r$" . r-mode)
         ("\\.img$" . text-img-mode)
 
-;; Use web-mode by default for PEEC files except PHP ones:
+        ;; Use web-mode by default for PEEC files except PHP ones:
         ("web/peec" . web-mode)
         ("\\.php" . php-mode)
-        ("web/peec/brownrice" . web-mode)
+
+        ; STS are Nightshade "strato scripts", with no particular syntax
+        ; except that they do have a comment syntax defined.
+        ; conf-mode seems like a reasonable compromise.
+        ("\\.sts" . conf-mode)
+
+        ;; Don't wrap on LWV HTML files -- they tend to have long lines.
+        ("lwvweb/" . html-mode)
 
 ;; Make sure changelogs don't use text-wrap-mode -- they're too long,
 ;; and text-mode invokes spellcheck which takes forever.
         ("ChangeLog" . fundamental-mode)
-
-;; A default for Docs/, must be before the competing Docs/* definitions:
-        ("Docs/" . text-wrap-mode)
 
 ;; A few special settings by location or name,
 ;; for files that may not have type-specific extensions:
