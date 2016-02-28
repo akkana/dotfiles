@@ -852,6 +852,7 @@
 
 ;; file types -- too bad emacs doesn't handle most of these automatically.
         ("\\.epub$" . archive-mode)
+        ("\\.kmz$" . archive-mode)
         ("\\.pde$" . c-mode)
         ("\\.ino$" . c-mode)
         ("\\.py$" . python-mode)
