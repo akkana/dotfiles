@@ -13,6 +13,60 @@ else
   return
 fi
 
+# Source global definitions
+if [[ -f /etc/zshrc ]]; then
+	. /etc/zshrc
+fi
+
+#setopt ignoreeof
+
+setopt RM_STAR_SILENT
+
+# Allow completions like *vol*<tab>
+setopt globcomplete
+
+# In a case like rm a/*T.jpg b/*T.jpg, don't fail to remove a/*T.jpg
+# just because b/*T.jpg didn't match anything.
+# But people on #zsh give dire warnings that this will be somehow unstable.
+# unsetopt nomatch
+# The only obvious thing wrong with it I've seen is that null matches
+# pass a wildcard through, e.g. echo *XX* passes '*XX*'
+# which apparently is what bash does.
+# 
+# This might be a better option. If it matches nothing, it returns nothing.
+# setopt nullglob
+# 
+# Best solution: do what tcsh does!
+setopt cshnullglob
+
+# Don't autocomplete non-executable files in PATH (slower but less confusing):
+# setopt hashexecutablesonly
+# But here's a better solution that lets us know when there's a problem.
+# It needs to always return false except in the -e case.
+# command_not_found_handler() { echo $? && return 1 };
+# This also works but is more verbose:
+setopt printexitvalue
+# Or this much more elaborate solution:
+# . $HOME/.zsh.printexit
+
+# zsh docs say it should be colon separated, but that doesn't work.
+# Or sometimes it does -- only on the laptop, for some reason,
+# when I'm not reading mail (maybe it's affected by mutt changing
+# the atime?) and it's super annoying there.
+#mailpath=($HOME/Msgs/in/Inbox $HOME/Msgs/in/whitelist)
+#MAIL=(0 $HOME/Msgs/in/Inbox $HOME/Msgs/in/whitelist)
+
+# Prevent any repeated entries in $PATH
+typeset -U PATH
+
+# Set path
+export PATH=$HOME/bin:$HOME/bin/linux:/usr/local/bin:/usr/local/gimp-git/bin:/usr/sbin:/usr/bin:/bin:/usr/bin/X11:.:/sbin:/usr/games:$HOME/outsrc/android-sdk-linux/platform-tools:$HOME/outsrc/android-sdk-linux/tools:/usr/local/bin:$HOME/.local/bin
+
+export PYTHONPATH=$HOME/bin
+
+ulimit -c unlimited
+HISTSIZE=200
+
 # If EDITOR is vim, zsh will try to be "smart" and switch to vi mode.
 # This switches bindings back to emacs:
 bindkey -e
@@ -51,37 +105,6 @@ function autoxchat()
 zle -N autoxchat
 bindkey "=xc" autoxchat
 
-# Source global definitions
-if [[ -f /etc/zshrc ]]; then
-	. /etc/zshrc
-fi
-
-#setopt ignoreeof
-
-setopt RM_STAR_SILENT
-
-# Allow completions like *vol*<tab>
-setopt globcomplete
-
-# zsh docs say it should be colon separated, but that doesn't work.
-# Or sometimes it does -- only on the laptop, for some reason,
-# when I'm not reading mail (maybe it's affected by mutt changing
-# the atime?) and it's super annoying there.
-#mailpath=($HOME/Msgs/in/Inbox $HOME/Msgs/in/whitelist)
-#MAIL=(0 $HOME/Msgs/in/Inbox $HOME/Msgs/in/whitelist)
-
-# Prevent any repeated entries in $PATH
-typeset -U PATH
-
-# Set path
-export PATH=$HOME/bin:$HOME/bin/linux:/usr/local/bin:/usr/sbin:/usr/bin:/bin:/usr/bin/X11:.:/sbin:/usr/games:$HOME/android/android-sdk-linux_x86/tools:$HOME/android/android-sdk-linux_x86/platform-tools:/usr/local/bin
-
-# Need to add android paths for both user AND root in order to use adb.
-# SO annoying!
-
-ulimit -c unlimited
-HISTSIZE=200
-
 # Prompt setting
 
 # Linux consoles don't colorize bold, so make it magenta to stand out
@@ -112,10 +135,16 @@ elif [[ $USER == root ]]; then
 fi
 export primes=${primes}\'
 
-# Print time on the right
+# Print useful info on the right.
+# %F{color} sets the color; %f%k restores default fg/bg colors, respectively.
+# %t is time in 12-hr format (%T 24);
+# %~ is current directory;
 #RPS1='%~%w %t'
-RPS1="%F{red}%~%t%f%k"
-# Cool happy/sad face right prompt from saz, from a friend of hers:
+# RPS1=" %F{red}%~ %t%f%k"
+# Just current dir, no time:
+RPS1="%F{red}%~%f%k"
+# Cool happy/sad face right prompt from saz, from a friend of hers,
+# changes with status of the last command:
 # RPS1=''%(?,"$(print '%{\e[1;35m%}:-)%{\e[0m%}')","$(print '%{\e[1;31m%}:-(%{\e[0m%}')")''
 
 # Bash defaults to a really short timeout, and exits on inactivity.
@@ -137,16 +166,12 @@ export LS_COLORS='ex=1;31:ln=1;35'
 export RSYNC_RSH=ssh
 export PHO_ARGS=-p
 
-# aliases
+#
+# Aliases and functions.
+#
 
-alias sss="titlebar D N A; ssh shallowsky.com; titlebar local"
-alias ssm="titlebar Moooooooooon; ssh moon; titlebar local"
-alias ssp="titlebar Raspberry Pi; ssh pipi; titlebar local"
+alias m=mutt
 
-#ls() { /bin/ls -F --color $* ; }
-#ll() { /bin/ls -laF --color $* ; }
-#llt() { /bin/ls -laSFHLt --color $* ; }
-#llth() { /bin/ls -lFSHLt --color $* | head -20 ; }
 show_symlinks() {
     for f in $*; do
         # Remove terminal slash.
@@ -204,9 +229,7 @@ alias ap="man -k"
 alias screenshot="scrot -b -s screenshot.jpg"
 alias thes="dict -h localhost -d moby-thesaurus"
 
-# alias newbg='hsetroot -fill `find -L $HOME/Backgrounds -name "*.*" | randomline`'
-
-alias akk='play ~/.xchat2/sounds/akk.wav'
+alias netscheme='sudo /home/akkana/src/netutils/netscheme'
 
 # Newer versions of xterm no longer support titlebar setting with
 # the documented sequence of \e]2. But \e]0 works, as long as you
@@ -225,6 +248,9 @@ sp() {
 # Recursive greps
 gr() {
   find . \( -type f -and -not -name '*.o' -and -not -name '*.so' -and -not -name '*.a' -and -not -name '*.pyc' -and -not -name '*.jpg' -and -not -name '*.JPG' -and -not -name '*.png' -and -not -name '*.xcf*' -and -not -name 'po' -and -not -name '*.tar*' -and -not -name '*.zip' -or -name '.metadata' -prune \) -print0 | xargs -0 grep $* /dev/null | fgrep -v .svn | fgrep -v .git
+}
+zgr() {
+  find . \( -type f -and -not -name '*.o' -and -not -name '*.so' -and -not -name '*.a' -and -not -name '*.pyc' -and -not -name '*.jpg' -and -not -name '*.JPG' -and -not -name '*.png' -and -not -name '*.xcf*' -and -not -name 'po' -and -not -name '*.tar*' -and -not -name '*.zip' -or -name '.metadata' -prune \) -print0 | xargs -0 zgrep $* /dev/null | fgrep -v .svn | fgrep -v .git
 }
 cgr() {
   find . \( -name '*.[CchH]' -or -name '*.cpp' -or -name '*.cc' \) -print0 | xargs -0 grep $* /dev/null
@@ -253,28 +279,100 @@ mgr() {
 agr() {
   find . -type f -print0 | xargs -0 grep $* /dev/null
 }
-zgr() {
-  find . \( -type f -and -not -name '*.o' -and -not -name '*.so' -and -not -name '*.a' \) -print0 | xargs -0 zgrep $* /dev/null
+javagr() {
+  find . -name '*.java' -print0 | xargs -0 grep $* /dev/null
 }
+# zgr() {
+#  find . \( -type f -and -not -name '*.o' -and -not -name '*.so' -and -not -name '*.a' \) -print0 | xargs -0 zgrep $* /dev/null
+#}
 # Next doesn't work. How do we use -prune?
 idagr() {
   find . \( -name OBJ -prune -or -name external -prune -or -name '*scons*' -prune -or -name google_appengine -prune -o -type f -and -not -name '*.o' -and -not -name '*.so' -and -not -name '*.a' -and -not -name '*.pyc' \) -print0 | xargs -0 grep $* /dev/null | fgrep -v .svn | fgrep -v .git
 }
-alias igr=idagr
 
-# Search for spam subjects or from lines in Spam/saved,
-# for purposes of telling which patterns should be added to procmail filters.
-spams() {
-    #grep Subject ~/Spam/saved ~/Spam/trained/saved | egrep -i "$*"
-    decodemail -a Subject: ~/Spam/trained/saved ~/Spam/saved | egrep -a -i "$*"
+alias pygrep="langgrep python"
+
+# Grep stdin for lines that have any of these terms.
+# usage: cmd | grepany term1 term2 term3 
+grepany() {
+    egrep "(${(j:|:)*})"
 }
-spamf() {
-    #grep -a -h '^From:' ~/Spam/trained/saved ~/Spam/saved | egrep -a -i "$*"
-    decodemail -a From: ~/Spam/saved ~/Spam/trained/saved | egrep -a -i "$*"
+
+# Grep stdin for lines that have all of these terms
+# (and none of the terms after the -v).
+# usage: cmd | grepall term1 term2 term3 -v term4 term5
+grepall() {
+    vterm=${*[(i)-v]}
+    pos=($*[1,$vterm-1])
+    neg=($*[$vterm+1,-1])
+
+    cmd="cat"
+    for term in $pos; do
+        cmd="$cmd | grep $term"
+    done
+    for term in $neg; do
+        cmd="$cmd | grep -v $term"
+    done
+
+    zsh -c $cmd
 }
-spamff() {
-    #grep -a -h '^From' ~/Spam/trained/saved ~/Spam/saved | egrep -a -i "$*"
-    decodemail -a From ~/Spam/saved ~/Spam/trained/saved | egrep -a -i "$*"
+
+# pushd, but not if we're already at the target directory
+# or if we're currently home.
+# Use in other scripts that need to save the previous directory.
+pushd_maybe() {
+    cwd=`pwd`
+    if [[ x$1 == x$cwd ]]; then
+        return
+    fi
+    if [[ x$cwd == x$HOME ]]; then
+        cd $1
+    else
+        pushd $1
+    fi
+}
+
+popd_maybe() {
+    # $dirstack isn't documented anywhere near pushd/popd/dirs,
+    # but it works. Apparently it's documented with the zsh/parameters
+    # module in zshmodules(1).
+    if [[ $#dirstack > 0 ]]; then
+        popd
+    fi
+}
+
+# end greps
+#######################################################
+
+# Update all my git repositories:
+allgit() {
+    pushd_maybe ~
+    foreach repo ( scripts netutils metapho feedme imagebatch pytopo
+                   gimp-plugins pho htmlpreso android dotfiles arduino )
+        echo $repo :
+        cd ~/src/$repo
+        git pull
+    end
+    popd_maybe
+}
+
+# Run a git with all-default settings.
+# Usage: gimpclean VERSION SWM
+# e.g. gimpclean git no, gimpclean 2.8 yes
+gimpclean() {
+    gimpdir=`mktemp -d /tmp/gimpenv.XXXXX`
+    if [[ x$1 != x ]]; then
+        version=-$1
+    else
+        version=
+    fi
+    if [[ x$2 == 'xno' ]]; then
+        echo swm no
+        # This doesn't really work, alas.
+        echo "(single-window-mode no)" > $gimpdir/sessionrc
+    fi
+    echo version is $version
+    GIMP2_DIRECTORY=$gimpdir gimp$version --new-instance
 }
 
 # Don't accidentally halt on server machines.
@@ -289,31 +387,7 @@ else
   alias reboot="sudo shutdown -r now"
 fi
 
-# blog stuff -- helpers for pyblosxom
-blogupdate() {
-  pushd ~/web/blogfiles
-  setopt localoptions errreturn
-  pyblosxom-cmd staticrender --incremental
-  ~/bin/blogtopics
-  mv ../blog/topics.html ../blog/oldtopics.html
-  mv ../blog/newtopics.html ../blog/topics.html
-  blog-tag-index
-  popd
-}
-
-blogup() {
-  pushd ~/web/blogfiles
-  setopt localoptions errreturn
-  pyblosxom-cmd staticrender --incremental
-  popd
-}
-
-# Sync new blog files back to the server:
-#alias blogsync='rsync -av ~/web/blog ~/web/blogfiles leewit:shallow/'
-alias blogsync='rsync -av ~/web/blog ~/web/blogfiles shallowsky.com:web/'
-
-# Palm stuff: USB0 for Tungsten, USB1 for everything else
-export PILOTPORT=/dev/ttyUSB1
+######## audio/video aliases
 
 # mencoder options are black magic.
 # This works for converting Minolta quicktime .mov to mpeg:
@@ -330,8 +404,25 @@ mov2mpeg4() {
 }
 
 # Extract audio from flash:
-mov2mp3() {
-  avconv -i $1 $2
+# mov2mp3old() {
+#   avconv -i $1 $2
+# }
+#
+# But that doesn't work any more (2015) and takes forever, so try this instead:
+alias tomp3='soundconverter -b -m "audio/mpeg" -s ".mp3"'
+
+# Record a realaudio stream
+getreal() {
+  mplayer -playlist $1 -ao pcm:file=$2 -vc dummy -vo null
+}
+# Then transcode it with: 
+# lame --tg Other --ta artist -tl album file.wav file.mp3
+
+######## end video aliases
+
+# Use LibreOffice to convert doc to html:
+LOdoc2html() {
+    libreoffice --headless --convert-to html:HTML --outdir doc2html $1
 }
 
 # Remove the line matching $1 from ~/.ssh/known_hosts.
@@ -347,67 +438,129 @@ cleanssh() {
 #alias temp="cat /proc/acpi/thermal_zone/*/temperature"
 alias temp=sensors
 
-# Record a realaudio stream
-getreal() {
-  mplayer -playlist $1 -ao pcm:file=$2 -vc dummy -vo null
-}
-# Then transcode it with: 
-# lame --tg Other --ta artist -tl album file.wav file.mp3
-
-# Ratings for my book
-alias ratings='links -dump "http://www.amazon.com/gp/product/1590595874" | grep "in Books" | grep -v Explore'
-
 # For presentations
-alias bigterm="rxvt -geometry 80x33 -fn '-*-lucidatypewriter-*-*-*-*-19-*-*-*-*-*-*-*'"
+# alias bigterm="rxvt -geometry 80x33 -fn '-*-lucidatypewriter-*-*-*-*-19-*-*-*-*-*-*-*'"
+alias bigterm="rxvt -fn terminus-iso8859-2-bold-18"
 alias noteterm="xterm -geometry 30x34+1025+0 -fn '-*-terminus-bold-*-*-*-22-*-*-*-*-*-*-*'"
+# For notes during planetarium shows:
+# red/black for night vision, narrow to show two at once on a laptop.
+alias planeterm="rxvt -geometry 62x45 -fn terminus-iso8859-2-bold-18 -bg black -fg red"
 
-# Some whizzy commands you can set to do various things,
-# only most of them don't seem to work reliably:
+#alias zzz='sudo /etc/acpi/sleep.sh'
+alias zzz='sudo pm-suspend --auto-quirks'
 
-function prompt_command {
-  echo command was $_, result was $?
-  echo foo bar $*
+########## Fiddle with external monitor/audio connections:
+# Connect to a projector on the VGA port:
+alias projector='xrandr --output VGA1 --mode 1024x768'
+# and on the HDMI port:
+alias projectorh='xrandr --output HDMI1 --mode 1024x768'
+
+# and set video back to normal:
+alias monitor='xrandr --output HDMI1 --mode 1680x1050 --output VGA1 --off --output LVDS1 --off'
+alias noprojector='xrandr --auto'
+
+# Send all audio output to HDMI.
+# Usage: hdmisound [on|off], default is on.
+hdmisound() {
+    if [[ $1 == 'off' ]]; then
+        if [[ -f ~/.asoundrc ]]; then
+            mv ~/.asoundrc ~/.asoundrc.hdmi
+        fi
+        amixer sset IEC958 mmute
+    else
+        if [[ -f ~/.asoundrc ]]; then
+            mv ~/.asoundrc ~/.asoundrc.nohdmi
+        fi
+        cat >> ~/.asoundrc <<EOF
+pcm.dmixer {
+  type dmix
+  ipc_key 1024
+  ipc_key_add_uid false
+  ipc_perm 0660
+  slave {
+    pcm "hw:0,3"
+    rate 48000
+    channels 2
+    period_time 0
+    period_size 1024
+    buffer_time 0
+    buffer_size 4096
+  }
 }
-
-function command_not_found_handle {
-  filename=$1
-  echo processing error on $1
-  echo Command not found: $filename
-  if [[ -e $filename ]]; then
-    if [[ ! -x $filename ]]; then
-      if [[ ! -r $filename ]]; then
-        echo "$filename is a file but it's not readable or executable."
-        echo "Maybe you need to be root?"
-        return 127
-      fi
-      echo "$filename is a file. Did you mean to view it:"
-      echo "  cat $filename"
-      echo "  less $filename"
-      echo "or edit it:"
-      if [[ x"$VISUAL" != x ]]; then
-        echo "  $VISUAL $filename"
-      elif [[ x"$EDITOR" != x ]]; then
-        echo "  $EDITOR $filename"
-      else
-        echo "  vim $filename"
-      fi
+ 
+pcm. !default {
+  type plug
+  slave.pcm "dmixer"
+}
+EOF
+        amixer sset IEC958 unmute
     fi
-  fi
-  echo "$*"
-  return 127
 }
+########## End external monitor/audio connections:
 
-not_accept_command() {
-  #test -f "$BUFFER"
-  echo accept_command
-  return 0
+# If you're working on a branch, and all your changes are committed,
+# use this to merge master changes into the current branch.
+alias git_merge_branch='git fetch; git rebase origin/master'
+
+# Mount encrypted SD card:
+cryptmount() {
+    device=$1
+    name=$2
+    sudo cryptsetup luksOpen $device $name
+    sudo mount /dev/mapper/$name /$name -o defaults,relatime
 }
+cryptunmount() {
+    name=$1
+    sudo umount /$name
+    sudo cryptsetup remove $name
+}
+if [[ $HOST == 'vaiolin' ]]; then
+  alias crypt='cryptmount /dev/mmcblk0p2 crypt'
+#elif [[ $HOST == 'imbrium' ]]; then
+#  # Should base this on whether /dev/sd[b-e] already exist
+#  alias crypt='cryptmount /dev/sdf3 crypt'
+else
+  #alias crypt='cryptmount /dev/sdc3 crypt'
+  alias crypt='cryptmount /dev/disk/by-uuid/170f3caa-412f-41b7-90a8-1c1b149cec8c crypt'
+fi
+alias uncrypt='cryptunmount crypt'
 
-#zle -N accept-line accept_command
+# Serial connections to plug computers:
+#alias plug='minicom -D /dev/ttyUSB1 -b 115200'
+alias plug='screen /dev/ttyUSB1 115200'
+alias guru='screen /dev/ttyUSB0 115200'
+alias rpi='titlebar "Raspberry Pi"; screen /dev/ttyUSB0 115200; titlebar "local"'
 
-#TRAPZERR=command_not_found_handle
-#ACCEPT_LINE=accept_command
-#PROMPT_COMMAND=prompt_command
+# Connect/disconnect from a docking station. Obsoleted by shell script.
+#alias dock='xrandr --output VGA1 --mode 1600x900; hsetroot -center `find -L $HOME/Backgrounds -name "*.*" | randomline`; xrandr --output LVDS1 --off'
+#alias undock='xrandr --output LVDS1 --mode 1280x800; hsetroot -center `find -L $HOME/Backgrounds -name "*.*" | randomline`'
+
+####################################################
+# zsh-specific options:
+
+# Lines configured by zsh-newuser-install
+HISTFILE=~/.histfile
+HISTSIZE=1000
+SAVEHIST=1000
+setopt appendhistory notify
+unsetopt autocd
+# End of lines configured by zsh-newuser-install
+
+# This is apparently Ubuntu-specific weirdness:
+#skip_global_compinit=1
+
+# The following lines were added by compinstall
+#zstyle :compinstall filename '/home/akkana/.zshrc'
+
+# End of lines added by compinstall
+
+# When typing a |, don't eat the space before it.
+ZLE_REMOVE_SUFFIX_CHARS=$' \t\n;&'
+
+# Older zsh, like on squeeze, don't have compdef.
+
+# zsh annoyingly only prints the last 10 lines of history by default.
+alias history='history 200'
 
 ###################################################
 ######## zsh completion stuff #####################
@@ -489,8 +642,8 @@ unsetopt AUTO_REMOVE_SLASH
 
 # Turning off completions that are too smart for their own good:
 if [ -n "$_comps" ]; then
-  # zsh has some kind of smart git completion that doesn't autocomplete file
-  # or directory names. I ask you, how smart is that?
+  # zsh has some kind of "smart" git completion that doesn't autocomplete
+  # file or directory names. I ask you, how smart is that?
   # But blah! compdef doesn't exist in the zsh in Debian squeeze.
   # I hope they don't have the smart completion either.
   #compdef _files git
@@ -502,6 +655,11 @@ if [ -n "$_comps" ]; then
 
   # loadkeys also has "smart" (* un-smart) completion.
   compdef _files loadkeys
+
+  # adb hangs trying to autocomplete anything -- apparently it's
+  # actually trying to talk to the android even when you're trying
+  # to autocomplete a local filename.
+  compdef _files adb
 
   # Other things that have broken autocomplete, so tell it to just
   # look for filenames like a normal well-behaved shell:
@@ -539,226 +697,7 @@ bindkey '^X^W' where-is
 bindkey '^X^D' describe-key-briefly
 
 ######## end zsh completion #######################
-###################################################
-
-#alias zzz='sudo /etc/acpi/sleep.sh'
-alias zzz='sudo pm-suspend --auto-quirks'
-
-#alias netscheme='sudo /etc/network/schemes/netscheme'
-alias netscheme='sudo /home/akkana/bin/netscheme'
-
-if [ -f ~/ideascopic/dev/tools/config/setup_dev_env.bash ]; then
-    source ~/ideascopic/dev/tools/config/setup_dev_env.bash
-fi
-
-# Mount encrypted SD card:
-cryptmount() {
-    device=$1
-    name=$2
-    sudo cryptsetup luksOpen $device $name
-    sudo mount /dev/mapper/$name /$name -o defaults,relatime
-}
-cryptunmount() {
-    name=$1
-    sudo umount /$name
-    sudo cryptsetup remove $name
-}
-if [[ $HOST == 'vaiolin' ]]; then
-  alias crypt='cryptmount /dev/mmcblk0p2 crypt'
-#elif [[ $HOST == 'imbrium' ]]; then
-#  # Should base this on whether /dev/sd[b-e] already exist
-#  alias crypt='cryptmount /dev/sdf3 crypt'
-else
-  #alias crypt='cryptmount /dev/sdc3 crypt'
-  alias crypt='cryptmount /dev/disk/by-uuid/170f3caa-412f-41b7-90a8-1c1b149cec8c crypt'
-fi
-alias uncrypt='cryptunmount crypt'
-
-# Serial connections to plug computers:
-#alias plug='minicom -D /dev/ttyUSB1 -b 115200'
-alias plug='screen /dev/ttyUSB1 115200'
-alias guru='screen /dev/ttyUSB0 115200'
-alias rpi='titlebar "Raspberry Pi"; screen /dev/ttyUSB0 115200; titlebar "local"'
-
-alias beagleroute='sudo iptables -A POSTROUTING -t nat -j MASQUERADE; echo 1 | sudo tee /proc/sys/net/ipv4/ip_forward > /dev/null'
-
-# Connect/disconnect from a docking station. Obsoleted by shell script.
-#alias dock='xrandr --output VGA1 --mode 1600x900; hsetroot -center `find -L $HOME/Backgrounds -name "*.*" | randomline`; xrandr --output LVDS1 --off'
-#alias undock='xrandr --output LVDS1 --mode 1280x800; hsetroot -center `find -L $HOME/Backgrounds -name "*.*" | randomline`'
-
-alias vpn='pushd ~/vpn/vpn-credentials-akkana; sudo cp /etc/network/schemes/resolv.conf-ida /etc/resolv.conf; sudo openvpn ideascopic.conf &; popd'
-
-####################################################
-# zsh-specific options:
-
-# Lines configured by zsh-newuser-install
-HISTFILE=~/.histfile
-HISTSIZE=1000
-SAVEHIST=1000
-setopt appendhistory notify
-unsetopt autocd
-# End of lines configured by zsh-newuser-install
-
-# This is apparently Ubuntu-specific weirdness:
-#skip_global_compinit=1
-
-# The following lines were added by compinstall
-#zstyle :compinstall filename '/home/akkana/.zshrc'
-
-# End of lines added by compinstall
-
-# Older zsh, like on squeeze, don't have compdef.
-
-# zsh annoyingly only prints the last 10 lines of history by default.
-alias history='history 200'
-
-# Connect to a projector on the VGA port:
-alias projector='xrandr --output VGA1 --mode 1024x768'
-alias noprojector='xrandr --auto'
-
-# Feedme helpers:
-# Mount the Android device, copy its list of URLs, run feedme
-# then back up everything:
-
-minifeed() {
-  if ! feedme 'A Word A Day' 'Jon Carroll' 'Slate' 'Language Log' 'Merc local news' 'Xtra'
-  then
-    echo "Error running feedme"
-    return
-  fi
-
-  curdate=`date +%m-%d-%a`
-  echo "You need to: cp -r ~/feeds/$curdate /droidsd/feeds/"
-}
-
-feed() {
-  setopt localoptions noerrreturn
-  mount /droidsd
-  if ! mount | grep droidsd > /dev/null 2>&1
-  then
-    echo "Couldn't mount /droidsd -- exiting"
-    return
-  fi
-
-  # From here on, return from the function if anything goes wrong
-  setopt localoptions errreturn
-  urlrss
-
-  if ! feedme
-  then
-    echo "Error running feedme"
-    return
-  fi
-
-  curdate=`date +%m-%d-%a`
-  echo "Copying $curdate to /droidsd/feeds/"
-  cp -r ~/feeds/$curdate /droidsd/feeds/
-  sync
-
-  # This actually might not be a good idea -- we'd want to --delete,
-  # but then what if something's wrong with the mounted microSD?
-  #rsync -av /droidsd/feeds/ ~/droidfeeds/
-
-  # Comment out for the Archos -- seems to encourage filesystem errors.
-  # Hopefully the Samsung will be more reliable.
-  umount /droidsd &
-
-  # Syncing back to the server is optional,
-  # but we want to list the new feeds whether or not syncing succeeds:
-  setopt localoptions noerrreturn
-  echo "Syncing back to the server"
-  rsync -av ~/.cache/feedme/ shallowsky.com:.cache/feedme/
-
-  echo "New feeds:"
-  /bin/ls ~/feeds/$curdate
-}
-
-alias syncfeeds='rsync -av ~/.cache/feedme/ shallowsky.com:.cache/feedme/'
-
-# Now that we're running feeds on shallowsky.com,
-# local/xtra urls have to be saved there too.
-# Run with e.g. localurl http://blahblah
-remove_newlines() {
-    # #" expands escape sequences like \n
-    echo ${1/$'\n'/}
-}
-localurl() {
-    ( for url in $* ; remove_newlines $url ) | ssh shallowsky.com 'cat >> web/feedme/feeds/localurls'
-}
-
-# Remove podcast files except recent ones:
-# Fancy zsh method, but I must have a typo in it 'cause it doesn't work:
-#alias prunepod='rm $HOME/POD/**/*(.mw+2)'
-alias prunepod='find ~/POD -type f -ctime +20 -exec rm "{}" \;'
-
-# Copy podcasts to the mp3 device
-#    echo cp $(cat $filename) "/media/mobile disk/"
-pods() {
-  filename=$(ls -1t `find ~/POD -name '*.m3u'` | head -1)
-  echo filename $filename
-  if [[ x$filename == x ]]; then
-    echo "Sorry, couldn't find most recent podcasts"
-  else
-    echo "Copying files from $filename"
-    pushd ~/POD
-    # Prepend the date to every filename, so an mp3 player that
-    # orders by date will play podcasts in date order.
-    date=$(date '+%y-%m-%d')
-    # Can't store filenames in a variable, or foreach will treat them
-    # as a long string with newlines in it, instead of separate items.
-    #files=$(cat $filename)
-    foreach fil in $(cat $filename)
-        f=$(basename $fil)
-        echo "  $f"
-        cp "$fil" "/mp3/$date-$f"
-        #cp "$fil" "~/pods/$date-$f"
-    end
-    popd
-
-    ls -t /mp3
-  fi
-}
-
-# If you're working on a branch, and all your changes are committed,
-# use this to merge master changes into the current branch.
-alias git_merge_branch='git fetch; git rebase origin/master'
-
-function ec2forward()
-{
-  ssh -L 5984:localhost:5984 ida@partners.ideascopic.com
-}
-
-# Pipe a function through a JSON prettyprinter, omitting any Content-type arg.
-# Sadly, mjson.tool doesn't work for dicts the way Python prints them, with
-# single quotes; they must be mapped to double-quotes to work.
-# Usage: ppjson myscript.cgi
-function ppjson()
-{
-    $* | grep -v Content-type | tr "'" '"' | python -mjson.tool
-}
-
-# Note to self about what args I need for unison to preserve times
-# and not prompt on every file:
-# unison -force source -times -auto source dest
-# Reference guide:
-# http://www.cis.upenn.edu/~bcpierce/unison/download/releases/stable/unison-manual.html#tutorial
-
-alias idamail='mutt -F ~/.mutt/ideascopic'
-alias shallowimap='mutt -F ~/.mutt/shallowimap'
-alias patmail='mutt -F ~/.mutt/patimap'
-alias znet='mutt -F ~/.mutt/znet'
-alias moonmail='mutt -F ~/.mutt/moon'
-
-# Figure out whether we're home or away.
-# if ping -c 1 -q -W 1 moon ; then
-#     echo "We're at home"
-#     alias m='mutt -F ~/.mutt/moon'
-# else
-#     echo "We're traveling"
-#     alias m=mutt
-# fi
-# But we're not doing that right now:
-alias m=mutt
+######## end zsh-specific options #################
 
 # Text to speech:
 # From commandlinefu:
@@ -780,6 +719,165 @@ say() {
 sayuk() {
     str=$(emplussen $*)
     wget -q -O- -U Mozilla "http://translate.google.com/translate_tts?q=$str&tl=en-uk" |cvlc - |play -t wav - -t wav -t alsa
+}
+
+#############################################################
+# Android aliases
+
+# Some aliases for getting files from Android KitKat via adb,
+# since the lack of usb-storage and autocomplete is such a pain.
+
+# There seems to be no way to remove multiple or wildcarded files via adb.
+# alias delallgpx='adb shell rm /mnt/extSdCard/Android/data/net.osmand.plus/tracks/rec/*'
+
+pullgpx() {
+  pushd_maybe ~/Docs/gps/new
+  adb pull /storage/extSdCard/Android/data/net.osmand.plus/files/tracks/rec/. .
+  for f in *.gpx; do
+    echo $f
+    adb shell rm /storage/extSdCard/Android/data/net.osmand.plus/files/tracks/rec/$f
+  done
+  ls
+}
+
+pullphotos() {
+  pushd_maybe ~/Docs/gps/new
+  adb pull /storage/extSdCard/DCIM/Camera/. .
+  for f in *.jpg *.mp4; do
+    echo $f
+    adb shell rm /storage/extSdCard/DCIM/Camera/$f
+  done
+  ls
+}
+
+# Android adb logcat is supposed to accept a filter argument to show only
+# logs from a single program, but it doesn't work and I have to use grep.
+# But just grepping for the program name gets tons of extra lines from
+# every tap or other event delivered to the program;
+# and piping grep to grep makes grep buffer its output
+# unless the --line-buffered flag is specified.
+# --line-buffered probably isn't needed on the last grep.
+adebug2() {
+    adb logcat | egrep --line-buffered "($1|E/AndroidRuntime)" | grep -v --line-buffered Delivering
+}
+adebug() {
+    adb logcat -s ActivityManager:I AndroidRuntime:E $1:D '*:S'
+}
+alias debugfeed='adebug FeedViewer'
+# alias df2='adb logcat | egrep --line-buffered "(Feed|E/AndroidRuntime)" | grep -v --line-buffered Delivering'
+
+# For building Android apps such as osmand:
+export ANDROID_HOME=$HOME/outsrc/android-sdk-linux
+export ANDROID_SDK=$HOME/outsrc/android-sdk-linux
+export ANDROID_NDK=$HOME/outsrc/android-ndk-r10d
+
+# Find location of Android imports:
+andimport() {
+    find $ANDROID_SDK -name $1.java
+}
+
+# https://code.google.com/p/osmand/wiki/GradleCommandLineBuildEnvironment
+alias osmandbuild='cd ~/outsrc/osmand/android; repo sync -d; cd OsmAnd; ../gradlew --refresh-dependencies clean assembleFullLegacyFatDebug'
+
+phof () {
+    pho `fotogr $*`
+}
+
+# Copy the primary selection into the clipboard:
+alias primary2clip='xsel -p | xsel -i -b'
+# and vice versa:
+alias clip2primary='xsel -b | xsel -i -p'
+
+# Tail the procmail log file, for when I'm expecting mail:
+alias proctail="tail -f Procmail/log | egrep -v '^procmail'"
+
+# What's the complement of a number, e.g. the fmask in fstab to get
+# a given file mode for vfat files? Sample usage: invert 755
+invertmask() {
+    python -c "print '0%o' % (0777 - 0$1)"
+    # This also works:
+    # python -c "print '0%o' % (~(0777 & 0$1) & 0777)"
+}
+
+alias s4='jmtpfs /s4'
+# Unmount with fusermount -u /s4
+
+# Clean up libreoffice HTML conversions:
+# tidy -q -config ~/tidy_options.conf -i /tmp/LWVNM\ Convention\ 2015\ Minutes.html | sed -e 's/ class="[cP][0-9]*"//g' -e 's/ class="[cP][0-9]* [cP][0-9]*"//g' > /tmp/tidied.html
+
+kml2gpx() {
+    # :t takes the basename, :r removes the extension
+    gpsbabel -i kml -f $1 -o gpx -F $1:t:r.gpx
+}
+
+kmz2gpx() {
+    # unzip the KMZ, since gpsbabel STILL doesn't know how to do that
+    # despite KMZ becoming the most popular format on the net:
+    kmlfile=/tmp/$1:t:r.kml
+    gunzip -c $1 > $kmlfile
+    # :t takes the basename, :r removes the extension
+    gpsbabel -i kml -f $kmlfile -o gpx -F $kmlfile:t:r.gpx
+}
+
+# Convert a pair of UTM coordinates in NM to a GPX file with one waypoint.
+# I don't know how to get the UTM zone if you don't already have it;
+# Barbara just gives me the pair of points without a zone.
+utm2gpx() {
+    unicsv=`mktemp /tmp/point-XXXXX.csv`
+    gpxfile=$unicsv:r.gpx
+    echo "name,utm_z,utm_e,utm_n,comment" >>$unicsv
+    printf "Point,13,%s,%s,point" $1 $2 >>$unicsv
+    gpsbabel -i unicsv -f $unicsv -o gpx -F $gpxfile
+    echo Created $gpxfile
+}
+
+# I get tired of all the multiple steps to update gimp now that it
+# requires three separate repositories.
+gimpmaster() {
+    # Make sure this exits on errors!
+    setopt localoptions errreturn
+
+    pushd_maybe ~/outsrc/babl
+    git pull
+    make -j4
+    sudo make install
+
+    cd ~/outsrc/gegl
+    git pull
+    make -j4
+    sudo make install
+
+    # Hopefully we don't have to update mypaint every time.
+    # cd ~/outsrc/libmypaint
+    # scons prefix=/usr/local/gimp-git enable_gegl=true
+    # sudo scons prefix=/usr/local/gimp-git enable_gegl=true install 
+
+    cd ~/outsrc/gimp
+    git pull
+    make -j4
+    sudo make install
+    popd_maybe
+}
+
+# It often happens that some change in the build system makes autogen/configure
+# fail, which also prevents you from doing a make clean.
+# But sometimes, running autogen.sh with no arguments will fix this,
+# let you run a distclean, and then everything will work again.
+alias distclean1="./autogen.sh && ./configure && make clean"
+
+distclean() {
+    setopt localoptions errreturn
+
+    args=$(egrep '^  \$ ./configure' config.log | sed 's_^  \$ ./configure __')
+    echo "Saving args:" $args
+    ./autogen.sh
+    ./configure
+    make clean
+
+    echo "=========================================="
+    echo "Running ./autogen.sh $args"
+    sleep 3
+    ./autogen.sh $args
 }
 
 # Make an android tar file from the arg or current directory:
@@ -825,6 +923,18 @@ alias playdvd="mplayer dvd://1 -alang en"
 # Making a PDF from a bunch of slides
 alias talk2pdf='qhtmlprint $( fgrep .html navigate.js  | grep -v // | sed -e "s/\",/\"/" -e "s/\"//g" ) '
 alias talk2pdf1024='qhtmlprint -1024 $( fgrep .html navigate.js  | grep -v // | sed -e "s/\",/\"/" -e "s/\"//g" ) '
+alias talk2pdf1366='qhtmlprint -1366 $( fgrep .html navigate.js  | grep -v // | sed -e "s/\",/\"/" -e "s/\"//g" ) '
+
+# Reduce the size of a PDF. Usage: pdfreduce infile.pdf outfile.pdf
+# http://ubuntuforums.org/showthread.php?t=1133357
+# You can also replace /screen with /ebook for slightly higher image quality.
+# This may cause vector diagrams to be removed, so be sure to check
+# before vs. after.
+# Can experiment with removing -dCompatibilityLevel=1.4 -dPDFSETTINGS=/screen
+# or just -dPDFSETTINGS=/screen.
+pdfreduce() {
+    gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/screen -dNOPAUSE -dQUIET -dBATCH -sOutputFile="$2" $1
+}
 
 # Controlling printers: lpstat -a will list queue names
 alias lpbrother='lp -d Brother_HP_LaserJet_4050_Series'
@@ -869,17 +979,8 @@ datediff() {
     echo $(( (d1 - d2) / 86400 / 7 )) weeks $(( (d1 - d2) / 86400 % 7 )) days
 }
 
-nextper() {
-    d=$( grep H: ~/Docs/Lists/health | grep -w P | tail -1 | cut -b -10 )
-    echo Last: $d
-    # d is format yyyy-mm-dd
-    echo -n 'Next: '
-    # date --date=$d'+28 days' +'%Y-%m-%d'
-    date --date=$d'+28 days' +'%b %d'
-}
-
 # Tell aptitude not to limit descriptions to the terminal width
-alias aptitude='aptitude --disable-columns'
+alias aptitude='/usr/bin/aptitude --disable-columns'
 
 # Adjust for day or nighttime monitor modes
 alias day="xrandr --output HDMI1 --brightness 1.0"
@@ -893,7 +994,7 @@ alias adobeDE="wine ~/.wine/drive_c/Program\ Files/Adobe/Adobe\ Digital\ Edition
 alias R="/usr/bin/R --no-save"
 
 # Convert temperatures between F and C, because units' stupid syntax
-# is impossible to remember.
+# is impossible to remember. (If ctemp isn't installed.)
 c2f() {
     units "tempC($1)" tempF
 }
@@ -915,6 +1016,7 @@ whichspam() {
   cat ~/Procmail/spast/$whichfile | while read line ; do
     #echo echo "$1" '| egrep -i --' "$line" '>/dev/null'
     #echo "$1" | egrep -i -- "$line" >/dev/null
+    # echo "$1" PIPE egrep -i -- "$line"
     echo "$1" | egrep -i -- "$line"
     if [[ $? == 0 ]]; then
       echo $line
@@ -923,12 +1025,51 @@ whichspam() {
   #set +o xtrace
 }
 
+#
+# Search for spam subjects or from lines in Spam/saved,
+# for purposes of telling which patterns should be added to procmail filters.
+#
+spams() {
+    #grep Subject ~/Spam/saved ~/Spam/trained/saved | egrep -i "$*"
+    decodemail -a Subject: ~/Spam/saved ~/Spam/oldheaders/saved | egrep -a -i "$*"
+}
+spamf() {
+    #grep -a -h '^From:' ~/Spam/trained/saved ~/Spam/saved | egrep -a -i "$*"
+    decodemail -a From: ~/Spam/saved ~/Spam/oldheaders/saved | egrep -a -i "$*"
+}
+spamff() {
+    #grep -a -h '^From' ~/Spam/trained/saved ~/Spam/saved | egrep -a -i "$*"
+    decodemail -a From ~/Spam/saved ~/Spam/oldheaders/saved | egrep -a -i "$*"
+}
+
+cleanspam() {
+    # Spam is saved in ~/Spam. (Outside my regular mail hierarchy,
+    # so it doesn't get synced to my laptop or backed up in minibackups.)
+    # Older batches have From, Subject, To headers saved in ~/Spam/oldheaders.
+    # Periodically, we need to clean out the current spam folders
+    # but save the old headers for spam filter development purposes.
+    for folder in $HOME/Spam/*; do
+        if [[ -f $folder && -s $folder ]]; then
+            echo $folder
+            # cat $folder >> $HOME/Spam/trained/$(basename $folder)
+            decodemail -a 'From:|Subject:|To:' $folder \
+                       >> $HOME/Spam/oldheaders/$(basename $folder)
+            # Zero the folder out rather than removing it,
+            # so mutt won't pester about creating the folder
+            # next time we save spam to it.
+            cp /dev/null $folder
+        fi
+    done
+    tail -7000 $HOME/Procmail/log >$HOME/Procmail/olog
+    rm $HOME/Procmail/log
+}
+
 # Linux has a lovely list of all compose key sequences.
 composekey() {
   grep $1 /usr/share/X11/locale/en_US.UTF-8/Compose
 }
 
-alias remindme='remind ~/Docs/Lists/remind'
+alias remindme='remind -g ~/Docs/Lists/remind'
 
 # Display a text calendar some number of months (default 2)
 # using my remind database:
@@ -963,11 +1104,13 @@ dobackup() {
     fi
 
     # Exclude these from all backups, even full ones:
-    fullexcludes=( Cache .cache/mozilla Spam LOG log olog Tarballs \
+    fullexcludes=( Cache .cache Spam LOG log olog Tarballs .Xout \
         VaioWin Bitlbee core outsrc .imap POD .cache/openbox/openbox.log \
         .icons .thumbnails .cache/thumbnails .imap .macromedia core .histfile \
+        'VirtualBox VMs' Virtualbox feeds kobo \
+        .mozilla/firefox/masterprofile/sessionstore-backups/ \
         webapps store.json.mozlz4 .dbus/session-bus .emacs-saves \
-        .config/chromium .googleearth/Temp .googleearth/Cache )
+        .config/chromium .googleearth/Temp .googleearth/Cache desert-center )
 
     # Exclude these from "mini-full" backups (e.g. if low on backup disk space)
     moreexcludes=( '*.mp4' '*.img' '*.iso' DVD \
@@ -991,11 +1134,11 @@ dobackup() {
         echo "Full backup to" $1
     fi
 
-    pushd ~
+    pushd_maybe ~
     echo sudo rsync -av --delete --delete-excluded "${excludesflags[@]}" ./ $1
     sleep 2
     sudo rsync -av --delete --delete-excluded "${excludesflags[@]}" ./ $1
-    popd
+    popd_maybe
 }
 
 fullbackup() {
@@ -1006,6 +1149,11 @@ minibackup() {
     dobackup "$1" mini
 }
 
+alias booksync='rsync -av --delete --size-only --exclude .FBReader ~/Docs/droidsd/Books/'
+
+# Always run sqlite inside rlwrap
+alias sqlite3="rlwrap -a -z pipeto -i /usr/bin/sqlite3"
+
 # Something is writing to recently-used.xbel and I'm not sure what.
 # This might help to monitor it.
 alias recent='ls -l ~/recently-used.xbel*(.N) ~/.local/share/recently-used.xbel*'
@@ -1015,40 +1163,27 @@ alias recent='ls -l ~/recently-used.xbel*(.N) ~/.local/share/recently-used.xbel*
 # server on the local machine.
 alias piroute='iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o eth0 -j MASQUERADE'
 
-alias znetspam="; echo -n '    Caught by znet: ' ; grep -h Subject ~/Spam/* | fgrep '[SPAM]' | wc -l; echo -n 'Not caught by znet: ' ; grep -h Subject ~/Spam/* | fgrep -v '[SPAM]' | wc -l"
-
-alias pygrep="langgrep python"
-
 alias tcolors='printf "\e[%dm%d dark\e[0m  \e[%d;1m%d bold\e[0m\n" {30..37}{,,,}'
-
-alias chase='fincompare.py ~/bin/chase.py SRCMX FMAGX FPURX BFLAX LDLAX FUSVX VSCGX IRCAX SCAL'
-
-alias moontrade='sshfs moon:/back/trade ~/moontrade'
-alias unmoontrade='fusermount -u ~/moontrade'
-alias remoontrade='sshfs -o reconnect moon:/back/trade ~/moontrade'
-
-# rsync a local web directory to shallowsky.
-toshallow() {
-    localdir=$1
-    # Make sure directories have a terminal slash,
-    # whether or not the user provided one.
-    if [ -d $localdir ]; then
-        # Remove terminal slash.
-        # ## requires extendedglob, so make sure it's set locally.
-        setopt localoptions extendedglob
-        localdir=${localdir%%/##}/
-    fi
-    plaindir=${localdir#~/}
-    cmd="rsync -av --delete $localdir shallowsky.com:$plaindir"
-    # We'll went --delete here too, but let's hold off until it's known working.
-    echo $cmd
-    eval $cmd
-}
 
 # I can never remember the ever-changing CUPS commands to talk to
 # printers from the cmdline.
 alias printers='lpstat -s; echo; echo You can print with lp -d printername'
 
+# Now that we're running feeds on shallowsky.com,
+# local/xtra urls have to be saved there too.
+# Run with e.g. localurl 'http://blahblah'
+# The single quotes are only needed if the URL has an embedded newline,
+# like a long URL pasted from mutt or from email from an Apple user.
+remove_newlines() {
+    # #" expands escape sequences like \n
+    echo ${1/$'\n'/}
+}
+
+localurl() {
+    ( for url in $* ; remove_newlines $url ) | ssh shallowsky.com 'cat >> web/feedme/feeds/localurls'
+}
+
+###################################################
 # Quick-jump to deeply nested directories
 # http://jeroenjanssens.com/2013/08/16/quickly-navigate-your-filesystem-from-the-command-line.html
 # Now if I could just remember to use it.
@@ -1056,7 +1191,7 @@ export MARKPATH=$HOME/.marks
 function jump { 
     cd -P "$MARKPATH/$1" 2>/dev/null || echo "No such mark: $1"
 }
-alias ju=jump
+alias mcd=jump
 function mark { 
     mkdir -p "$MARKPATH"; ln -s "$(pwd)" "$MARKPATH/$1"
 }
@@ -1078,107 +1213,6 @@ compctl -K _completemarks jump
 compctl -K _completemarks unmark
 
 #### end quick-jump
-
-# Mirror a specific ftp website:
-ftpmirror() {
-list_commands=""
-for dir in thisdir thatdir theotherdir
-do
-  list_commands="$list_commands
-mirror --only-newer -vvv -X '*.ppt' -X '*.doc*' -X '*.pdf' htdocs/$dir $HOME/web/ftpmirror/$dir"
-done
-
-echo Commands to be run:
-echo $list_commands
-echo
-
-lftp <<EOF
-open -u 'user,passwd' ftp.example.com
-$list_commands
-bye
-EOF
-
-# lftp doesn't preserve permissions, even though -p is supposed to.
-# So change permissions back on the files that need it:
-chmod 666 $HOME/web/peec/data/*_edited.csv
-chmod 755 $HOME/web/peec/guides/save_db.cgi
-}
-
-# Copy a list of selected files up to the PEEC website using lftp.
-# Assumes we already have a bookmark with the password which puts
-# us already in htdocs.
-topeec() {
-    list_commands=""
-    for f in $*; do
-        dn=$(dirname $f)
-        # bn=$(basename $f)
-        list_commands="$list_commands
-put -O $dn $f"
-    done
-
-    echo Commands to be run:
-    echo $list_commands
-    echo
-
-    lftp peec <<EOF
-$list_commands
-bye
-EOF
-}
-
-# Mounting PEEC website over ftp with curlftpfs.
-# umount doesn't work, have to use fusermount -u.
-alias peec="mount /peecweb"
-alias unpeec="fusermount -u /peecweb"
-
-# Android adb logcat is supposed to accept a filter argument to show only
-# logs from a single program, but it doesn't work and I have to use grep.
-# But just grepping for the program name gets tons of extra lines from
-# every tap or other event delivered to the program;
-# and piping grep to grep makes grep buffer its output
-# unless the --line-buffered flag is specified.
-# --line-buffered probably isn't needed on the last grep.
-alias adbfeed='adb logcat | grep --line-buffered FeedViewer | grep -v --line-buffered Delivering'
-
-phof () {
-    pho `fotogr $*`
-}
-
-cleanspam() {
-    for folder in $HOME/Spam/*; do
-        if [[ -f $folder ]]; then
-            echo $folder
-            cat $folder >> $HOME/Spam/trained/$(basename $folder)
-            cp /dev/null $folder
-        fi
-    done
-    tail -7000 $HOME/Procmail/log >$HOME/Procmail/olog
-    rm $HOME/Procmail/log
-}
-
-# I get tired of all the multiple steps to update gimp now that it
-# requires three separate repositories.
-# Make sure this exits on errors!
-gimpmaster() {
-    setopt localoptions errreturn
-
-    pushd ~/outsrc/babl
-    git pull
-    make -j4
-    sudo make install
-
-    cd ~/outsrc/gegl
-    git pull
-    make -j4
-    sudo make install
-
-    cd ~/outsrc/gimp
-    git pull
-    make -j4
-    sudo make install
-
-    popd
-}
 
 # Two good pages on zsh scripting:
 # http://www.rayninfo.co.uk/tips/zshtips.html
@@ -1208,4 +1242,40 @@ gimpmaster() {
 #     fi
 # }
 
-alias newphotos='cp index.php index.php.bak; mkphplist index.php *[^T].jpg'
+# Trying git prompt info:
+# http://arjanvandergaag.nl/blog/customize-zsh-prompt-with-vcs-info.html
+gitprompt() {
+  autoload -Uz vcs_info
+
+  zstyle ':vcs_info:git*' formats "%{$fg[grey]%}%s %{$reset_color%}%r/%S%{$fg[grey]%} %{$fg[blue]%}%b%{$reset_color%}%m%u%c%{$reset_color%} "
+
+  zstyle ':vcs_info:*' enable git svn
+  precmd() {
+    vcs_info
+  }
+
+  setopt prompt_subst
+  PROMPT='${vcs_info_msg_0_}%# '
+}
+
+# I can never remember nmap arguments
+alias portscan="nmap -v -sT localhost"
+
+# chroot to alternate partition /partitionname in order to update it
+chroot-update() {
+    partitionname=$1
+    titlebar $partitionname chroot
+    sudo mount /$partitionname
+    sudo mount --bind /proc /$partitionname/proc
+    sudo mount --bind /sys /$partitionname/sys
+    sudo mount --bind /dev /$partitionname/dev
+    sudo mount --bind /dev/pts /$partitionname/dev/pts
+    sudo mount --bind /boot /$partitionname/boot
+    sudo chroot /$partitionname
+}
+
+######################################################
+# Source local zsh options:
+if [[ -f $HOME/.zshrc.$hostname ]]; then
+  . $HOME/.zshrc.$hostname
+fi
