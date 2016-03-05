@@ -1031,11 +1031,19 @@ whichspam() {
 #
 spams() {
     #grep Subject ~/Spam/saved ~/Spam/trained/saved | egrep -i "$*"
-    decodemail -a Subject: ~/Spam/saved ~/Spam/oldheaders/saved | egrep -a -i "$*"
+    echo "============ Recent =============="
+    decodemail -a Subject: ~/Spam/saved | egrep -a -i "$*"
+    echo
+    echo "============ Older =============="
+    decodemail -a Subject: ~/Spam/oldheaders/saved | egrep -a -i "$*"
 }
 spamf() {
     #grep -a -h '^From:' ~/Spam/trained/saved ~/Spam/saved | egrep -a -i "$*"
-    decodemail -a From: ~/Spam/saved ~/Spam/oldheaders/saved | egrep -a -i "$*"
+    echo "============ Recent =============="
+    decodemail -a From: ~/Spam/saved | egrep -a -i "$*"
+    echo
+    echo "============ Older =============="
+    decodemail -a From: ~/Spam/oldheaders/saved | egrep -a -i "$*"
 }
 spamff() {
     #grep -a -h '^From' ~/Spam/trained/saved ~/Spam/saved | egrep -a -i "$*"
