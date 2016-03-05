@@ -37,6 +37,10 @@
 (global-set-key "\M-w" 'kill-region)
 (global-set-key "\C-m" 'newline-and-indent)
 
+;; I am forever hitting this by accident, when my finger slips off
+;; Ctrl-z and grazes C-x at the same time. Disable it:
+(global-unset-key "\C-x\C-z")
+
 ;; I seem to spend half my free time chasing after various broken
 ;; electric indents in emacs. And really, the only time I ever want
 ;; electric indent is for }. So maybe the answer is to turn off
