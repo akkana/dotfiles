@@ -4,6 +4,36 @@
  * author sets any.  Rules with !important overrule author rules.
  */
 
+/* Disable CSS animations. Good test: pythonpedia.com
+ * Unfortunately it blocks the popup on losalamosnm.us forums,
+ * so whitelist those.
+ */
+:not(.modal.fade) {
+    animation-delay: 0ms !important;
+    animation-duration: 0ms !important;
+    transition: none !important;
+}
+/*
+@document domain(www.losalamosnm.us) {
+}
+*/
+
+/* An even stronger way, but it might prevent some things from showing:
+* {
+    -moz-animation: none !important;
+    animation: none !important;
+}
+*/
+
+/* These might come in handy at some point too,
+   but so far I haven't needed them.
+-webkit-transition: none !important;
+-moz-transition: none !important;
+-o-transition: none !important;
+-ms-transition: none !important;
+transition: none !important;
+*/
+
 /*
  * turns off "blink" element blinking
  */
@@ -21,7 +51,8 @@ input {
  */
 @namespace url(http://www.w3.org/1999/xhtml);
 @-moz-document domain("youtube.com"){
-#theater-background { display:none !important;}}
+  #theater-background { display:none !important;}
+}
 
 /* Google is doing a horrible experiment where selecting in the
  * search box changes the font size, voiding the selection.
@@ -31,6 +62,29 @@ input {
   font-family: inherit !important;
   font-size: inherit !important;
 }
+
+/* Wikipedia begging pane: but it has several and this doesn't get all. */
+#frbanner, #frbanner-facts { display:none !important; }
+
+/* Various annoying LA Times banners */
+.trb_bnn, .trb_nh { display:none !important;}
+
+/* Hide "Never miss a post" on Tumblr */
+.version_follow_nag { display: none !important; }
+
+/* Hide the "Make google your default search engine" on search pages.
+ * They change this all the time so the rule has to be updated.
+   div#pushdown { display: none !important; }
+   For div class="gb_ga gb_g" area-hidden="false" :
+ */
+div.gb_ea { display: none !important; }
+div.gb_g { display: none !important; }
+
+/* Turn off the annoying parts of new Google maps that steal all the
+ * screen real estate from the actual map.
+ */
+div#cards { display: none !important; }
+div#viewcard { display: none !important; }
 
 /* Hide the annoying messages begging you to make Google your default search */
 #taw { display: none !important; }
@@ -114,6 +168,7 @@ a:hover[href$=".pdf"], a:hover[href$=".PDF"] {
 }
 
 /* disable ad iframes */
+/*
 IFRAME[SRC*="ad."]  { display: none ! important }
 IFRAME[SRC*="ads."]  { display: none ! important }
 IFRAME[SRC*="/ad"]  { display: none ! important }
@@ -128,6 +183,7 @@ IFRAME[SRC*="transfer.go"]  { display: none ! important }
 IFRAME[SRC*="adfarm"]  { display: none ! important }
 IFRAME[SRC*="bluestreak"]  { display: none ! important }
 IFRAME[SRC*="doubleclick"]  { display: none ! important }
+*/
 
 /* Get rid of Huffington Post bottom bar */
 div#service_bottom_bar { display: none !important; }
