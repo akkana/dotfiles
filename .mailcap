@@ -13,6 +13,9 @@ text/html; lynx -dump %s; nametemplate=%s.html; copiousoutput
 
 # text/html; netscape -remote openURL(file://%s)
 
+application/rtf; /usr/bin/unrtf --text %s; copiousoutput
+text/rtf; /usr/bin/unrtf --text %s; copiousoutput
+
 # Use pho for images
 image/*; mimehelper 2 pho -P %s; x-mozilla-flags=internal
 
@@ -42,7 +45,7 @@ audio/x-pn-aiff;/usr/bin/play "%u"
 # But evince isn't usable because it comes up too small and the
 # doc is gone before we can resize. Sigh!
 # mupdf -r 100 works pretty well, so use a script that does that.
-application/pdf; mutt_bgrun /home/akkana/bin/pdf '%s'; test=test "$DISPLAY" != ""; description=Portable Document Format; nametemplate=%s.pdf
+application/pdf; /home/akkana/bin/pdf '%s'; test=test "$DISPLAY" != ""; description=Portable Document Format; nametemplate=%s.pdf
 
 #application/x-pdf; /usr/local/bin/xpdf '%s'; test=test "$DISPLAY" != ""; description=Portable Document Format; nametemplate=%s.pdf
 #application/postscript; /usr/local/bin/xpdf '%s'; test=test "$DISPLAY" != ""; description=Portable Document Format; nametemplate=%s.pdf
@@ -64,8 +67,20 @@ audio/x-pn-windows-acm;/home/akkana/RealPlayer8/realplay "%u"
 # Java Web Start
 application/x-java-jnlp-file; /home/akkana/Tarballs/j2sdk1.4.2_06/jre/javaws/javaws %s
 
+# Options for doc: wvText, wvHtml, catdoc, antiword.
+# Options for docx: docx2txt
+
+# docx needs a separate program -- catdoc just crashes.
+text/html; mimehelper 5 firefox 'file://%s'; nametemplate=%s.html
+application/vnd.openxmlformats-officedocument.wordprocessingml.document; wordview %s
+# application/vnd.openxmlformats-officedocument.wordprocessingml.document; mimehelper 2 docx2txt %s -; copiousoutput
+application/vnd.openxmlformats-officedocument.wordprocessingml.document; docx2txt %s -; copiousoutput
+
+# Regular .doc files can use catdoc.
+
+application/msword; wordview %s
 application/msword; mimehelper 2 catdoc %s; copiousoutput
-application/msword; mimehelper 5 abiword %s
+# application/msword; mimehelper 5 abiword %s
 
 application/vnd.openxmlformats-officedocument.wordprocessingml.document; mimehelper 2 catdoc %s; copiousoutput
 
