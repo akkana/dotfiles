@@ -1,1 +1,7 @@
 set bind-tty-special-chars Off
+
+# Get readline to break words at punctuation instead of just spaces
+# (this is supposed to be the default, but isn't):
+"\C-w": backward-kill-word
+# "\C-w": unix-word-rubout
+
