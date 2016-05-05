@@ -32,9 +32,9 @@
 # You might think that [difftool] is the one that controls git difftool,
 # but no, you have to change both of them.
 [diff]
-    tool = meld
+    tool = tkdiff
 [difftool]
-    tool = meld
+    tool = tkdiff
     prompt = false
 
 [rerere]
