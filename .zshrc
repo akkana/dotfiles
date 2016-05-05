@@ -351,10 +351,14 @@ allgit() {
                    gimp-plugins pho htmlpreso android dotfiles arduino )
         echo $repo :
         cd ~/src/$repo
-        git pull
+        git pull --all
     end
     popd_maybe
 }
+
+# If you're working on a branch, and all your changes are committed,
+# use this to merge master changes into the current branch.
+alias git_merge_branch='git fetch; git rebase origin/master'
 
 # Run a git with all-default settings.
 # Usage: gimpclean VERSION SWM
@@ -423,6 +427,12 @@ getreal() {
 # Use LibreOffice to convert doc to html:
 LOdoc2html() {
     libreoffice --headless --convert-to html:HTML --outdir doc2html $1
+}
+
+# Extract text out of a ppt:
+# http://superuser.com/questions/661315/tools-to-extract-text-from-powerpoint-pptx-in-linux
+ppt2txt() {
+    unzip -qc "$1" ppt/slides/slide*.xml | grep -oP '(?<=\<a:t\>).*?(?=\</a:t\>)'
 }
 
 # Remove the line matching $1 from ~/.ssh/known_hosts.
@@ -498,10 +508,6 @@ EOF
 }
 ########## End external monitor/audio connections:
 
-# If you're working on a branch, and all your changes are committed,
-# use this to merge master changes into the current branch.
-alias git_merge_branch='git fetch; git rebase origin/master'
-
 # Mount encrypted SD card:
 cryptmount() {
     device=$1
@@ -530,6 +536,7 @@ alias uncrypt='cryptunmount crypt'
 alias plug='screen /dev/ttyUSB1 115200'
 alias guru='screen /dev/ttyUSB0 115200'
 alias rpi='titlebar "Raspberry Pi"; screen /dev/ttyUSB0 115200; titlebar "local"'
+alias pion='titlebar "Raspberry Pi Pion"; ssh -X pi@pion; titlebar "local"'
 
 # Connect/disconnect from a docking station. Obsoleted by shell script.
 #alias dock='xrandr --output VGA1 --mode 1600x900; hsetroot -center `find -L $HOME/Backgrounds -name "*.*" | randomline`; xrandr --output LVDS1 --off'
@@ -750,6 +757,14 @@ pullphotos() {
   ls
 }
 
+# But what if we don't have adb installed? Here's how to do it using gphoto2.
+alias pullphotosg='gphoto2 --folder /store_00020002/DCIM/Camera -P'
+alias delphotosg='gphoto2 --folder /store_00020002/DCIM/Camera -D'
+
+# And similar aliases for gpx:
+alias pullgpxg='gphoto2 --folder /store_00020002/Android/data/net.osmand.plus/files/tracks/rec -P'
+alias delgpxg='gphoto2 --folder /store_00020002/Android/data/net.osmand.plus/files/tracks/rec -D'
+
 # Android adb logcat is supposed to accept a filter argument to show only
 # logs from a single program, but it doesn't work and I have to use grep.
 # But just grepping for the program name gets tons of extra lines from
@@ -805,6 +820,9 @@ alias s4='jmtpfs /s4'
 # Clean up libreoffice HTML conversions:
 # tidy -q -config ~/tidy_options.conf -i /tmp/LWVNM\ Convention\ 2015\ Minutes.html | sed -e 's/ class="[cP][0-9]*"//g' -e 's/ class="[cP][0-9]* [cP][0-9]*"//g' > /tmp/tidied.html
 
+################################################
+# Various GPS conversions
+
 kml2gpx() {
     # :t takes the basename, :r removes the extension
     gpsbabel -i kml -f $1 -o gpx -F $1:t:r.gpx
@@ -831,13 +849,28 @@ utm2gpx() {
     echo Created $gpxfile
 }
 
+# Converting back is harder, but gpsbabel's "text" format gives both:
+gpx2utm() {
+    gpsbabel -i gpx -f $1 -o text -F -
+}
+# End GPS conversions
+################################################
+
+################################################
+# Build/development helpers
+
 # I get tired of all the multiple steps to update gimp now that it
 # requires three separate repositories.
 gimpmaster() {
     # Make sure this exits on errors!
     setopt localoptions errreturn
 
-    pushd_maybe ~/outsrc/babl
+    pushd_maybe ~/outsrc/libmypaint
+    # Don't do this every time. But if we did, this is what to do:
+    # scons prefix=/usr/local/gimp-git/ enable_gegl=true
+    # sudo scons prefix=/usr/local/gimp-git/ enable_gegl=true install
+
+    cd ~/outsrc/babl
     git pull
     make -j4
     sudo make install
@@ -897,6 +930,48 @@ droidtar() {
     echo "Created $tarfile"
 }
 
+newhexchat() {
+    # Can't set errreturn yet, because that will cause mv and rm
+    # (even with -f) to exit if there's nothing to remove.
+    cd ~/outsrc/hexchat-debian
+    echo "Removing what was in old previously"
+    rm -rf old
+    echo "Moving everything here to old/"
+    mkdir old
+    mv *.* old/
+
+    # Make sure this exits on errors from here on!
+    setopt localoptions errreturn
+
+    echo "Getting source ..."
+    apt-get source hexchat
+    cd hexchat-2*
+    echo "Patching ..."
+    patch -p0 < ~/outsrc/hexchat-2.10.2.patch
+    echo "Building ..."
+    debuild -b -uc -us
+    echo
+    echo 'Installing' ../hexchat{,-python,-perl}_2*.deb
+    sudo dpkg -i ../hexchat{,-python,-perl}_2*.deb
+}
+
+# Check on status of all held packages:
+check_holds() {
+    for pkg in $( aptitude search '~ahold' | awk '{print $2}' ); do
+        policy=$(apt-cache policy $pkg)
+        installed=$(echo $policy | grep Installed: | awk '{print $2}' )
+        candidate=$(echo $policy | grep Candidate: | awk '{print $2}' )
+        if [[ "$installed" == "$candidate" ]]; then
+            echo $pkg : nothing new
+        else
+            echo $pkg : new version $candidate available
+        fi
+    done
+}
+
+# End build/development helpers
+################################################
+
 # Some handy battery scripts from d:
 
 bat() {
@@ -935,9 +1010,6 @@ alias talk2pdf1366='qhtmlprint -1366 $( fgrep .html navigate.js  | grep -v // | 
 pdfreduce() {
     gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/screen -dNOPAUSE -dQUIET -dBATCH -sOutputFile="$2" $1
 }
-
-# Controlling printers: lpstat -a will list queue names
-alias lpbrother='lp -d Brother_HP_LaserJet_4050_Series'
 
 # Which printers are available? lpstat -p -d also works.
 alias whichprinters='lpstat -a'
@@ -1001,6 +1073,9 @@ c2f() {
 f2c() {
     units "tempF($1)" tempC
 }
+
+##################################
+# Spam-related aliases
 
 # Spast checks spam with e.g. echo $subj | grep -i -f $patfile
 # How do we find out from $subj which line in $patfile matched the grep?
@@ -1071,6 +1146,8 @@ cleanspam() {
     tail -7000 $HOME/Procmail/log >$HOME/Procmail/olog
     rm $HOME/Procmail/log
 }
+# End spam-related aliases
+##################################
 
 # Linux has a lovely list of all compose key sequences.
 composekey() {
