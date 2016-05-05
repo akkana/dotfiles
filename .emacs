@@ -232,8 +232,14 @@
 ;; or not do it at all (I can ^X^S frequently):
 (setq auto-save-default nil)
 
-;; don't paste syntax highlight color into buffers where it's meaningless:
-(setq yank-excluded-properties t)
+;; don't paste syntax highlight color into buffers where it's meaningless.
+;; But none of these help, alas.
+;(setq yank-excluded-properties t)
+;(add-to-list 'yank-excluded-properties 'font)
+;(add-to-list 'yank-excluded-properties 'font-lock-face)
+; You can use this to turn off colors on a block of text:
+(defun decolorize () (interactive)
+  (set-text-properties (point) (mark) nil))
 
 ;; make sure the tab width is right:
 ;(set-variable "tab-width" 8)
