@@ -64,6 +64,10 @@ export PATH=$HOME/bin:$HOME/bin/linux:/usr/local/bin:/usr/local/gimp-git/bin:/us
 
 export PYTHONPATH=$HOME/bin
 
+# Autocomplete in the python console:
+# https://python.readthedocs.io/en/v2.7.2/tutorial/interactive.html
+export PYTHONSTARTUP=~/.pystartup
+
 ulimit -c unlimited
 HISTSIZE=200
 
@@ -157,6 +161,15 @@ export PAGER=less
 export LESS="-EerX"
 export LC_COLLATE=C
 
+# systemctl pipes through less with some completely broken set of
+# arguments that cuts off all output too wide to fit in the terminal.
+# Disable that:
+# export SYSTEMD_PAGER=
+# but it still cuts off at 80 columns, so this works better:
+systemctl() {
+  /bin/systemctl -l --no-pager $*
+}
+
 export EDITOR=vim
 # Be sure to set bindkey -e -- done above with the other bindkey stuff.
 
@@ -219,6 +232,7 @@ lsdirs() {
 
 alias j=jobs
 alias pd=pushd
+# pd() { [[ $# == 0 ]] && set - -; builtin pushd "$@" }
 alias s=suspend
 alias rl="telnet -r"
 
@@ -348,7 +362,8 @@ popd_maybe() {
 allgit() {
     pushd_maybe ~
     foreach repo ( scripts netutils metapho feedme imagebatch pytopo
-                   gimp-plugins pho htmlpreso android dotfiles arduino )
+                   gimp-plugins pho htmlpreso android dotfiles arduino
+                   Planetarium )
         echo $repo :
         cd ~/src/$repo
         git pull --all
@@ -365,17 +380,30 @@ alias git_merge_branch='git fetch; git rebase origin/master'
 # e.g. gimpclean git no, gimpclean 2.8 yes
 gimpclean() {
     gimpdir=`mktemp -d /tmp/gimpenv.XXXXX`
+
+    # GIMP 2.8 gets very confused about GIMP2_DIRECTORY,
+    # and won't create the directories it needs. So we
+    # have to create them first.
+    for f in brushes dynamics patterns gradients palettes tool-presets; do
+        mkdir $gimpdir/$f
+    done
+    # But, sadly, that's not enough, and 2.8 still won't bring up
+    # a window of a reasonable size in either swm or mwm mode.
+
     if [[ x$1 != x ]]; then
         version=-$1
     else
         version=
     fi
-    if [[ x$2 == 'xno' ]]; then
-        echo swm no
+    if [[ x$2 == 'swm' ]]; then
+        echo Single Window Mode
+    else
+        echo Multi Window Mode
         # This doesn't really work, alas.
         echo "(single-window-mode no)" > $gimpdir/sessionrc
     fi
     echo version is $version
+    echo "GIMP2_DIRECTORY=$gimpdir gimp$version --new-instance"
     GIMP2_DIRECTORY=$gimpdir gimp$version --new-instance
 }
 
@@ -451,10 +479,11 @@ alias temp=sensors
 # For presentations
 # alias bigterm="rxvt -geometry 80x33 -fn '-*-lucidatypewriter-*-*-*-*-19-*-*-*-*-*-*-*'"
 alias bigterm="rxvt -fn terminus-iso8859-2-bold-18"
-alias noteterm="xterm -geometry 30x34+1025+0 -fn '-*-terminus-bold-*-*-*-22-*-*-*-*-*-*-*'"
+# alias noteterm="nohup xterm -geometry 30x34+1025+0 -fn '-*-terminus-bold-*-*-*-22-*-*-*-*-*-*-*' &"
+alias noteterm="nohup xterm -geometry 33x37+1025+0 -fn '-*-terminus-bold-*-*-*-20-*-*-*-*-*-*-*' &"
 # For notes during planetarium shows:
 # red/black for night vision, narrow to show two at once on a laptop.
-alias planeterm="rxvt -geometry 62x45 -fn terminus-iso8859-2-bold-18 -bg black -fg red"
+alias planeterm="nohup rxvt -geometry 62x45 -fn terminus-iso8859-2-bold-18 -bg black -fg red &"
 
 #alias zzz='sudo /etc/acpi/sleep.sh'
 alias zzz='sudo pm-suspend --auto-quirks'
@@ -837,6 +866,14 @@ kmz2gpx() {
     gpsbabel -i kml -f $kmlfile -o gpx -F $kmlfile:t:r.gpx
 }
 
+# ESRI shapefiles to KML. Use the .shp and ignore the other files.
+# Converting to GPX usually doesn't work so well; stick with KML.
+shp2kml() {
+    shapefile=$1
+    kmlfile=$shapefile:t:r.kml
+    ogr2ogr -f KML $kmlfile $shapefile
+}
+
 # Convert a pair of UTM coordinates in NM to a GPX file with one waypoint.
 # I don't know how to get the UTM zone if you don't already have it;
 # Barbara just gives me the pair of points without a zone.
@@ -867,8 +904,15 @@ gimpmaster() {
 
     pushd_maybe ~/outsrc/libmypaint
     # Don't do this every time. But if we did, this is what to do:
+    # git pull
     # scons prefix=/usr/local/gimp-git/ enable_gegl=true
     # sudo scons prefix=/usr/local/gimp-git/ enable_gegl=true install
+    # But now it uses configure/make like everything else,
+    # except that autogen.sh doesn't call configure:
+    # ./autogen.sh --prefix=/usr/local/gimp-git
+    # ./configure --prefix=/usr/local/gimp-git
+    # make -j4
+    # sudo make install
 
     cd ~/outsrc/babl
     git pull
@@ -1176,6 +1220,33 @@ mycalp() {
     remind -p$months ~/Docs/Lists/remind  | rem2ps -e -l >/tmp/mycal.ps; gv /tmp/mycal.ps &
 }
 
+#
+# PyBlosxom helpers for my blog:
+#
+blogupdate() {
+  pushd_maybe ~/web/blogfiles
+  setopt localoptions errreturn
+  pyblosxom-cmd staticrender --incremental
+  ~/bin/blogtopics
+  mv ../blog/topics.html ../blog/oldtopics.html
+  mv ../blog/newtopics.html ../blog/topics.html
+  blog-tag-index
+  popd_maybe
+}
+
+blogup() {
+  pushd_maybe ~/web/blogfiles
+  setopt localoptions errreturn
+  pyblosxom-cmd staticrender --incremental
+  popd_maybe
+}
+
+# Sync new blog files back to the server:
+#alias blogsync='rsync -av ~/web/blog ~/web/blogfiles leewit:shallow/'
+alias blogsync='rsync -av ~/web/blog ~/web/blogfiles shallowsky.com:web/'
+
+# End PyBlosxom helpers.
+
 ####################################################################
 # Full and nearly-full backups.
 
@@ -1233,6 +1304,65 @@ fullbackup() {
 minibackup() {
     dobackup "$1" mini
 }
+
+####################################################################
+# Rsync local files up to a web server
+# Usage: towebhost dir
+# $webserver will be used as the webserver default, if not specified.
+# Set up pre-defined web hosts and their local and remote paths as follows:
+# webhosts=(      mywebserver1.com mywebserver2.com )
+# weblocalpaths=( $home/mywebdir   /public/myotherwebdir )
+
+towebhost() {
+    if [[ $# == 0 ]]; then
+        print "Usage: towebhost file_or_dir"
+        return
+    fi
+
+    # Get the full path of the argument:
+    localpath=$1:A
+
+    # Sanity check our three webhosts variables:
+    if [[ $#weblocalpaths != $#webhosts ]]
+    then
+        echo "Error: webhosts and weblocalpaths don't match"
+        return
+    fi
+    webhost='none'
+    for i in {1..$#webhosts}; do
+        if [[ $localpath == $weblocalpaths[$i]* ]]; then
+            webhost=$webhosts[$i]
+            localbase=$weblocalpaths[$i]
+            break
+        fi
+    done
+
+    if [[ $webhost == 'none' ]]; then
+        echo "$localpath doesn't match any known local path in $weblocalpaths"
+        return
+    fi
+
+    # Make sure directories have a terminal slash,
+    # whether or not the user provided one.
+    if [ -d $localpath ]; then
+        # Remove terminal slash.
+        # ## requires extendedglob, so make sure it's set locally.
+        setopt localoptions extendedglob
+        localpath=${localpath%%/##}/
+    fi
+
+    remotepath=${localpath#$localbase}
+
+    echo "Copying $localpath to $webhost $remotepath"
+    echo
+    cmd="rsync -av --delete --exclude .git $localpath $webhost$remotepath"
+    # We'll went --delete here too, but let's hold off until it's known working.
+    echo $cmd
+    eval $cmd
+}
+
+####################################################################
+# More assorted aliases
 
 alias booksync='rsync -av --delete --size-only --exclude .FBReader ~/Docs/droidsd/Books/'
 
