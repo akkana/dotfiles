@@ -488,15 +488,32 @@ alias planeterm="nohup rxvt -geometry 62x45 -fn terminus-iso8859-2-bold-18 -bg b
 #alias zzz='sudo /etc/acpi/sleep.sh'
 alias zzz='sudo pm-suspend --auto-quirks'
 
-########## Fiddle with external monitor/audio connections:
+##########
+# Fiddle with external monitor/audio connections,
+# and other aliases useful for presentations:
+
+# Enable/disable screen blanking.
+# Note: xset -q will show settings.
+
+noscreenblank() {
+    xset -dpms
+    xset s off
+}
+
+screenblankon() {
+    xset +dpms
+    xset s on
+}
+
 # Connect to a projector on the VGA port:
-alias projector='xrandr --output VGA1 --mode 1024x768'
+alias projector='xrandr --output VGA1 --mode 1024x768; noscreenblank'
 # and on the HDMI port:
 alias projectorh='xrandr --output HDMI1 --mode 1024x768'
 
 # and set video back to normal:
-alias monitor='xrandr --output HDMI1 --mode 1680x1050 --output VGA1 --off --output LVDS1 --off'
-alias noprojector='xrandr --auto'
+# alias monitor='xrandr --output HDMI1 --mode 1680x1050 --output VGA1 --off --output LVDS1 --off'
+alias noprojector='xrandr --auto; screenblankon'
+# See also my checkmonitor script.
 
 # Send all audio output to HDMI.
 # Usage: hdmisound [on|off], default is on.
@@ -535,6 +552,7 @@ EOF
         amixer sset IEC958 unmute
     fi
 }
+
 ########## End external monitor/audio connections:
 
 # Mount encrypted SD card:
