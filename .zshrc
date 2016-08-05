@@ -797,10 +797,13 @@ pullgpx() {
 pullphotos() {
   pushd_maybe ~/Docs/gps/new
   adb pull /storage/extSdCard/DCIM/Camera/. .
-  for f in *.jpg *.mp4; do
+  adb pull /storage/sdcard0/DCIM/CardboardCamera/. .
+  setopt extendedglob
+  for f in *.jpg~*.vr.jpg *.mp4; do
     echo $f
     adb shell rm /storage/extSdCard/DCIM/Camera/$f
   done
+  # If we start shooting a lot with CardboardCamera, can delete those too.
   ls
 }
 
