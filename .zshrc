@@ -245,6 +245,10 @@ alias thes="dict -h localhost -d moby-thesaurus"
 
 alias netscheme='sudo /home/akkana/src/netutils/netscheme'
 
+# Distros keeps changing the command, so make an alias I can maintain.
+#alias zzz='sudo /etc/acpi/sleep.sh'
+alias zzz='sudo pm-suspend --auto-quirks'
+
 # Newer versions of xterm no longer support titlebar setting with
 # the documented sequence of \e]2. But \e]0 works, as long as you
 # don't set XTerm*allowSendEvents.
@@ -258,7 +262,7 @@ sp() {
   spell $* | sort | uniq
 }
 
-###############################
+##################
 # Recursive greps
 gr() {
   find . \( -type f -and -not -name '*.o' -and -not -name '*.so' -and -not -name '*.a' -and -not -name '*.pyc' -and -not -name '*.jpg' -and -not -name '*.JPG' -and -not -name '*.png' -and -not -name '*.xcf*' -and -not -name 'po' -and -not -name '*.tar*' -and -not -name '*.zip' -or -name '.metadata' -prune \) -print0 | xargs -0 grep $* /dev/null | fgrep -v .svn | fgrep -v .git
@@ -330,6 +334,31 @@ grepall() {
 
     zsh -c $cmd
 }
+
+# End grep aliases
+
+phof () {
+    pho `fotogr $*`
+}
+
+# Copy the primary selection into the clipboard:
+alias primary2clip='xsel -p | xsel -i -b'
+# and vice versa:
+alias clip2primary='xsel -b | xsel -i -p'
+
+# Tail the procmail log file, for when I'm expecting mail:
+alias proctail="tail -f Procmail/log | egrep -v '^procmail'"
+
+# What's the complement of a number, e.g. the fmask in fstab to get
+# a given file mode for vfat files? Sample usage: invert 755
+invertmask() {
+    python -c "print '0%o' % (0777 - 0$1)"
+    # This also works:
+    # python -c "print '0%o' % (~(0777 & 0$1) & 0777)"
+}
+
+alias s4='jmtpfs /s4'
+# Unmount with fusermount -u /s4
 
 # pushd, but not if we're already at the target directory
 # or if we're currently home.
@@ -452,6 +481,7 @@ getreal() {
 
 ######## end video aliases
 
+######## Some format changing commands
 # Use LibreOffice to convert doc to html:
 LOdoc2html() {
     libreoffice --headless --convert-to html:HTML --outdir doc2html $1
@@ -462,6 +492,63 @@ LOdoc2html() {
 ppt2txt() {
     unzip -qc "$1" ppt/slides/slide*.xml | grep -oP '(?<=\<a:t\>).*?(?=\</a:t\>)'
 }
+
+ppjson() {
+    # This works but reorders the json:
+    # python -m json.tool $*
+    # This doesn't and is just as fast:
+    jq . $*
+}
+
+# Clean up libreoffice HTML conversions:
+# tidy -q -config ~/tidy_options.conf -i /tmp/LWVNM\ Convention\ 2015\ Minutes.html | sed -e 's/ class="[cP][0-9]*"//g' -e 's/ class="[cP][0-9]* [cP][0-9]*"//g' > /tmp/tidied.html
+
+################################################
+# Various GPS conversions
+
+kml2gpx() {
+    # :t takes the basename, :r removes the extension
+    gpsbabel -i kml -f $1 -o gpx -F $1:t:r.gpx
+}
+
+kmz2gpx() {
+    # unzip the KMZ, since gpsbabel STILL doesn't know how to do that
+    # despite KMZ becoming the most popular format on the net:
+    kmlfile=/tmp/$1:t:r.kml
+    gunzip -c $1 > $kmlfile
+    # :t takes the basename, :r removes the extension
+    gpsbabel -i kml -f $kmlfile -o gpx -F $kmlfile:t:r.gpx
+}
+
+# ESRI shapefiles to KML. Use the .shp and ignore the other files.
+# Converting to GPX usually doesn't work so well; stick with KML.
+shp2kml() {
+    shapefile=$1
+    kmlfile=$shapefile:t:r.kml
+    ogr2ogr -f KML $kmlfile $shapefile
+}
+
+# Convert a pair of UTM coordinates in NM to a GPX file with one waypoint.
+# I don't know how to get the UTM zone if you don't already have it;
+# Barbara just gives me the pair of points without a zone.
+utm2gpx() {
+    unicsv=`mktemp /tmp/point-XXXXX.csv`
+    gpxfile=$unicsv:r.gpx
+    echo "name,utm_z,utm_e,utm_n,comment" >>$unicsv
+    printf "Point,13,%s,%s,point" $1 $2 >>$unicsv
+    gpsbabel -i unicsv -f $unicsv -o gpx -F $gpxfile
+    echo Created $gpxfile
+}
+
+# Converting back is harder, but gpsbabel's "text" format gives both:
+gpx2utm() {
+    gpsbabel -i gpx -f $1 -o text -F -
+}
+
+# End GPS conversions
+################################################
+
+######## end format changing commands
 
 # Remove the line matching $1 from ~/.ssh/known_hosts.
 # Ssh refuses to operate if anything has changed about the host:
@@ -476,19 +563,7 @@ cleanssh() {
 #alias temp="cat /proc/acpi/thermal_zone/*/temperature"
 alias temp=sensors
 
-# For presentations
-# alias bigterm="rxvt -geometry 80x33 -fn '-*-lucidatypewriter-*-*-*-*-19-*-*-*-*-*-*-*'"
-alias bigterm="rxvt -fn terminus-iso8859-2-bold-18"
-# alias noteterm="nohup xterm -geometry 30x34+1025+0 -fn '-*-terminus-bold-*-*-*-22-*-*-*-*-*-*-*' &"
-alias noteterm="nohup xterm -geometry 33x37+1025+0 -fn '-*-terminus-bold-*-*-*-20-*-*-*-*-*-*-*' &"
-# For notes during planetarium shows:
-# red/black for night vision, narrow to show two at once on a laptop.
-alias planeterm="nohup rxvt -geometry 62x45 -fn terminus-iso8859-2-bold-18 -bg black -fg red &"
-
-#alias zzz='sudo /etc/acpi/sleep.sh'
-alias zzz='sudo pm-suspend --auto-quirks'
-
-##########
+########## Presentations:
 # Fiddle with external monitor/audio connections,
 # and other aliases useful for presentations:
 
@@ -552,8 +627,18 @@ EOF
         amixer sset IEC958 unmute
     fi
 }
+# End external monitor/audio connections
 
-########## End external monitor/audio connections:
+# For presentations
+# alias bigterm="rxvt -geometry 80x33 -fn '-*-lucidatypewriter-*-*-*-*-19-*-*-*-*-*-*-*'"
+alias bigterm="rxvt -fn terminus-iso8859-2-bold-18"
+# alias noteterm="nohup xterm -geometry 30x34+1025+0 -fn '-*-terminus-bold-*-*-*-22-*-*-*-*-*-*-*' &"
+alias noteterm="nohup xterm -geometry 33x37+1025+0 -fn '-*-terminus-bold-*-*-*-20-*-*-*-*-*-*-*' &"
+# For notes during planetarium shows:
+# red/black for night vision, narrow to show two at once on a laptop.
+alias planeterm="nohup rxvt -geometry 62x45 -fn terminus-iso8859-2-bold-18 -bg black -fg red &"
+
+########## End presentation-related aliases
 
 # Mount encrypted SD card:
 cryptmount() {
@@ -776,7 +861,7 @@ sayuk() {
 }
 
 #############################################################
-# Android aliases
+# Android-related aliases
 
 # Some aliases for getting files from Android KitKat via adb,
 # since the lack of usb-storage and autocomplete is such a pain.
@@ -844,75 +929,7 @@ andimport() {
 # https://code.google.com/p/osmand/wiki/GradleCommandLineBuildEnvironment
 alias osmandbuild='cd ~/outsrc/osmand/android; repo sync -d; cd OsmAnd; ../gradlew --refresh-dependencies clean assembleFullLegacyFatDebug'
 
-phof () {
-    pho `fotogr $*`
-}
-
-# Copy the primary selection into the clipboard:
-alias primary2clip='xsel -p | xsel -i -b'
-# and vice versa:
-alias clip2primary='xsel -b | xsel -i -p'
-
-# Tail the procmail log file, for when I'm expecting mail:
-alias proctail="tail -f Procmail/log | egrep -v '^procmail'"
-
-# What's the complement of a number, e.g. the fmask in fstab to get
-# a given file mode for vfat files? Sample usage: invert 755
-invertmask() {
-    python -c "print '0%o' % (0777 - 0$1)"
-    # This also works:
-    # python -c "print '0%o' % (~(0777 & 0$1) & 0777)"
-}
-
-alias s4='jmtpfs /s4'
-# Unmount with fusermount -u /s4
-
-# Clean up libreoffice HTML conversions:
-# tidy -q -config ~/tidy_options.conf -i /tmp/LWVNM\ Convention\ 2015\ Minutes.html | sed -e 's/ class="[cP][0-9]*"//g' -e 's/ class="[cP][0-9]* [cP][0-9]*"//g' > /tmp/tidied.html
-
-################################################
-# Various GPS conversions
-
-kml2gpx() {
-    # :t takes the basename, :r removes the extension
-    gpsbabel -i kml -f $1 -o gpx -F $1:t:r.gpx
-}
-
-kmz2gpx() {
-    # unzip the KMZ, since gpsbabel STILL doesn't know how to do that
-    # despite KMZ becoming the most popular format on the net:
-    kmlfile=/tmp/$1:t:r.kml
-    gunzip -c $1 > $kmlfile
-    # :t takes the basename, :r removes the extension
-    gpsbabel -i kml -f $kmlfile -o gpx -F $kmlfile:t:r.gpx
-}
-
-# ESRI shapefiles to KML. Use the .shp and ignore the other files.
-# Converting to GPX usually doesn't work so well; stick with KML.
-shp2kml() {
-    shapefile=$1
-    kmlfile=$shapefile:t:r.kml
-    ogr2ogr -f KML $kmlfile $shapefile
-}
-
-# Convert a pair of UTM coordinates in NM to a GPX file with one waypoint.
-# I don't know how to get the UTM zone if you don't already have it;
-# Barbara just gives me the pair of points without a zone.
-utm2gpx() {
-    unicsv=`mktemp /tmp/point-XXXXX.csv`
-    gpxfile=$unicsv:r.gpx
-    echo "name,utm_z,utm_e,utm_n,comment" >>$unicsv
-    printf "Point,13,%s,%s,point" $1 $2 >>$unicsv
-    gpsbabel -i unicsv -f $unicsv -o gpx -F $gpxfile
-    echo Created $gpxfile
-}
-
-# Converting back is harder, but gpsbabel's "text" format gives both:
-gpx2utm() {
-    gpsbabel -i gpx -f $1 -o text -F -
-}
-# End GPS conversions
-################################################
+# End Android
 
 ################################################
 # Build/development helpers
