@@ -2,11 +2,6 @@
 ;; Akkana's old and grizzled GNU Emacs initialization file
 ;;
 
-;; How to set a font here rather than in .Xdefaults
-;; But don't do this without checking screen size or hostname or something;
-;; we only want to do it on iridum.
-;(set-default-font "Inconsolata-12")
-
 ;;(setq load-path (cons "~/.emacs-lisp/" load-path))
 (add-to-list 'load-path "~/.emacs-lisp/")
 
@@ -25,6 +20,44 @@
 
 ;; Don't prompt for y-e-s-\n
 (fset 'yes-or-no-p 'y-or-n-p)
+
+;; Change window size on smaller screens. Adapted from
+;; http://stackoverflow.com/questions/92971/how-do-i-set-the-size-of-emacs-window
+(defun set-frame-size-according-to-resolution ()
+  (interactive)
+  (if (display-graphic-p)    ; window-system
+  (progn
+    ;; Emacs can't accept some fonts via Xdefaults. Here's how to set them here,
+    ;; and we'd want to do it differently based on screen size:
+    ;(message (x-display-pixel-height))
+    ;; (if (<= (x-display-pixel-height) 768)
+    ;;     ; Good on a small monitor
+    ;;     ; This works but isn't bold
+    ;;     ;(set-default-font "Inconsolata-12:bold")
+    ;;     ; This isn't found at all, though it works for xterm in Xdefaults:
+    ;;     (set-default-font "-*-clean-bold-r-*-*-13-*-*-*-c-*-*-*")
+    ;;     ; Prettier on a larger monitor:
+    ;;     (set-default-font "-misc-fixed-bold-r-normal-*-14-*-*-*-*-*-*-*")
+         (set-default-font "-misc-fixed-bold-r-normal-*-14-*-*-*-*-*-*-*")
+    ;;     )
+
+    ;; Always use a width of 80
+    (add-to-list 'default-frame-alist (cons 'width 80))
+
+    ;; for the height, subtract a couple hundred pixels
+    ;; from the screen height (for panels, menubars and
+    ;; whatnot), then divide by the height of a char to
+    ;; get the height we want
+    (add-to-list 'default-frame-alist
+                 ; was    (- (x-display-pixel-height) 100)
+                 ; That produces an int, but with * we must convert
+                 ; from float to int with floor.
+         (cons 'height (+ 4 (floor (/ (* (x-display-pixel-height) 0.85)
+                                      (frame-char-height)))))))))
+;; To set initial window position too:
+;; (set-frame-position (selected-frame) 10 30)
+
+(set-frame-size-according-to-resolution)
 
 ;;
 ;; Basic key bindings
@@ -180,6 +213,8 @@
 (set-face-background 'mode-line "purple")
 (set-face-background 'mode-line-inactive "light blue")
 
+(set-face-attribute 'region nil :background "#8df" :foreground "black")
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; turning off annoyances
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -252,7 +287,6 @@
 ;; line instead of the next buffer line (on lines long enough to wrap).
 ;; Revert to old behavior:
 (setq line-move-visual nil)
-
 ;;;;;;;;;;;;; X Selection / Clipboard behavior
 
 ;; This may be helpful: http://www.emacswiki.org/emacs/Comments_on_CopyAndPaste
@@ -403,13 +437,33 @@
 ;; previously separated paragraphs.
 ;;
 (defun wp-munge () "un-fill paragraphs and remove blank lines" (interactive)
-  (let ((save-fill-column fill-column))
+  (if (not (use-region-p)) (mark-whole-buffer))
+  (let ((save-fill-column fill-column)
+        (rstart           (region-beginning))
+        (rend             (region-end)))
+
+    ;(message (format "beginning: %s, end: %s" rstart rend))
+    ;(sleep-for 3)
+
+    ; First, try to protect lines that start with - or * since they
+    ; might be outlines and shouldn't be merged with adjacent lines.
+    (replace-regexp "^\* " "\n* " nil rstart rend)
+    (replace-regexp "^- "  "\n- " nil rstart rend)
+
+    ; Fill all paragraphs
     (set-fill-column 1000000)
-    (if (not (use-region-p)) (mark-whole-buffer))
-    (fill-individual-paragraphs (region-beginning) (region-end))
+    (fill-individual-paragraphs rstart rend)
+
+    ; Remove those blank lines we added
+    (replace-regexp "\n\n\* " "\n* " nil rstart rend)
+    (replace-regexp "\n\n- "  "\n- " nil rstart rend)
+
+    ; Deletion of blank lines currently disabled
     ;(delete-matching-lines "^$")
+
+    ; restore the previous fill column
     (set-fill-column save-fill-column)
-    ))
+))
 
 (defun wp-unmunge () "fill paragraphs and separate them with blank lines"
   (interactive)
@@ -534,7 +588,9 @@
 
 (defun text-indent-hook ()
   (local-set-key "\C-m" 'newline-and-text-indent)
-  (flyspell-mode 1)
+  ; Initializing flyspell on a buffer takes forever -- like, MINUTES.
+  ;; So, only use it when we really need it.
+  ; (flyspell-mode 1)
   ;(flyspell-buffer)
   (local-set-key (kbd "C-;") 'insert-date)
   (global-set-key (kbd "C-;") 'insert-date)
@@ -873,13 +929,18 @@
         ("\\.blx$" . html-wrap-mode)
         ("\\.html$" . html-wrap-mode)
         ("\\.xml$" . xml-mode)
+        ("\\.gpx$" . xml-mode)
         ("\\.js$" . javascript-mode)
         ("\\.r$" . r-mode)
         ("\\.img$" . text-img-mode)
+        ("\\.zsh\\'" . sh-mode)
 
-        ;; Use web-mode by default for PEEC files except PHP ones:
+        ;; Use web-mode by default for PEEC files:
         ("web/peec" . web-mode)
-        ("\\.php" . php-mode)
+        ;; If there's a PHP mode installed, use it instead:
+        ;; ("\\.php" . php-mode)
+        ;; Otherwise use web mode:
+        ("\\.php" . web-mode)
 
         ; STS are Nightshade "strato scripts", with no particular syntax
         ; except that they do have a comment syntax defined.
@@ -922,30 +983,6 @@
 ;; This is supposed to prevent the excessive making of local backup files.
 ;; http://jamesthornton.com/emacs/chapter/emacs_16.html#SEC150
 (setq vc-cvs-stay-local nil)
-
-;; Change window size on smaller screens. Adapted from
-;; http://stackoverflow.com/questions/92971/how-do-i-set-the-size-of-emacs-window
-(defun set-frame-size-according-to-resolution ()
-  (interactive)
-  (if (display-graphic-p)    ; window-system
-  (progn
-    ;; Always use a width of 80
-    (add-to-list 'default-frame-alist (cons 'width 80))
-
-    ;; for the height, subtract a couple hundred pixels
-    ;; from the screen height (for panels, menubars and
-    ;; whatnot), then divide by the height of a char to
-    ;; get the height we want
-    (add-to-list 'default-frame-alist
-                 ; was    (- (x-display-pixel-height) 100)
-                 ; That produces an int, but with * we must convert
-                 ; from float to int with floor.
-         (cons 'height (+ 2 (floor (/ (* (x-display-pixel-height) 0.85)
-                                      (frame-char-height)))))))))
-;; To set initial window position too:
-;; (set-frame-position (selected-frame) 10 30)
-
-(set-frame-size-according-to-resolution)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Turn debugging back off.  Put any questionable code after these lines!
@@ -1093,6 +1130,17 @@
   (add-to-list 'ac-modes 'inferior-emacs-lisp-mode)
   (auto-complete-mode 1))
 (add-hook 'ielm-mode-hook 'ielm-auto-complete)
+
+;; https://www.emacswiki.org/emacs/EdiffMode
+;; Usage: emacs -diff file1 file2
+(defun command-line-diff (switch)
+    (let ((file1 (pop command-line-args-left))
+          (file2 (pop command-line-args-left)))
+      (ediff file1 file2)))
+
+(add-to-list 'command-switch-alist '("diff" . command-line-diff))
+
+(setq ediff-split-window-function 'split-window-horizontally)
 
 ;;
 ;; A few other useful elisp tutorials:
