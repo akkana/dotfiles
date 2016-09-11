@@ -1,8 +1,7 @@
 ;;
-;; Akkana's old and grizzled GNU Emacs initialization file
+;; Akkana's ancient and grizzled GNU Emacs initialization file
 ;;
 
-;;(setq load-path (cons "~/.emacs-lisp/" load-path))
 (add-to-list 'load-path "~/.emacs-lisp/")
 
 ;; Show errors in this file:
@@ -283,6 +282,10 @@
 (setq-default indent-tabs-mode nil)
 (setq tabify nil)
 
+;; Highlight trailing whitespace.
+;; This may be too annoying on files edited by mac/win people.
+(setq-default show-trailing-whitespace t)
+
 ;; Emacs 23 changed up/down behavior, so it goes to the next screen
 ;; line instead of the next buffer line (on lines long enough to wrap).
 ;; Revert to old behavior:
@@ -412,9 +415,10 @@
   )
 
 (defun fixm ()
-  "Change line breaks to Unix style"
+  "Change line breaks to Unix style."
   (interactive)
   (set-buffer-file-coding-system 'utf-8-unix t)
+  (replace-string "\r" "")
   ;(message "fixm")
 )
 
