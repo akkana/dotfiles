@@ -202,15 +202,19 @@
 ;(set-background-color "Alice Blue")
 ;(set-background-color "#eeeeff")
 (custom-set-faces
- '(flyspell-duplicate ((((class color))
-                        (:foreground "red" :underline t :weight bold))))
- '(font-lock-comment-face ((((class color) (min-colors 88)
-                             (background light)) (:foreground "blue"))))
- )
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(flyspell-duplicate ((((class color)) (:foreground "red" :underline t :weight bold))))
+ '(font-lock-comment-face ((((class color) (min-colors 88) (background light)) (:foreground "blue"))))
+ '(whitespace-trailing ((t (:background "cyan" :foreground "yellow" :weight bold)))))
 
 (set-face-foreground 'mode-line "yellow")
 (set-face-background 'mode-line "purple")
 (set-face-background 'mode-line-inactive "light blue")
+
+(set-face-background 'trailing-whitespace "yellow")
 
 (set-face-attribute 'region nil :background "#8df" :foreground "black")
 
@@ -285,6 +289,13 @@
 ;; Highlight trailing whitespace.
 ;; This may be too annoying on files edited by mac/win people.
 (setq-default show-trailing-whitespace t)
+
+;; Also show tabs. https://www.emacswiki.org/emacs/ShowWhiteSpace
+(defface extra-whitespace-face
+  '((t (:background "pale green")))
+  "Used for tabs and such.")
+(defvar bad-whitespace
+  '(("\t" . 'extra-whitespace-face)))
 
 ;; Emacs 23 changed up/down behavior, so it goes to the next screen
 ;; line instead of the next buffer line (on lines long enough to wrap).
@@ -515,25 +526,34 @@
 ;    (define-key keymap "{" 'self-insert-command)
 ;    (define-key keymap "}" 'self-insert-command)
     (define-key keymap "," 'self-insert-command)
+
+    ;; It would be nice to add
+    ;;(font-lock-add-keywords nil bad-whitespace)
+    ;; here, because anywhere I want no-electrics I also want that.
+    ;; But alas, putting it here doesn't work for some reason.
  ))
 
 ;; But these stopped working, maybe because the names for the maps
 ;; are wrong. thunk on #emacs points to:
 ;; ,,df current-local-map and ,,df local-unset-key
-(add-hook 'c-mode-hook (lambda () (no-electric c-mode-map)))
-(add-hook 'c++-mode-hook (lambda () (no-electric c-mode-map)))
-(add-hook 'java-mode-hook (lambda () (no-electric java-mode-map)))
+(add-hook 'c-mode-hook (lambda () (no-electric c-mode-map) (font-lock-add-keywords nil bad-whitespace)))
+(add-hook 'c++-mode-hook (lambda () (no-electric c-mode-map) (font-lock-add-keywords nil bad-whitespace)))
+(add-hook 'java-mode-hook (lambda () (no-electric java-mode-map) (font-lock-add-keywords nil bad-whitespace)))
 
 ;; no-electric doesn't work for python mode -- even if : is bound
 ;; to self-insert it still reindents the line.
 ;(add-hook 'python-mode-hook (lambda () (electric-indent-mode -1)))
 ;; But this method does work!
 ;;http://stackoverflow.com/questions/21182550/how-to-turn-of-electric-indent-mode-for-specific-major-mode
-(add-hook 'python-mode-hook (lambda () (electric-indent-local-mode -1)))
+(add-hook 'python-mode-hook (lambda ()
+                              (electric-indent-local-mode -1)
+                              (font-lock-add-keywords nil bad-whitespace)
+                              ))
 
 (add-hook 'js-mode-hook (lambda ()
   (define-key js-mode-map "," 'self-insert-command)
   (define-key js-mode-map ";" 'self-insert-command)
+  (font-lock-add-keywords nil bad-whitespace)
  ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -921,6 +941,7 @@
         ("Docs/" . text-wrap-mode)
 
 ;; file types -- too bad emacs doesn't handle most of these automatically.
+        ("Tags" . text-mode)
         ("\\.epub$" . archive-mode)
         ("\\.kmz$" . archive-mode)
         ("\\.pde$" . c-mode)
@@ -1106,12 +1127,17 @@
 ;;        "^.*\\([pP]assword\\|Response\\|passphrase.*\\):\^@? *" )
 
 (custom-set-variables
-  ;; custom-set-variables was added by Custom.
-  ;; If you edit it by hand, you could mess it up, so be careful.
-  ;; Your init file should contain only one such instance.
-  ;; If there is more than one, they won't work right.
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
  '(inhibit-startup-screen t)
- '(safe-local-variable-values (quote ((not-flyspell-mode) (encoding . utf-8) (auto-fill-mode) (wrap-mode)))))
+ '(safe-local-variable-values
+   (quote
+    ((not-flyspell-mode)
+     (encoding . utf-8)
+     (auto-fill-mode)
+     (wrap-mode)))))
 (put 'upcase-region 'disabled nil)
 
 ;;
