@@ -32,10 +32,10 @@ setopt globcomplete
 # The only obvious thing wrong with it I've seen is that null matches
 # pass a wildcard through, e.g. echo *XX* passes '*XX*'
 # which apparently is what bash does.
-# 
+#
 # This might be a better option. If it matches nothing, it returns nothing.
 # setopt nullglob
-# 
+#
 # Best solution: do what tcsh does!
 setopt cshnullglob
 
@@ -60,9 +60,9 @@ setopt printexitvalue
 typeset -U PATH
 
 # Set path
-export PATH=$HOME/bin:$HOME/bin/linux:/usr/local/bin:/usr/local/gimp-git/bin:/usr/sbin:/usr/bin:/bin:/usr/bin/X11:.:/sbin:/usr/games:$HOME/outsrc/android-sdk-linux/platform-tools:$HOME/outsrc/android-sdk-linux/tools:/usr/local/bin:$HOME/.local/bin
+export PATH=$HOME/bin:$HOME/bin/linux:/usr/local/bin:/usr/local/gimp-git/bin:$PATH:.:/usr/sbin:/sbin:$HOME/outsrc/android-sdk-linux/platform-tools:$HOME/outsrc/android-sdk-linux/tools
 
-export PYTHONPATH=$HOME/bin
+export PYTHONPATH=$HOME/bin/pythonpath:$HOME/bin
 
 # Autocomplete in the python console:
 # https://python.readthedocs.io/en/v2.7.2/tutorial/interactive.html
@@ -160,6 +160,10 @@ export PAGER=less
 # Need -er in LESS, for git colors to work
 export LESS="-EerX"
 export LC_COLLATE=C
+
+export MAILER=mutt
+export EDITOR=vim
+export VISUAL=vim
 
 # systemctl pipes through less with some completely broken set of
 # arguments that cuts off all output too wide to fit in the terminal.
@@ -385,17 +389,55 @@ popd_maybe() {
 }
 
 # end greps
+
 #######################################################
+## Keep git repos up to date
+#######################################################
+
+# Check which git repos need checkins/pushing:
+checkallgit() {
+    # Formatting:
+    BOLD='\033[1m'
+    NONE='\033[00m'
+    RED='\033[01;31m'
+
+    pushd ~
+    foreach repo ($myrepos)
+        cd ~/src/$repo
+        # -uno means untracked: no, i.e. ignore untracked files.
+        if [[ $# == 0 && -n "$(git status --porcelain -uno)" ]]; then
+            echo "$RED$repo : dirty$NONE"
+            # git status
+        elif [[ -n $(git for-each-ref --format="%(refname:short) %(push:track)" refs/heads |  fgrep '[ahead') ]]; then
+            echo "$RED$repo : clean but unpushed$NONE"
+        else
+            echo $repo ": clean"
+        fi
+    end
+    popd
+}
 
 # Update all my git repositories:
 allgit() {
     pushd_maybe ~
-    foreach repo ( scripts netutils metapho feedme imagebatch pytopo
-                   gimp-plugins pho htmlpreso android dotfiles arduino
-                   Planetarium )
+    foreach repo ($myrepos)
         echo $repo :
         cd ~/src/$repo
+        # Fetch all branches, so it's be safe to go offline.
+        # The --all is probably not needed in most cases,
+        # except perhaps for repos where the remote is forked
+        # from an upstream remote.
         git pull --all
+
+        # The once-maintainer of git-up (github.com/aanand/git-up)
+        # says this works in git 2.9 to merge changes into each branch.
+        # Unfortunately Debian is still on git 2.1.4.
+        # git pull --rebase --autostash
+
+        # Once these are pulled, the game isn't necessarily won.
+        # On any but the current branch, the changes will still
+        # need to be merged into that branch.
+        # Use the git update-branch alias I've set up in .gitconfig.
     end
     popd_maybe
 }
@@ -520,6 +562,11 @@ kmz2gpx() {
     gpsbabel -i kml -f $kmlfile -o gpx -F $kmlfile:t:r.gpx
 }
 
+gpx2kml() {
+    # :t takes the basename, :r removes the extension
+    gpsbabel -i gpx -f $1 -o kml -F $1:t:r.kml
+}
+
 # ESRI shapefiles to KML. Use the .shp and ignore the other files.
 # Converting to GPX usually doesn't work so well; stick with KML.
 shp2kml() {
@@ -640,6 +687,14 @@ alias planeterm="nohup rxvt -geometry 62x45 -fn terminus-iso8859-2-bold-18 -bg b
 
 ########## End presentation-related aliases
 
+# Photo alias: Delete all .cr2 files that don't have a corresponding .jpg.
+# (That way I can manage my jpgs with metapho and anything deleted, I
+# can easily delete the corresponding raw file as well.)
+# Assume the current directory.
+delcr2() {
+    rm *.cr2(e:'[[ ! -e ${REPLY%.cr2}.jpg ]]':)
+}
+
 # Mount encrypted SD card:
 cryptmount() {
     device=$1
@@ -652,6 +707,7 @@ cryptunmount() {
     sudo umount /$name
     sudo cryptsetup remove $name
 }
+
 if [[ $HOST == 'vaiolin' ]]; then
   alias crypt='cryptmount /dev/mmcblk0p2 crypt'
 #elif [[ $HOST == 'imbrium' ]]; then
@@ -869,36 +925,59 @@ sayuk() {
 # There seems to be no way to remove multiple or wildcarded files via adb.
 # alias delallgpx='adb shell rm /mnt/extSdCard/Android/data/net.osmand.plus/tracks/rec/*'
 
+# Where is the SD card on my phone?
+# Under KitKat, it's at /storage/extSdCard.
+# Under Marshmallow, it's at /storage/nnnn-nnnn
+# Set androidSD in .zshrc.hostname.
+
+# Where photos are stored on Android.
+# I have no idea where this magic code comes from,
+# but set androidDCIM in .zshrc.hostname.
+
 pullgpx() {
   pushd_maybe ~/Docs/gps/new
-  adb pull /storage/extSdCard/Android/data/net.osmand.plus/files/tracks/rec/. .
+  adb pull $androidSD/Android/data/net.osmand.plus/files/tracks/rec/. .
   for f in *.gpx; do
     echo $f
-    adb shell rm /storage/extSdCard/Android/data/net.osmand.plus/files/tracks/rec/$f
+    adb shell rm $androidSD/Android/data/net.osmand.plus/files/tracks/rec/$f
   done
   ls
+  echo Maybe adb push file.gpx $androidSD/GPX/
 }
 
 pullphotos() {
   pushd_maybe ~/Docs/gps/new
-  adb pull /storage/extSdCard/DCIM/Camera/. .
-  adb pull /storage/sdcard0/DCIM/CardboardCamera/. .
+  adb pull $androidSD/DCIM/Camera/. .
+  # adb pull /storage/sdcard0/DCIM/CardboardCamera/. .
   setopt extendedglob
   for f in *.jpg~*.vr.jpg *.mp4; do
     echo $f
-    adb shell rm /storage/extSdCard/DCIM/Camera/$f
+    adb shell rm $androidSD/DCIM/Camera/$f
   done
   # If we start shooting a lot with CardboardCamera, can delete those too.
+  echo "Pulled photos:"
   ls
 }
 
 # But what if we don't have adb installed? Here's how to do it using gphoto2.
-alias pullphotosg='gphoto2 --folder /store_00020002/DCIM/Camera -P'
+alias pullphotosg='gphoto2 --folder $androidDCIM/DCIM/Camera -P'
 alias delphotosg='gphoto2 --folder /store_00020002/DCIM/Camera -D'
 
 # And similar aliases for gpx:
 alias pullgpxg='gphoto2 --folder /store_00020002/Android/data/net.osmand.plus/files/tracks/rec -P'
 alias delgpxg='gphoto2 --folder /store_00020002/Android/data/net.osmand.plus/files/tracks/rec -D'
+
+# Copy podcasts to the mp3 device
+#    echo cp $(cat $filename) "/media/mobile disk/"
+# For mp3 player mounted on /mp3:
+#alias pods="podcopy ~/POD /mp3; ls /mp3"
+# For Android phone:
+# alias pods="podcopy ~/POD android:/mnt/extSdCard/Music/Podcasts"
+# But we can't copy into a common location like that, because Android
+# apps can't modify anything on the SD card unless it's in a directory
+# named for their Java class.
+# For the MortPlayer Audio Books:
+alias pods="podcopy ~/POD android:$androidSD/Android/data/de.stohelit.audiobookplayer"
 
 # Android adb logcat is supposed to accept a filter argument to show only
 # logs from a single program, but it doesn't work and I have to use grep.
@@ -907,13 +986,13 @@ alias delgpxg='gphoto2 --folder /store_00020002/Android/data/net.osmand.plus/fil
 # and piping grep to grep makes grep buffer its output
 # unless the --line-buffered flag is specified.
 # --line-buffered probably isn't needed on the last grep.
-adebug2() {
+adebug() {
     adb logcat | egrep --line-buffered "($1|E/AndroidRuntime)" | grep -v --line-buffered Delivering
 }
-adebug() {
+adebug1() {
     adb logcat -s ActivityManager:I AndroidRuntime:E $1:D '*:S'
 }
-alias debugfeed='adebug FeedViewer'
+alias debugfeed='adebug Feed'
 # alias df2='adb logcat | egrep --line-buffered "(Feed|E/AndroidRuntime)" | grep -v --line-buffered Delivering'
 
 # For building Android apps such as osmand:
@@ -940,6 +1019,7 @@ gimpmaster() {
     # Make sure this exits on errors!
     setopt localoptions errreturn
 
+    # echo "Updating libmypaint ..."
     pushd_maybe ~/outsrc/libmypaint
     # Don't do this every time. But if we did, this is what to do:
     # git pull
@@ -952,25 +1032,23 @@ gimpmaster() {
     # make -j4
     # sudo make install
 
+    echo "Updating babl ..."
     cd ~/outsrc/babl
     git pull
     make -j4
-    sudo make install
+    make install
 
+    echo "Updating gegl ..."
     cd ~/outsrc/gegl
     git pull
     make -j4
-    sudo make install
+    make install
 
-    # Hopefully we don't have to update mypaint every time.
-    # cd ~/outsrc/libmypaint
-    # scons prefix=/usr/local/gimp-git enable_gegl=true
-    # sudo scons prefix=/usr/local/gimp-git enable_gegl=true install 
-
+    echo "Updating GIMP ..."
     cd ~/outsrc/gimp
     git pull
     make -j4
-    sudo make install
+    make install
     popd_maybe
 }
 
@@ -995,34 +1073,48 @@ distclean() {
     ./autogen.sh $args
 }
 
-# Make an android tar file from the arg or current directory:
-# just the source files without all the eclipse workspace crap.
-droidtar() {
-    name=$1
-    if [[ $name == '' ]]; then
-        name=$(basename $PWD)
-        cd ..
-    fi
-    # Remove terminal slash.
-    name=${name/\//}
-    date=$(date +%Y-%m-%d)
-    echo "Making tar file of $name on $date"
-    tarfile="$name-$date.tar.gz"
-    tar czvf $tarfile $name/AndroidManifest.xml $name/default.properties $name/src $name/res
-    echo "Created $tarfile"
+# Make a Python virtualenv.
+# Remove all special PATH and PYTHONPATH elements like ~/bin.
+# This still leaves the problem of ~/.local, which pip and venv
+# will use in preference to the venv.
+venv() {
+    export PATH=''
+    export PYTHONPATH=''
+    . /etc/zsh/zshenv
+    virtualenv --system-site-packages venv
+    . venv/bin/activate
 }
 
 newhexchat() {
+    # Make sure this exits on errors from here on.
+    setopt localoptions errreturn
+
+    pushd_maybe ~/outsrc/hexchat
+
+    # Pull changes from upstream and merge into my fork.
+    # Should also push these changes back to my fork.
+    # https://help.github.com/articles/syncing-a-fork/
+    git fetch upstream
+    git checkout master
+    git merge upstream/master
+
+    make -j4
+    make install
+
+    popd_maybe
+}
+
+newhexchat-deb() {
     # Can't set errreturn yet, because that will cause mv and rm
     # (even with -f) to exit if there's nothing to remove.
-    cd ~/outsrc/hexchat-debian
+    pushd_maybe ~/outsrc/hexchat-debian
     echo "Removing what was in old previously"
     rm -rf old
     echo "Moving everything here to old/"
     mkdir old
     mv *.* old/
 
-    # Make sure this exits on errors from here on!
+    # Make sure this exits on errors from here on.
     setopt localoptions errreturn
 
     echo "Getting source ..."
@@ -1035,6 +1127,8 @@ newhexchat() {
     echo
     echo 'Installing' ../hexchat{,-python,-perl}_2*.deb
     sudo dpkg -i ../hexchat{,-python,-perl}_2*.deb
+
+    popd_maybe
 }
 
 # Check on status of all held packages:
@@ -1297,18 +1391,18 @@ dobackup() {
         return
     fi
 
-    # Exclude these from all backups, even full ones:
-    fullexcludes=( Cache .cache Spam LOG log olog Tarballs .Xout \
+    # Exclude files/dirs with these names from all backups, even full ones:
+    fullexcludes=( Cache .cache core Spam LOG log olog Tarballs .Xout \
         VaioWin Bitlbee core outsrc .imap POD .cache/openbox/openbox.log \
-        .icons .thumbnails .cache/thumbnails .imap .macromedia core .histfile \
-        'VirtualBox VMs' Virtualbox feeds kobo \
+        .icons .thumbnails .cache/thumbnails .imap .macromedia .histfile \
+        'VirtualBox VMs' Virtualbox .VirtualBox feeds \
         .mozilla/firefox/masterprofile/sessionstore-backups/ \
         webapps store.json.mozlz4 .dbus/session-bus .emacs-saves \
         .config/chromium .googleearth/Temp .googleearth/Cache desert-center )
 
     # Exclude these from "mini-full" backups (e.g. if low on backup disk space)
     moreexcludes=( '*.mp4' '*.img' '*.iso' DVD \
-        outsrc .VirtualBox 'VirtualBox VMs' \
+        outsrc kobo \
         droidsd-old .googleearth )
 
     # Build up the excludes list:
@@ -1335,6 +1429,9 @@ dobackup() {
     popd_maybe
 }
 
+#
+# Usage: fullbackup target, e.g. fullbackup /backupdisk/username/
+#
 fullbackup() {
     dobackup "$1" full
 }
