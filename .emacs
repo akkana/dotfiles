@@ -2,13 +2,13 @@
 ;; Akkana's ancient and grizzled GNU Emacs initialization file
 ;;
 
-(add-to-list 'load-path "~/.emacs-lisp/")
+(add-to-list 'load-path "~/.emacs.d/lisp/")
 
 ;; Show errors in this file:
 (setq debug-on-error t)
 (setq stack-trace-on-error t)
 
-; (setq load-path (cons "~/.emacs-lisp/" load-path))
+; (setq load-path (cons "~/.emacs.d/lisp/" load-path))
 
 ;; Automatically uncompress .gz files
 ;; -- this seems to have stopped working unless I do it by hand.
@@ -346,6 +346,30 @@
 (setq x-select-enable-primary t)
 (setq x-select-enable-clipboard t)
 (setq save-interprogram-paste-before-kill t)
+
+;; bremner on #emacs warns me that in emacs25 these will change names:
+(setq select-enable-primary t)
+(setq select-enable-clipboard t)
+
+;; Around 24.5, emacs developed the annoying habit that every time I
+;; switch into a buffer, it primary-selects whatever region is active.
+;; Nobody seems to know how to turn this off, so instead, bind C-x b
+;; to something that eliminates any active region before switching out.
+;; This is a much better alternative to the more drastic solution:
+;; (transient-mark-mode 0)
+(defun deselect-then-switch-buffer ()
+  "Deselect any region in the current buffer, then prompt and switch"
+  (interactive)
+  (deactivate-mark)
+  ;; deactivate-mark leaves us at the region's end.
+  ;; It might be nicer to end up at the region's beginning.
+  ;; This doesn't work -- sets it to the end (why?) --
+  (if (region-active-p) (push-mark (region-beginning)))
+  ;;(if (region-active-p) (push-mark (region-end)))
+  (call-interactively 'switch-to-buffer)
+  )
+(global-set-key "\C-xb" 'deselect-then-switch-buffer)
+
 ;; and also comments:
 ;; sometimes the primary selection kill won't be top of the ring, if I've
 ;; done something else meanwhile; sometimes I have to M-y
@@ -1157,7 +1181,7 @@
                      ac-source-features
                      ac-source-symbols
                      ac-source-words-in-same-mode-buffers))
-  (add-to-list 'ac-modes 'inferior-emacs-lisp-mode)
+  (add-to-list 'ac-modes 'inferior-emacs.d/lisp-mode)
   (auto-complete-mode 1))
 (add-hook 'ielm-mode-hook 'ielm-auto-complete)
 
