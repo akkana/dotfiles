@@ -648,9 +648,10 @@
 (setq text-mode-hook 'text-indent-hook)
 
 ;;
-;; Define keys for inserting tags in HTML mode:
+;; HTML-mode definitions:
 ;;
 (defun html-hook ()
+  ;; Define keys for inserting tags in HTML mode:
   (local-set-key "\C-cb" (lambda () (interactive) (sgml-tag "b")))
   (local-set-key "\C-ci" (lambda () (interactive) (sgml-tag "i")))
   (local-set-key "\C-cp" (lambda () (interactive) (sgml-tag "pre")))
@@ -659,10 +660,23 @@
   (local-set-key "\C-c2" (lambda () (interactive) (sgml-tag "h2")))
   (local-set-key "\C-c3" (lambda () (interactive) (sgml-tag "h3")))
   (local-set-key "\C-c4" (lambda () (interactive) (sgml-tag "h4")))
-  (local-set-key "\C-m" (lambda () (interactive) (insert "\n")))
+  ;(local-set-key "\C-m" (lambda () (interactive) (insert "\n")))
+
+  ;; And finally, a generic shorthand to use with other tags:
+  (local-set-key "\C-ct"  (lambda () (interactive) (sgml-tag)))
+
+  ;; Don't insert a newline around <code> and </code> tags.
+  (add-to-list 'html-tag-alist '("code"))
+  ;; Contents of <pre> tags get reindented, destroying their formatting.
+  ;; You can avoid that by not inserting a newline, same as with <code>,
+  ;; But better is to turn off indenting entirely in html-mode,
+  ;; which is fine with me. 'ignore is elisp's nop function.
+  (setq indent-line-function 'ignore)
+
   ;; Would be nice if this would fix the horked dash handling in sgml-mode,
   ;; but alas it has zero effect that I can find.
   ;;(setq sgml-specials nil)
+
   (flyspell-mode 1)
   )
 (setq sgml-mode-hook 'html-hook)
