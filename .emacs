@@ -68,6 +68,8 @@
 (global-set-key "\C-xs" 'save-buffer)
 (global-set-key "\M-w" 'kill-region)
 (global-set-key "\C-m" 'newline-and-indent)
+(global-set-key "\C-cc" 'comment-region)
+(global-set-key "\C-cC" 'uncomment-region)
 
 ;; I am forever hitting this by accident, when my finger slips off
 ;; Ctrl-z and grazes C-x at the same time. Disable it:
@@ -572,6 +574,7 @@
 (add-hook 'python-mode-hook (lambda ()
                               (electric-indent-local-mode -1)
                               (font-lock-add-keywords nil bad-whitespace)
+                              ;(local-set-key "\C-cc" 'comment-region)
                               ))
 
 (add-hook 'js-mode-hook (lambda ()
@@ -650,6 +653,26 @@
 ;;
 ;; HTML-mode definitions:
 ;;
+;; Override some of the mandatory formatting set in html-tag-alist.
+;; You can't add to html-tag-alist until after sgml-mode is loaded,
+;; but if you do it in the html-hook, it's too late for that file:
+;; the changed associations will work in subsequent HTML files but
+;; not in the first one. So we have to load sgml-file first,
+;; whether or not we'll be editing HTML in this session.
+;; Would be nice to find a way to make it work from the mode hook.
+(require 'sgml-mode)
+
+;; Don't insert a newline around <code> and </code> tags.
+;; This worked when I first tested it, but now isn't working.
+(add-to-list 'html-tag-alist '("code"))
+
+;; Header tags all prompt for an attribute, which I never use. Kill that:
+(add-to-list 'html-tag-alist '("h1"))
+(add-to-list 'html-tag-alist '("h2"))
+(add-to-list 'html-tag-alist '("h3"))
+(add-to-list 'html-tag-alist '("h3"))
+
+;; Key bindings and such can be done in the mode hook.
 (defun html-hook ()
   ;; Define keys for inserting tags in HTML mode:
   (local-set-key "\C-cb" (lambda () (interactive) (sgml-tag "b")))
@@ -660,13 +683,12 @@
   (local-set-key "\C-c2" (lambda () (interactive) (sgml-tag "h2")))
   (local-set-key "\C-c3" (lambda () (interactive) (sgml-tag "h3")))
   (local-set-key "\C-c4" (lambda () (interactive) (sgml-tag "h4")))
+
   ;(local-set-key "\C-m" (lambda () (interactive) (insert "\n")))
 
   ;; And finally, a generic shorthand to use with other tags:
   (local-set-key "\C-ct"  (lambda () (interactive) (sgml-tag)))
 
-  ;; Don't insert a newline around <code> and </code> tags.
-  (add-to-list 'html-tag-alist '("code"))
   ;; Contents of <pre> tags get reindented, destroying their formatting.
   ;; You can avoid that by not inserting a newline, same as with <code>,
   ;; But better is to turn off indenting entirely in html-mode,
@@ -678,6 +700,8 @@
   ;;(setq sgml-specials nil)
 
   (flyspell-mode 1)
+  (message "Ran html-hook")
+  ;(sleep-for 3)
   )
 (setq sgml-mode-hook 'html-hook)
 
