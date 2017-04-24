@@ -60,7 +60,8 @@ setopt printexitvalue
 typeset -U PATH
 
 # Set path
-export PATH=$HOME/bin:$HOME/bin/linux:/usr/local/bin:/usr/local/gimp-git/bin:$PATH:.:/usr/sbin:/sbin:$HOME/outsrc/android-sdk-linux/platform-tools:$HOME/outsrc/android-sdk-linux/tools
+arch=$(uname -m)
+export PATH=$HOME/bin:$HOME/bin/$arch:/opt/cxoffice/bin:/usr/local/bin:/usr/local/gimp-git/bin:$PATH:.:/usr/sbin:/sbin:$HOME/outsrc/android-sdk-linux/platform-tools:$HOME/outsrc/android-sdk-linux/tools
 
 export PYTHONPATH=$HOME/bin/pythonpath:$HOME/bin
 
@@ -132,10 +133,15 @@ export standout_end="\e[m"
 if [[ $USER == akkana ]]; then
   # PS1=$'%{\e[1m%}<'$(hostname)$primes$'>-%{\e[0m%} '
   #PS1='%K{white}%F{blue}<'$(hostname)$primes$'>- %f%k'
-  PS1='%F{blue}<'$(hostname)$primes$'>- %f%k'
+  hostname=$(hostname)
+  if [[ $hostname == raspberrypi ]]; then
+    PS1='%F{green}<'$hostname$primes$'>- %f%k'
+  else
+    PS1='%F{blue}<'$hostname$primes$'>- %f%k'
+  fi
 elif [[ $USER == root ]]; then
   #PS1=$'%{\e[1m%}#['$(hostname)$primes$']#%{\e[0m%} '
-  PS1='%K{white}%F{red}['$(hostname)$primes$'#]- %f%k'
+  PS1='%K{white}%F{red}['$hostname$primes$'#]- %f%k'
 fi
 export primes=${primes}\'
 
@@ -269,7 +275,7 @@ sp() {
 ##################
 # Recursive greps
 gr() {
-  find . \( -type f -and -not -name '*.o' -and -not -name '*.so' -and -not -name '*.a' -and -not -name '*.pyc' -and -not -name '*.jpg' -and -not -name '*.JPG' -and -not -name '*.png' -and -not -name '*.xcf*' -and -not -name 'po' -and -not -name '*.tar*' -and -not -name '*.zip' -or -name '.metadata' -prune \) -print0 | xargs -0 grep $* /dev/null | fgrep -v .svn | fgrep -v .git
+  find . \( -type f -and -not -name '*.o' -and -not -name '*.so' -and -not -name '*.a' -and -not -name '*.pyc' -and -not -name '*.jpg' -and -not -name '*.JPG' -and -not -name '*.png' -and -not -name '*.xcf*' -and -not -name '*.gmo' -and -not -name '.intltool*' -and -not -name '*.po' -and -not -name 'po' -and -not -name '*.tar*' -and -not -name '*.zip' -or -name '.metadata' -prune \) -print0 | xargs -0 grep $* /dev/null | fgrep -v .svn | fgrep -v .git
 }
 zgr() {
   find . \( -type f -and -not -name '*.o' -and -not -name '*.so' -and -not -name '*.a' -and -not -name '*.pyc' -and -not -name '*.jpg' -and -not -name '*.JPG' -and -not -name '*.png' -and -not -name '*.xcf*' -and -not -name 'po' -and -not -name '*.tar*' -and -not -name '*.zip' -or -name '.metadata' -prune \) -print0 | xargs -0 zgrep $* /dev/null | fgrep -v .svn | fgrep -v .git
@@ -312,10 +318,22 @@ idagr() {
   find . \( -name OBJ -prune -or -name external -prune -or -name '*scons*' -prune -or -name google_appengine -prune -o -type f -and -not -name '*.o' -and -not -name '*.so' -and -not -name '*.a' -and -not -name '*.pyc' \) -print0 | xargs -0 grep $* /dev/null | fgrep -v .svn | fgrep -v .git
 }
 
+# For some reason, with Tags/Keywords this fails with -print0/-0
+# but works without it.
+taggr() {
+  find . -name 'Tags' -or -name 'Keywords' | xargs grep $* /dev/null
+}
+
 alias pygrep="langgrep python"
 
+# My PHP projects are scattered among various website images, not ~/bin.
+# find is too slow for all of $HOME, so use locate instead.
+phpgrep() {
+    grep $* `locate .php | grep $HOME | grep '\.php$' | egrep -v '(android|index|showpix|ies4linux)'` | sed "s_${HOME}_\~_"
+}
+
 # Grep stdin for lines that have any of these terms.
-# usage: cmd | grepany term1 term2 term3 
+# usage: cmd | grepany term1 term2 term3
 grepany() {
     egrep "(${(j:|:)*})"
 }
@@ -342,7 +360,12 @@ grepall() {
 # End grep aliases
 
 phof () {
-    pho `fotogr $*`
+    imglist=(`fotogr $*`)
+    if [[ -z $imglist ]]; then
+        echo no match
+        return
+    fi
+    pho $imglist
 }
 
 # Copy the primary selection into the clipboard:
@@ -361,8 +384,7 @@ invertmask() {
     # python -c "print '0%o' % (~(0777 & 0$1) & 0777)"
 }
 
-alias s4='jmtpfs /s4'
-# Unmount with fusermount -u /s4
+# end greps
 
 # pushd, but not if we're already at the target directory
 # or if we're currently home.
@@ -388,8 +410,6 @@ popd_maybe() {
     fi
 }
 
-# end greps
-
 #######################################################
 ## Keep git repos up to date
 #######################################################
@@ -408,7 +428,7 @@ checkallgit() {
         if [[ $# == 0 && -n "$(git status --porcelain -uno)" ]]; then
             echo "$RED$repo : dirty$NONE"
             # git status
-        elif [[ -n $(git for-each-ref --format="%(refname:short) %(push:track)" refs/heads |  fgrep '[ahead') ]]; then
+        elif [[ -n $(git for-each-ref --format="%(refname:short) %(push:track)" refs/heads | fgrep '[ahead') ]]; then
             echo "$RED$repo : clean but unpushed$NONE"
         else
             echo $repo ": clean"
@@ -419,7 +439,7 @@ checkallgit() {
 
 # Update all my git repositories:
 allgit() {
-    pushd_maybe ~
+    pushd ~
     foreach repo ($myrepos)
         echo $repo :
         cd ~/src/$repo
@@ -439,7 +459,7 @@ allgit() {
         # need to be merged into that branch.
         # Use the git update-branch alias I've set up in .gitconfig.
     end
-    popd_maybe
+    popd
 }
 
 # If you're working on a branch, and all your changes are committed,
@@ -495,15 +515,21 @@ fi
 # mencoder options are black magic.
 # This works for converting Minolta quicktime .mov to mpeg:
 mov2mpg1() {
-  mencoder $1 -oac pcm -ovc lavc -lavcopts vcodec=mpeg1video -o $2
+  # mencoder has changed its arg structure and this no longer works
+  # mencoder $1 -oac pcm -ovc lavc -lavcopts vcodec=mpeg1video -o $2
+  echo Sorry, not sure of the new mencoder args
 }
 # -lavc is ffmpeg, and the default codec is divx:
 mov2divx() {
-  mencoder $1 -oac pcm -ovc lavc -o $2
+  # mencoder has changed its arg structure and this no longer works
+  # mencoder $1 -oac pcm -ovc lavc -o $2
+  echo Sorry, not sure of the new mencoder args
 }
 # From drc on #gimp:
 mov2mpeg4() {
-  mencoder $1 -oac pcm -ovc lavc -lavcopts vcodec=mpeg4:vqmin=2:vlelim=-4:vcelim=9:lumi_mask=0.05:dark_mask=0.01:vhq -o $2
+  # mencoder has changed its arg structure and this no longer works
+  # mencoder $1 -oac pcm -ovc lavc -lavcopts vcodec=mpeg4:vqmin=2:vlelim=-4:vcelim=9:lumi_mask=0.05:dark_mask=0.01:vhq -o $2
+  ffmpeg -i $1 -c copy $1:t:r.mp4
 }
 
 # Extract audio from flash:
@@ -518,7 +544,7 @@ alias tomp3='soundconverter -b -m "audio/mpeg" -s ".mp3"'
 getreal() {
   mplayer -playlist $1 -ao pcm:file=$2 -vc dummy -vo null
 }
-# Then transcode it with: 
+# Then transcode it with:
 # lame --tg Other --ta artist -tl album file.wav file.mp3
 
 ######## end video aliases
@@ -601,8 +627,9 @@ gpx2utm() {
 # Ssh refuses to operate if anything has changed about the host:
 # network card, distro it's running, etc.
 cleanssh() {
-  mv $HOME/.ssh/known_hosts $HOME/.ssh/known_hosts.bak
-  egrep -v "^\[?$h\]?\b" $HOME/.ssh/known_hosts.bak >$HOME/.ssh/known_hosts
+  # mv $HOME/.ssh/known_hosts $HOME/.ssh/known_hosts.bak
+  # egrep -v "^\[?$1(\]|\w|\:)" $HOME/.ssh/known_hosts.bak >$HOME/.ssh/known_hosts
+  echo Use ssh-keygen -R $1
 }
 
 # Get the temperature from /proc/acpi/thermal_zone/THRM/temperature
@@ -692,7 +719,38 @@ alias planeterm="nohup rxvt -geometry 62x45 -fn terminus-iso8859-2-bold-18 -bg b
 # can easily delete the corresponding raw file as well.)
 # Assume the current directory.
 delcr2() {
+    echo Removing *.cr2(e:'[[ ! -e ${REPLY%.cr2}.jpg ]]':)
+    sleep 3
     rm *.cr2(e:'[[ ! -e ${REPLY%.cr2}.jpg ]]':)
+}
+
+########## Mount-related aliases
+
+# Mount and df no longer suffice to show mounted filesystems,
+# since they show so much irrelevant crap now.
+# Here are ways to clean them up:
+mount() {
+    if [[ $# -ne 0 ]]; then
+        /bin/mount $*
+        return
+    fi
+
+    # Else called with no arguments: we want to list mounted filesystems.
+    /bin/mount -t nosysfs,nodevtmpfs,nocgroup,nomqueue,notmpfs,noproc,nopstore,nohugetlbfs,nodebugfs,nodevpts,noautofs,nosecurityfs,nofusectl
+
+    # Two other options, in case that stops working:
+    # mount -t ext3,ext4,cifs,nfs,nfs4,zfs
+    # mount | grep -E --color=never  '^(/|[[:alnum:]\.-]*:/)'
+}
+
+df() {
+    if [[ $# -ne 0 ]]; then
+        /bin/df $*
+        return
+    fi
+
+    # Else called with no arguments: we want to list mounted filesystems.
+    /bin/df -hTx tmpfs -x devtmpfs -x rootfs
 }
 
 # Mount encrypted SD card:
@@ -950,6 +1008,7 @@ pullphotos() {
   adb pull $androidSD/DCIM/Camera/. .
   # adb pull /storage/sdcard0/DCIM/CardboardCamera/. .
   setopt extendedglob
+  setopt EXTENDED_GLOB
   for f in *.jpg~*.vr.jpg *.mp4; do
     echo $f
     adb shell rm $androidSD/DCIM/Camera/$f
@@ -976,8 +1035,13 @@ alias delgpxg='gphoto2 --folder /store_00020002/Android/data/net.osmand.plus/fil
 # But we can't copy into a common location like that, because Android
 # apps can't modify anything on the SD card unless it's in a directory
 # named for their Java class.
-# For the MortPlayer Audio Books:
-alias pods="podcopy ~/POD android:$androidSD/Android/data/de.stohelit.audiobookplayer"
+# pods() has to be a shell function; if it's an alias, it will expand
+# $androidSD right now instead of at the time it's run, and we don't
+# know $androidSD yet since we haven't yet evaled .zshrc.hostname.
+# For MortPlayer Audio Books:
+pods() {
+    podcopy ~/POD android:$androidSD/Android/data/de.stohelit.audiobookplayer
+}
 
 # Android adb logcat is supposed to accept a filter argument to show only
 # logs from a single program, but it doesn't work and I have to use grep.
@@ -1084,6 +1148,23 @@ venv() {
     virtualenv --system-site-packages venv
     . venv/bin/activate
 }
+
+venv-nosite() {
+    export PATH=''
+    export PYTHONPATH=''
+    . /etc/zsh/zshenv
+    virtualenv venv
+    . venv/bin/activate
+}
+
+# Where would a python module be imported from?
+pythonwhich() {
+    foreach lib ($*)
+      python -c "import imp; file, pathname, description = imp.find_module(\"$lib\"); print pathname"
+    end
+}
+
+# Build a new copy of my forked hexchat
 
 newhexchat() {
     # Make sure this exits on errors from here on.
@@ -1235,7 +1316,8 @@ alias day="xrandr --output HDMI1 --brightness 1.0"
 alias night="xrandr --output HDMI1 --brightness .8"
 
 alias kindle="wine ~/.wine/drive_c/Program\ Files/Amazon/Kindle/Kindle.exe"
-alias adobeDE="wine ~/.wine/drive_c/Program\ Files/Adobe/Adobe\ Digital\ Editions/digitaleditions.exe"
+# alias adobeDE="wine ~/.wine/drive_c/Program\ Files/Adobe/Adobe\ Digital\ Editions/digitaleditions.exe"
+alias adobeDE="cxrun ~/.cxoffice/ADE_4/drive_c/Program\ Files/Adobe/Adobe\ Digital\ Editions\ 4.5/DigitalEditions.exe"
 
 # R has no way to tell it not to prompt annoyingly to save the environment
 # every time you quit, except as a commandline flag:
@@ -1269,6 +1351,27 @@ whichspam() {
     #echo "$1" | egrep -i -- "$line" >/dev/null
     # echo "$1" PIPE egrep -i -- "$line"
     echo "$1" | egrep -i -- "$line"
+    if [[ $? == 0 ]]; then
+      echo $line
+    fi
+  done
+  #set +o xtrace
+}
+
+whichspam2() {
+  # to print each line before executing, for debugging purposes:
+  #set -o xtrace
+  whichfile=$2
+  if [[ x$whichfile == x ]]; then
+    whichfile=subjectRejects
+  fi
+  echo Searching in ~/Procmail/spast/$whichfile
+  cat ~/Procmail/spast/$whichfile | while read line ; do
+    #echo echo "$1" '| egrep -i --' "$line" '>/dev/null'
+    #echo "$1" | egrep -i -- "$line" >/dev/null
+    # echo "$1" PIPE egrep -i -- "$line"
+    # echo "$1" | egrep -i -- "$line"
+    echo "$line" | egrep -i -f -- "$1"
     if [[ $? == 0 ]]; then
       echo $line
     fi
@@ -1392,21 +1495,43 @@ dobackup() {
     fi
 
     # Exclude files/dirs with these names from all backups, even full ones:
-    fullexcludes=( Cache .cache core Spam LOG log olog Tarballs .Xout \
-        VaioWin Bitlbee core outsrc .imap POD .cache/openbox/openbox.log \
+    fullexcludes=( Cache ".cache/*" core Spam LOG log olog foo .Xout feeds \
+        .local .pythonenv Tarballs \
+        desert-center planetarium-movies \
+        VaioWin core outsrc .imap \
         .icons .thumbnails .cache/thumbnails .imap .macromedia .histfile \
-        'VirtualBox VMs' Virtualbox .VirtualBox feeds \
-        .mozilla/firefox/masterprofile/sessionstore-backups/ \
-        webapps store.json.mozlz4 .dbus/session-bus .emacs-saves \
-        .config/chromium .googleearth/Temp .googleearth/Cache desert-center )
+        .gradle/ .dbus/ .emacs-saves \
+        .config/chromium .googleearth/Temp .googleearth/Cache \
+
+        # All the places virtualbox stores profiles:
+        'VirtualBox VMs' Virtualbox .VirtualBox \
+
+        # All the various crap firefox stores:
+        "*.Default User" \
+        "gmp-gmp*"/ crashes/ datareporting/ storage/permanent/ \
+        sessionstore-backups/ saved-telemetry-pings/ "*store.json*" \
+
+        )
 
     # Exclude these from "mini-full" backups (e.g. if low on backup disk space)
     moreexcludes=( '*.mp4' '*.img' '*.iso' DVD \
-        outsrc kobo \
+        outsrc kobo planetarium-movies \
         droidsd-old .googleearth )
+
+    # Things we want even though they're under otherwise excluded patterns.
+    # If these are part of patterns that would otherwise be excluded,
+    # use a * in the exclude pattern.
+    # E.g. include .cache/feedme/, exclude .cache/* instead of .cache/
+    includes=( .cache/feedme/ )
 
     # Build up the excludes list:
     excludesflags=( )
+
+    for i in $includes; do
+        excludesflags+="--include"
+        excludesflags+="$i"
+    done
+
     for ex in $fullexcludes; do
         excludesflags+="--exclude"
         excludesflags+="$ex"
@@ -1422,9 +1547,19 @@ dobackup() {
         echo "Full backup to" $1
     fi
 
-    pushd_maybe ~
+    if [[ ! -f $1/.config/zsh/.zshrc ]]; then
+        echo
+        echo "********************************************************"
+        echo "WARNING: $1 doesn't appear to be an existing backup dir."
+        echo "Are you sure?"
+        echo "Waiting for 10 seconds ..."
+        echo "********************************************************"
+        echo
+        sleep 10
+    fi
     echo sudo rsync -av --delete --delete-excluded "${excludesflags[@]}" ./ $1
     sleep 2
+    pushd_maybe ~
     sudo rsync -av --delete --delete-excluded "${excludesflags[@]}" ./ $1
     popd_maybe
 }
@@ -1538,14 +1673,14 @@ localurl() {
 # http://jeroenjanssens.com/2013/08/16/quickly-navigate-your-filesystem-from-the-command-line.html
 # Now if I could just remember to use it.
 export MARKPATH=$HOME/.marks
-function jump { 
+function jump {
     cd -P "$MARKPATH/$1" 2>/dev/null || echo "No such mark: $1"
 }
 alias mcd=jump
-function mark { 
+function mark {
     mkdir -p "$MARKPATH"; ln -s "$(pwd)" "$MARKPATH/$1"
 }
-function unmark { 
+function unmark {
     rm -i "$MARKPATH/$1"
 }
 function marks {
@@ -1624,8 +1759,16 @@ chroot-update() {
     sudo chroot /$partitionname
 }
 
+#
+# echo_and_do something.
+#
+echo_and_do() {
+  echo $*
+  $*
+}
+
 ######################################################
 # Source local zsh options:
-if [[ -f $HOME/.zshrc.$hostname ]]; then
-  . $HOME/.zshrc.$hostname
+if [[ -f $HOME/.config/zsh/.zshrc.$hostname ]]; then
+  . $HOME/.config/zsh/.zshrc.$hostname
 fi
