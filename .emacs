@@ -71,6 +71,11 @@
 (global-set-key "\C-cc" 'comment-region)
 (global-set-key "\C-cC" 'uncomment-region)
 
+;; Lately exchange-point-and-mark selects everything in between the two points,
+;; clobbering anything in the primary selection.
+;; But you can turn that off by passing t to activate "Transient Mark mode".
+(global-set-key "\C-x\C-x" (lambda () (interactive) (exchange-point-and-mark t)))
+
 ;; I am forever hitting this by accident, when my finger slips off
 ;; Ctrl-z and grazes C-x at the same time. Disable it:
 (global-unset-key "\C-x\C-z")
@@ -241,8 +246,10 @@
 
 ;; Get rid of keys I hit accidentally:
 (global-unset-key "\M-c")    ; don't want the capitalize thing
+
 ;; undefine the keys that do narrow-to-page and narrow-to-region,
 ;; because who would ever want such a stupid function??
+;; And they're easy to hit accidentally.
 (global-unset-key "\C-xp")
 (global-unset-key "\C-xn")
 
@@ -434,23 +441,6 @@
       (replace-string ">" "&gt;")
       )))
 
-;; Create a basic HTML page template -- I get tired of typing this all the time.
-;; Strangely, you have to have some text in the file already --
-;; I'm not sure why.
-(defun newhtml ()
-  "Insert a template for an empty HTML page"
-  (interactive)
-  (insert "<html>\n"
-          "<head>\n"
-          "<title></title>\n"
-          "</head>\n\n"
-          "<body>\n\n"
-          "<h1></h1>\n\n"
-          "<p>\n\n"
-          "</body>\n"
-          "</html>\n")
-  )
-
 (defun fixm ()
   "Change line breaks to Unix style."
   (interactive)
@@ -566,16 +556,36 @@
 (add-hook 'c++-mode-hook (lambda () (no-electric c-mode-map) (font-lock-add-keywords nil bad-whitespace)))
 (add-hook 'java-mode-hook (lambda () (no-electric java-mode-map) (font-lock-add-keywords nil bad-whitespace)))
 
+(defun newpython ()
+  "Insert a template for an empty Python script"
+  (interactive)
+  (insert "#!/usr/bin/env python\n"
+          "\n"
+          "\n"
+          "\n"
+          "if __name__ == '__main__':\n"
+          "\n"
+          )
+  (forward-line -4)
+  )
+;; with-eval-after-load is never called.
+;;(with-eval-after-load ".py"
+;;  (newpython))
+
 ;; no-electric doesn't work for python mode -- even if : is bound
 ;; to self-insert it still reindents the line.
 ;(add-hook 'python-mode-hook (lambda () (electric-indent-mode -1)))
 ;; But this method does work!
 ;;http://stackoverflow.com/questions/21182550/how-to-turn-of-electric-indent-mode-for-specific-major-mode
-(add-hook 'python-mode-hook (lambda ()
-                              (electric-indent-local-mode -1)
-                              (font-lock-add-keywords nil bad-whitespace)
-                              ;(local-set-key "\C-cc" 'comment-region)
-                              ))
+(add-hook 'python-mode-hook
+          (lambda ()
+            (electric-indent-local-mode -1)
+            (font-lock-add-keywords nil bad-whitespace)
+            ;(local-set-key "\C-cc" 'comment-region)
+            (if (= (buffer-size) 0)
+                (newpython))
+            ;(message "python hook")
+            ))
 
 (add-hook 'js-mode-hook (lambda ()
   (define-key js-mode-map "," 'self-insert-command)
@@ -639,7 +649,7 @@
 
 (defun text-indent-hook ()
   (local-set-key "\C-m" 'newline-and-text-indent)
-  ; Initializing flyspell on a buffer takes forever -- like, MINUTES.
+  ; Initializing flyspell on a large buffer takes forever -- like, MINUTES.
   ;; So, only use it when we really need it.
   ; (flyspell-mode 1)
   ;(flyspell-buffer)
@@ -672,6 +682,27 @@
 (add-to-list 'html-tag-alist '("h3"))
 (add-to-list 'html-tag-alist '("h3"))
 
+;; Create a basic HTML page template -- I get tired of typing this all the time.
+(defun newhtml ()
+  "Insert a template for an empty HTML page"
+  (interactive)
+  (insert "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">\n"
+          "<html>\n"
+          "<head>\n"
+          "<title></title>\n"
+          "</head>\n\n"
+          "<body>\n\n"
+          "<h1></h1>\n\n"
+          "<p>\n\n"
+          "</body>\n"
+          "</html>\n")
+  (forward-line -11)
+  (forward-char 7)
+  )
+;; with-eval-after-load is never called.
+;;(with-eval-after-load ".*\..html"
+;;  (newhtml))
+
 ;; Key bindings and such can be done in the mode hook.
 (defun html-hook ()
   ;; Define keys for inserting tags in HTML mode:
@@ -700,6 +731,12 @@
   ;;(setq sgml-specials nil)
 
   (flyspell-mode 1)
+
+  ;; s-suffix? is like Python endswith
+  (if (and (= (buffer-size) 0)
+           (string-suffix-p ".html" (buffer-file-name)))
+      (newhtml) )
+
   (message "Ran html-hook")
   ;(sleep-for 3)
   )
