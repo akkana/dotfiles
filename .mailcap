@@ -67,21 +67,21 @@ audio/x-pn-windows-acm;/home/akkana/RealPlayer8/realplay "%u"
 # Java Web Start
 application/x-java-jnlp-file; /home/akkana/Tarballs/j2sdk1.4.2_06/jre/javaws/javaws %s
 
-# Options for doc: wvText, wvHtml, catdoc, antiword.
-# Options for docx: docx2txt
+# GUI programs for various formats.
+# For text-mode programs, see ~/.mutt/mailcap.
 
-# docx needs a separate program -- catdoc just crashes.
-text/html; mimehelper 5 firefox 'file://%s'; nametemplate=%s.html
-application/vnd.openxmlformats-officedocument.wordprocessingml.document; wordview %s
-# application/vnd.openxmlformats-officedocument.wordprocessingml.document; mimehelper 2 docx2txt %s -; copiousoutput
-application/vnd.openxmlformats-officedocument.wordprocessingml.document; docx2txt %s -; copiousoutput
+# HTML
+text/html; mimehelper 5 quickbrowse 'file://%s'; nametemplate=%s.html
 
-# Regular .doc files can use catdoc.
-
-application/msword; wordview %s
-application/msword; mimehelper 2 catdoc %s; copiousoutput
+# MS Word formats
+application/vnd.openxmlformats-officedocument.wordprocessingml.document; abiword %s
+# application/vnd.openxmlformats-officedocument.wordprocessingml.document; abiword %s -
+application/vnd.openxmlformats-officedocument.wordprocessingml.document; abiword %s -
+application/msword; abiword %s
+application/msword; abiword %s
 # application/msword; mimehelper 5 abiword %s
+application/vnd.openxmlformats-officedocument.wordprocessingml.document; abiword %s
 
-application/vnd.openxmlformats-officedocument.wordprocessingml.document; mimehelper 2 catdoc %s; copiousoutput
+application/vnd.ms-excel; gnumeric %s
 
-application/vnd.ms-excel; mimehelper 5 gnumeric %s
+text/calendar; /home/akkana/bin/vcalparse %s
