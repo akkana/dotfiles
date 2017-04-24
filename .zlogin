@@ -19,6 +19,9 @@ if [[ $(tty) == /dev/tty1 ]]; then
     # Start networking if we have a remembered scheme
     netscheme -w -r > /tmp/netscheme-login.out 2>&1 &
 
+    # Housekeeping, things we want to clean up regularly
+    rm -rf .cache/chromium .cache/google-chrome .macromedia .vlc
+
     # echo Starting X with dumb scheduler
     echo "Starting x ..."
     startx -- >& $HOME/.Xout
@@ -40,3 +43,14 @@ else
 fi
 
 # export ZMLIB=~/outsrc/zmail-2009/zmail/lib
+
+# Python virtualenv.
+# pip install --user doesn't work properly on Debian: it ignores
+# system-installed packages and re-installs dependencies that don't
+# need re-installing, https://github.com/pypa/pip/issues/4222
+# So instead, use a virtualenv all the time to do the job .local
+# was supposed to do.
+# Set this up once with:
+# virtualenv --system-site-packages $HOME/.pythonenv
+VIRTUAL_ENV_DISABLE_PROMPT=1 source $HOME/.pythonenv/bin/activate
+echo Activated Python virtualenv
