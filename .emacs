@@ -846,6 +846,15 @@
   (local-set-key "\C-cs" 'screenshot)
   (local-set-key "\C-cr" 'repeat-screenshot)
   (local-set-key "\C-cp" 'mypaint)
+
+  ;; Our usual font is terrible for Greek letters.
+  ;; For courses that require a lot of greek-letter equations,
+  ;; use a different font.
+  ;; 11x18 or sony 8x16 (those two look the same), Default is nice and bold
+  ;; 8x13 is a little small and spidery but has great Greek and fits in
+  ;; the normal window size, 9x15 isn't bad but doesn't actually fit
+  (setq buffer-face-mode-face '(:family "DejaVu Sans" :height 105 :width semi-condensed))
+  (buffer-face-mode)
   )
 
 (defun get-and-insert-image (progname imgdir flags)
