@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Figure out whether we're in a docking station or not, and adjust
 # the display accordingly.
@@ -7,31 +7,42 @@
 
 # Check whether the external monitor is connected: returns 0 on success
 hostname=$(hostname)
-if [ $hostname=hesiodus ]; then
+if [ $hostname == hesiodus ]; then
   # Make the F1 key another Escape
   xmodmap -e 'keycode 67 = Escape'
 
-  xrandr | grep HDMI | grep " connected "
+  # This is a bit gross, but it has to work on older machines that
+  # use names like HDMI1 as well as newer xrandr that names it HDMI-1.
+  # This would work in zsh, but not in bash
+  # connected_monitors=("${(@f)$(xrandr | grep ' connected')}")
+  HDMIline=$(xrandr | grep HDMI | grep connected | head -1)
+  HDMIdev=$(echo $HDMIline | sed 's/ .*//')
+  VGAline=$(xrandr | grep VGA | grep connected | head -1)
+  VGIdev=$(echo $VGIline | sed 's/ .*//')
+  LVDSline=$(xrandr | grep LVDS | grep connected | head -1)
+  LVDSdev=$(echo $LVDSline | sed 's/ .*//')
+
+  echo $HDMIline | grep " connected "
   if [ $? -eq 0 ]; then
-    xrandr --output VGA1 --off
-    xrandr --output LVDS1 --off
-    xrandr --output HDMI1 --mode 1680x1050
+    xrandr --output $VGAdev --off
+    xrandr --output $LVDSdev --off
+    xrandr --output $HDMIdev --mode 1680x1050
     echo HDMI, should be setting 1680x1050
     geom=80x60-0-0
   else
-    xrandr | grep VGA | grep " connected "
+    echo $VGAline | grep " connected "
     if [ $? -eq 0 ]; then
-      xrandr --output HDMI1 --off
-      xrandr --output LVDS1 --off
-      xrandr --output VGA1 --mode 1680x1050
+      xrandr --output $HDMIdev --off
+      xrandr --output $LVDSdev --off
+      xrandr --output $VGAdev --mode 1680x1050
       geom=80x60-0-0
     else
       # Fall back on the built-in laptop display, LVDS1
       # and trust it (fingers crossed!) to get the resolution right.
-      xrandr --output VGA1 --off
-      xrandr --output HDMI1 --off
-#      xrandr --output LVDS1 --mode 1280x800
-      xrandr --output LVDS1
+      xrandr --output $VGAdev --off
+      xrandr --output $HDMIdev --off
+#      xrandr --output $LVDS1dev --mode 1280x800
+      xrandr --output $LVDSdev
       geom=80x51+0-0
     fi
   fi
@@ -48,9 +59,9 @@ fi
 #(xsetbg -fullscreen -border black `find -L $HOME/Backgrounds -name "*.*" | randomline`) &
 #(hsetroot -center `find -L $HOME/Backgrounds -name "*.*" | randomline`) &
 #echo "Running randombg:" `date` >/tmp/xinit.log
-randombg &
+/home/akkana/bin/randombg &
 
-#xrdb -l .Xdefaults
+# xrdb -l .Xdefaults
 
 #xmodmap .Xmodmap
 #xhost +moon &
@@ -61,11 +72,74 @@ randombg &
 xterm -geometry $geom &
 
 # Disable touchpad types when typing:
-# Too annoying!
-#syndaemon -d -i 2
+# Too annoying! But necessary on the Asus 1015e, where the touchpad
+# is just too sensitive and always palm-triggers while typing.
+# syndaemon -d -i 2
 
-# More reliable way. man synaptics for the list of available options:
-if [ $hostname=io ]; then
-  synclient TapButton1=0 HorizEdgeScroll=1
+# man synaptics for the list of available options:
+# TapButton1=0 : turn off single taps (if they interfere with typing).
+# TapButton3=2 : triple-tap does a middle click.
+# Should base this on whether a touchpad exists, but I
+# haven't found a good way of determining that.
+# Would like to have 2-finger do middle, 3-finger do right
+# but the Elantech pad recognizes 3-finger tapes easily,
+# but I have to try 5-10 times to get a 2-finger tap recognized.
+#synclient TapButton1=1 TapButton2=2 TapButton3=3 HorizEdgeScroll=1
+if [ $hostname == iridum ]; then
+  synclient TapButton1=0 TapButton2=3 TapButton3=2 HorizEdgeScroll=1
+else
+  synclient TapButton1=1 TapButton2=3 TapButton3=2 HorizEdgeScroll=1
 fi
 
+# Some other possible parameters:
+
+# Tap sensitivity
+# FingerLow=9 FingerHigh=12
+
+# 2-finger scroll
+# VertTwoFingerScroll=1 HorizTwoFingerScroll=1
+
+# # faster coasting
+# synclient CoastingSpeed=10
+
+# enable tap to click (2 fingers for middle click, 3 fingers for right click)
+# synclient TapButton1=1 TapButton2=3 TapButton3=2
+
+# continue dragging movement when reaching the edge of the touchpad
+# synclient EdgeMotionMinZ=30 EdgeMotionMaxZ=40 EdgeMotionMinSpeed=100 EdgeMotionMaxSpeed=400
+
+# Also see xinput list-props
+
+# My new Logitech mouse is too fast. Set it to be slower like this:
+mouseid=$(xinput list | grep Mouse | sed 's/.*id=\([0-9]*\).*/\1/')
+xinput set-prop $mouseid $(xinput list-props $mouseid | grep 'Constant Deceleration' | sed 's/.* Deceleration (\([0-9]*\)).*/\1/') 2
+
+# In Pangolin, somehow setting this option in /etc/default/keyboard
+# doesn't do the job. setxkbmap -query says it's set, and it works
+# in consoles, but it doesn't work in X.
+# But for some reason, setting it again via setxkbmap does work.
+# Sometimes. Maybe.
+#setxkbmap -option 'ctrl:nocaps'
+setxkbmap -option 'ctrl:nocaps,compose:menu,terminate:ctrl_alt_bksp'
+
+# The Asus' touchpad just doesn't register two-finger-taps most of the time.
+# So use F9 for that on that machine:
+if [ $hostname == iridum ]; then
+  echo "We're on iridum: setting Fn keys as mouse buttons"
+
+  xmodmap -e "keysym F1 = Pointer_Button1"
+  xmodmap -e "keysym F2 = Pointer_Button2"
+  xmodmap -e "keysym F3 = Pointer_Button3"
+
+  xmodmap -e "keysym F10 = Pointer_Button1"
+  xmodmap -e "keysym F11 = Pointer_Button2"
+  xmodmap -e "keysym F12 = Pointer_Button3"
+
+  xkbset m
+  # I'm not clear on why I need the next line, but saw it recommended.
+  # exp is expire, but man xkbset doesn't explain what that means.
+  xkbset exp =m
+fi
+
+# How to prepare the way for ssh-agent, supposedly:
+# ssh-add /path/to/ssh.key &
