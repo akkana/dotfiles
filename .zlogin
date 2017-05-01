@@ -17,7 +17,9 @@ if [[ $(tty) == /dev/tty1 ]]; then
     fi
 
     # Start networking if we have a remembered scheme
-    netscheme -w -r > /tmp/netscheme-login.out 2>&1 &
+    if [[ -f $HOME/.config/netscheme/current ]]; then
+      netscheme -w -r > /tmp/netscheme-login.out 2>&1 &
+    fi
 
     # Housekeeping, things we want to clean up regularly
     rm -rf .cache/chromium .cache/google-chrome .macromedia .vlc
@@ -52,5 +54,9 @@ fi
 # was supposed to do.
 # Set this up once with:
 # virtualenv --system-site-packages $HOME/.pythonenv
-VIRTUAL_ENV_DISABLE_PROMPT=1 source $HOME/.pythonenv/bin/activate
+if [[ $arch == 'x86_64' ]]; then
+  VIRTUAL_ENV_DISABLE_PROMPT=1 source $HOME/.pythonenv64/bin/activate
+else
+  VIRTUAL_ENV_DISABLE_PROMPT=1 source $HOME/.pythonenv/bin/activate
+fi
 echo Activated Python virtualenv
