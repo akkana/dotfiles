@@ -46,17 +46,8 @@ fi
 
 # export ZMLIB=~/outsrc/zmail-2009/zmail/lib
 
-# Python virtualenv.
-# pip install --user doesn't work properly on Debian: it ignores
-# system-installed packages and re-installs dependencies that don't
-# need re-installing, https://github.com/pypa/pip/issues/4222
-# So instead, use a virtualenv all the time to do the job .local
-# was supposed to do.
-# Set this up once with:
-# virtualenv --system-site-packages $HOME/.pythonenv
-if [[ $arch == 'x86_64' ]]; then
-  VIRTUAL_ENV_DISABLE_PROMPT=1 source $HOME/.pythonenv64/bin/activate
-else
-  VIRTUAL_ENV_DISABLE_PROMPT=1 source $HOME/.pythonenv/bin/activate
-fi
-echo Activated Python virtualenv
+# By default, use a python2 virtualenv.
+# It might be possible to use both, even though most people say not to;
+# more research required.
+echo
+python2env

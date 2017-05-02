@@ -193,7 +193,13 @@ export PHO_ARGS=-p
 # Aliases and functions.
 #
 
-alias m=mutt
+#
+# echo_and_do something.
+#
+echo_and_do() {
+  echo $*
+  $*
+}
 
 show_symlinks() {
     for f in $*; do
@@ -240,18 +246,14 @@ lsdirs() {
   echo `/bin/ls -1F $@ | grep / | sed 's_/$__'`| tr -s ' ' '\n' | paste - - - | column -x -t -c3
 }
 
+alias m=mutt
 alias j=jobs
 alias pd=pushd
 # pd() { [[ $# == 0 ]] && set - -; builtin pushd "$@" }
 alias s=suspend
-alias rl="telnet -r"
 
 alias beep="echo "
-alias akk="aplay $HOME/.xchat2/sounds/akk.wav"
 alias ap="man -k"
-
-alias screenshot="scrot -b -s screenshot.jpg"
-alias thes="dict -h localhost -d moby-thesaurus"
 
 alias netscheme='sudo /home/akkana/src/netutils/netscheme'
 
@@ -265,11 +267,6 @@ alias zzz='sudo pm-suspend --auto-quirks'
 titlebar() {
   # echo ']]2;$*'
   echo -e "\033]0; $* \007"
-}
-
-# Spelling check
-sp() {
-  spell $* | sort | uniq
 }
 
 ##################
@@ -974,106 +971,6 @@ sayuk() {
     wget -q -O- -U Mozilla "http://translate.google.com/translate_tts?q=$str&tl=en-uk" |cvlc - |play -t wav - -t wav -t alsa
 }
 
-#############################################################
-# Android-related aliases
-
-# Some aliases for getting files from Android KitKat via adb,
-# since the lack of usb-storage and autocomplete is such a pain.
-
-# There seems to be no way to remove multiple or wildcarded files via adb.
-# alias delallgpx='adb shell rm /mnt/extSdCard/Android/data/net.osmand.plus/tracks/rec/*'
-
-# Where is the SD card on my phone?
-# Under KitKat, it's at /storage/extSdCard.
-# Under Marshmallow, it's at /storage/nnnn-nnnn
-# Set androidSD in .zshrc.hostname.
-
-# Where photos are stored on Android.
-# I have no idea where this magic code comes from,
-# but set androidDCIM in .zshrc.hostname.
-
-pullgpx() {
-  pushd_maybe ~/Docs/gps/new
-  adb pull $androidSD/Android/data/net.osmand.plus/files/tracks/rec/. .
-  for f in *.gpx; do
-    echo $f
-    adb shell rm $androidSD/Android/data/net.osmand.plus/files/tracks/rec/$f
-  done
-  ls
-  echo Maybe adb push file.gpx $androidSD/GPX/
-}
-
-pullphotos() {
-  pushd_maybe ~/Docs/gps/new
-  adb pull $androidSD/DCIM/Camera/. .
-  # adb pull /storage/sdcard0/DCIM/CardboardCamera/. .
-  setopt extendedglob
-  setopt EXTENDED_GLOB
-  for f in *.jpg~*.vr.jpg *.mp4; do
-    echo $f
-    adb shell rm $androidSD/DCIM/Camera/$f
-  done
-  # If we start shooting a lot with CardboardCamera, can delete those too.
-  echo "Pulled photos:"
-  ls
-}
-
-# But what if we don't have adb installed? Here's how to do it using gphoto2.
-alias pullphotosg='gphoto2 --folder $androidDCIM/DCIM/Camera -P'
-alias delphotosg='gphoto2 --folder /store_00020002/DCIM/Camera -D'
-
-# And similar aliases for gpx:
-alias pullgpxg='gphoto2 --folder /store_00020002/Android/data/net.osmand.plus/files/tracks/rec -P'
-alias delgpxg='gphoto2 --folder /store_00020002/Android/data/net.osmand.plus/files/tracks/rec -D'
-
-# Copy podcasts to the mp3 device
-#    echo cp $(cat $filename) "/media/mobile disk/"
-# For mp3 player mounted on /mp3:
-#alias pods="podcopy ~/POD /mp3; ls /mp3"
-# For Android phone:
-# alias pods="podcopy ~/POD android:/mnt/extSdCard/Music/Podcasts"
-# But we can't copy into a common location like that, because Android
-# apps can't modify anything on the SD card unless it's in a directory
-# named for their Java class.
-# pods() has to be a shell function; if it's an alias, it will expand
-# $androidSD right now instead of at the time it's run, and we don't
-# know $androidSD yet since we haven't yet evaled .zshrc.hostname.
-# For MortPlayer Audio Books:
-pods() {
-    podcopy ~/POD android:$androidSD/Android/data/de.stohelit.audiobookplayer
-}
-
-# Android adb logcat is supposed to accept a filter argument to show only
-# logs from a single program, but it doesn't work and I have to use grep.
-# But just grepping for the program name gets tons of extra lines from
-# every tap or other event delivered to the program;
-# and piping grep to grep makes grep buffer its output
-# unless the --line-buffered flag is specified.
-# --line-buffered probably isn't needed on the last grep.
-adebug() {
-    adb logcat | egrep --line-buffered "($1|E/AndroidRuntime)" | grep -v --line-buffered Delivering
-}
-adebug1() {
-    adb logcat -s ActivityManager:I AndroidRuntime:E $1:D '*:S'
-}
-alias debugfeed='adebug Feed'
-# alias df2='adb logcat | egrep --line-buffered "(Feed|E/AndroidRuntime)" | grep -v --line-buffered Delivering'
-
-# For building Android apps such as osmand:
-export ANDROID_HOME=$HOME/outsrc/android-sdk-linux
-export ANDROID_SDK=$HOME/outsrc/android-sdk-linux
-export ANDROID_NDK=$HOME/outsrc/android-ndk-r10d
-
-# Find location of Android imports:
-andimport() {
-    find $ANDROID_SDK -name $1.java
-}
-
-# https://code.google.com/p/osmand/wiki/GradleCommandLineBuildEnvironment
-alias osmandbuild='cd ~/outsrc/osmand/android; repo sync -d; cd OsmAnd; ../gradlew --refresh-dependencies clean assembleFullLegacyFatDebug'
-
-# End Android
-
 ################################################
 # Build/development helpers
 
@@ -1135,33 +1032,6 @@ distclean() {
     echo "Running ./autogen.sh $args"
     sleep 3
     ./autogen.sh $args
-}
-
-# Make a Python virtualenv.
-# Remove all special PATH and PYTHONPATH elements like ~/bin.
-# This still leaves the problem of ~/.local, which pip and venv
-# will use in preference to the venv.
-venv() {
-    export PATH=''
-    export PYTHONPATH=''
-    . /etc/zsh/zshenv
-    virtualenv --system-site-packages venv
-    . venv/bin/activate
-}
-
-venv-nosite() {
-    export PATH=''
-    export PYTHONPATH=''
-    . /etc/zsh/zshenv
-    virtualenv venv
-    . venv/bin/activate
-}
-
-# Where would a python module be imported from?
-pythonwhich() {
-    foreach lib ($*)
-      python -c "import imp; file, pathname, description = imp.find_module(\"$lib\"); print pathname"
-    end
 }
 
 # Build a new copy of my forked hexchat
@@ -1226,111 +1096,160 @@ check_holds() {
     done
 }
 
-# End build/development helpers
-################################################
+#############################################################
+# Python virtualenv and path helpers.
 
-# Some handy battery scripts from d:
+# Python virtualenvs for everyday use.
+# pip install --user doesn't work properly on Debian: it ignores
+# system-installed packages and re-installs dependencies that don't
+# need re-installing, https://github.com/pypa/pip/issues/4222
+# So instead, use a virtualenv all the time to do the job .local
+# was supposed to do.
+#
+# Set each one up once with:
+# virtualenv --system-site-packages $HOME/.python2env (python2)
+# python3 -m venv --system-site-packages .python3env (python3)
 
-bat() {
-  #cat /proc/acpi/battery/BAT1/state
-  #cat /proc/acpi/battery/BAT1/info
-  acpitool -B | egrep "^ *[CPR][ehr]"
-}
-
-batt() {
-  #cat /proc/acpi/battery/BAT1/state
-  #cat /proc/acpi/battery/BAT1/info
-  acpitool -B
-}
-
-volts() {
-  acpi -i
-  calc `cat /sys/class/power_supply/BAT0/voltage_now` / 1000000
-  acpitool -B | grep Present
-}
-
-# Playing DVDs with mplayer. f => fullscreen, v -> no subtitles
-alias playdvd="mplayer dvd://1 -alang en"
-
-# Making a PDF from a bunch of slides
-alias talk2pdf='qhtmlprint $( fgrep .html navigate.js  | grep -v // | sed -e "s/\",/\"/" -e "s/\"//g" ) '
-alias talk2pdf1024='qhtmlprint -1024 $( fgrep .html navigate.js  | grep -v // | sed -e "s/\",/\"/" -e "s/\"//g" ) '
-alias talk2pdf1366='qhtmlprint -1366 $( fgrep .html navigate.js  | grep -v // | sed -e "s/\",/\"/" -e "s/\"//g" ) '
-
-# Reduce the size of a PDF. Usage: pdfreduce infile.pdf outfile.pdf
-# http://ubuntuforums.org/showthread.php?t=1133357
-# You can also replace /screen with /ebook for slightly higher image quality.
-# This may cause vector diagrams to be removed, so be sure to check
-# before vs. after.
-# Can experiment with removing -dCompatibilityLevel=1.4 -dPDFSETTINGS=/screen
-# or just -dPDFSETTINGS=/screen.
-pdfreduce() {
-    gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/screen -dNOPAUSE -dQUIET -dBATCH -sOutputFile="$2" $1
-}
-
-# Which printers are available? lpstat -p -d also works.
-alias whichprinters='lpstat -a'
-
-# lp inconsistently decides to use zero margins. When it does, this helps.
-# (In theory, adding -o page-top=17 should add a top margin, but in
-# 2014 this seems to make a negative margin, dropping the first few
-# lines. All hail Linux printing!)
-alias lpp='lp -o page-left=38'
-
-# Mirror a website on a directory. Be sure to include an end slash
-# on the URL!
-mirror() {
-    d=$1
-    if [[ $d =~ '.*/$' ]]; then
-        wget -np -r $d
+switchpythonenv() {
+    if [[ x$1 == x ]]; then
+        vers=2
     else
-        echo "$d needs to end with a slash"
+        vers=$1
     fi
+    if [[ $arch == 'x86_64' ]]; then
+        archbits=64
+    else
+        archbits=32
+    fi
+    if type deactivate >/dev/null ; then
+        deactivate
+    fi
+    echo Switching Python envs to python${vers}, ${archbits} bit
+    VIRTUAL_ENV_DISABLE_PROMPT=1 source $HOME/.python${vers}env-${archbits}/bin/activate
 }
 
-# What's the current time in UT / GMT?
-ut() {
-    date -u $*
+alias python2env='switchpythonenv 2'
+alias python3env='switchpythonenv 3'
+
+# Make a temporary Python virtualenv for testing something.
+# This is separate from the 
+# Remove all special PATH and PYTHONPATH elements like ~/bin.
+# This still leaves the problem of ~/.local, which pip and venv
+# will use in preference to the venv.
+venv() {
+    export PATH=''
+    export PYTHONPATH=''
+    . /etc/zsh/zshenv
+    virtualenv --system-site-packages venv
+    . venv/bin/activate
 }
 
-# Convert a fixed date (e.g. for a meeting) from UT/GMT.
-# date -d 'Tue November 12 18:00 UTC' or date -d '18:00 UTC next Friday'
-fromut() {
-    date -d $*
+venv-nosite() {
+    export PATH=''
+    export PYTHONPATH=''
+    . /etc/zsh/zshenv
+    virtualenv venv
+    . venv/bin/activate
 }
 
-# Subtract dates
-datediff() {
-    d1=$(date -d "$1" +%s)
-    d2=$(date -d "$2" +%s)
-    echo $(( (d1 - d2) / 86400 )) days
-    echo $(( (d1 - d2) / 86400 / 7. )) weeks
-    echo $(( (d1 - d2) / 86400 / 7 )) weeks $(( (d1 - d2) / 86400 % 7 )) days
+# Where would a python module be imported from?
+pythonwhich() {
+    foreach lib ($*)
+      python -c "import imp; file, pathname, description = imp.find_module(\"$lib\"); print pathname"
+    end
 }
 
-# Tell aptitude not to limit descriptions to the terminal width
-alias aptitude='/usr/bin/aptitude --disable-columns'
+#############################################################
+# Android-related aliases
 
-# Adjust for day or nighttime monitor modes
-alias day="xrandr --output HDMI1 --brightness 1.0"
-alias night="xrandr --output HDMI1 --brightness .8"
+# Some aliases for getting files from Android KitKat via adb,
+# since the lack of usb-storage and autocomplete is such a pain.
 
-alias kindle="wine ~/.wine/drive_c/Program\ Files/Amazon/Kindle/Kindle.exe"
-# alias adobeDE="wine ~/.wine/drive_c/Program\ Files/Adobe/Adobe\ Digital\ Editions/digitaleditions.exe"
-alias adobeDE="cxrun ~/.cxoffice/ADE_4/drive_c/Program\ Files/Adobe/Adobe\ Digital\ Editions\ 4.5/DigitalEditions.exe"
+# There seems to be no way to remove multiple or wildcarded files via adb.
+# alias delallgpx='adb shell rm /mnt/extSdCard/Android/data/net.osmand.plus/tracks/rec/*'
 
-# R has no way to tell it not to prompt annoyingly to save the environment
-# every time you quit, except as a commandline flag:
-alias R="/usr/bin/R --no-save"
+# Where is the SD card on my phone?
+# Under KitKat, it's at /storage/extSdCard.
+# Under Marshmallow, it's at /storage/nnnn-nnnn
+# Set androidSD in .zshrc.hostname.
 
-# Convert temperatures between F and C, because units' stupid syntax
-# is impossible to remember. (If ctemp isn't installed.)
-c2f() {
-    units "tempC($1)" tempF
+# Where photos are stored on Android.
+# I have no idea where this magic code comes from,
+# but set androidDCIM in .zshrc.hostname.
+
+pullscreenshot() {
+  pushd_maybe ~/Docs/gps/new
+  adb pull /sdcard/Pictures/Screenshots/. .
+  for f in *.png; do
+    echo $f
+    adb shell rm $androidSD/Android/data/net.osmand.plus/files/tracks/rec/$f
+  done
 }
-f2c() {
-    units "tempF($1)" tempC
+
+pullgpx() {
+  pushd_maybe ~/Docs/gps/new
+  adb pull $androidSD/Android/data/net.osmand.plus/files/tracks/rec/. .
+  for f in *.gpx; do
+    echo $f
+    adb shell rm $androidSD/Android/data/net.osmand.plus/files/tracks/rec/$f
+  done
+  ls
+  echo Maybe adb push file.gpx $androidSD/GPX/
 }
+
+pullphotos() {
+  pushd_maybe ~/Docs/gps/new
+  adb pull $androidSD/DCIM/Camera/. .
+  # adb pull /storage/sdcard0/DCIM/CardboardCamera/. .
+  setopt extendedglob
+  setopt EXTENDED_GLOB
+  for f in *.jpg~*.vr.jpg *.mp4; do
+    echo $f
+    adb shell rm $androidSD/DCIM/Camera/$f
+  done
+  # If we start shooting a lot with CardboardCamera, can delete those too.
+  echo "Pulled photos:"
+  ls
+}
+
+# But what if we don't have adb installed? Here's how to do it using gphoto2.
+alias pullphotosg='gphoto2 --folder $androidDCIM/DCIM/Camera -P'
+alias delphotosg='gphoto2 --folder /store_00020002/DCIM/Camera -D'
+
+# And similar aliases for gpx:
+alias pullgpxg='gphoto2 --folder /store_00020002/Android/data/net.osmand.plus/files/tracks/rec -P'
+alias delgpxg='gphoto2 --folder /store_00020002/Android/data/net.osmand.plus/files/tracks/rec -D'
+
+# Android adb logcat is supposed to accept a filter argument to show only
+# logs from a single program, but it doesn't work and I have to use grep.
+# But just grepping for the program name gets tons of extra lines from
+# every tap or other event delivered to the program;
+# and piping grep to grep makes grep buffer its output
+# unless the --line-buffered flag is specified.
+# --line-buffered probably isn't needed on the last grep.
+adebug() {
+    adb logcat | egrep --line-buffered "($1|E/AndroidRuntime)" | grep -v --line-buffered Delivering
+}
+adebug1() {
+    adb logcat -s ActivityManager:I AndroidRuntime:E $1:D '*:S'
+}
+alias debugfeed='adebug Feed'
+# alias df2='adb logcat | egrep --line-buffered "(Feed|E/AndroidRuntime)" | grep -v --line-buffered Delivering'
+
+# For building Android apps such as osmand:
+export ANDROID_HOME=$HOME/outsrc/android-sdk-linux
+export ANDROID_SDK=$HOME/outsrc/android-sdk-linux
+export ANDROID_NDK=$HOME/outsrc/android-ndk-r10d
+
+# Find location of Android imports:
+andimport() {
+    find $ANDROID_SDK -name $1.java
+}
+
+# https://code.google.com/p/osmand/wiki/GradleCommandLineBuildEnvironment
+alias osmandbuild='cd ~/outsrc/osmand/android; repo sync -d; cd OsmAnd; ../gradlew --refresh-dependencies clean assembleFullLegacyFatDebug'
+
+# End Android
 
 ##################################
 # Spam-related aliases
@@ -1430,7 +1349,7 @@ cleanspam() {
 
 # Linux has a lovely list of all compose key sequences.
 composekey() {
-  grep $1 /usr/share/X11/locale/en_US.UTF-8/Compose
+  grep -i $1 /usr/share/X11/locale/en_US.UTF-8/Compose ~/.XCompose
 }
 
 alias remindme='remind -g ~/Docs/Lists/remind'
@@ -1508,7 +1427,9 @@ dobackup() {
 
         # All the various crap firefox stores:
         "*.Default User" \
-        "gmp-gmp*"/ crashes/ datareporting/ storage/permanent/ \
+        "gmp-gmp*"/ crashes/ datareporting/ '/healthreport.sqlite*' \
+        'webapps*' \
+        storage/permanent/ storage/default/ storage/temporary/ \
         sessionstore-backups/ saved-telemetry-pings/ "*store.json*" \
 
         )
@@ -1522,7 +1443,7 @@ dobackup() {
     # If these are part of patterns that would otherwise be excluded,
     # use a * in the exclude pattern.
     # E.g. include .cache/feedme/, exclude .cache/* instead of .cache/
-    includes=( .cache/feedme/ )
+    includes=( .cache/feedme/ outsrc/gimp/ outsrc/hexchat/ outsrc/openbox/ )
 
     # Build up the excludes list:
     excludesflags=( )
@@ -1634,6 +1555,117 @@ towebhost() {
 ####################################################################
 # More assorted aliases
 
+alias akk="aplay $HOME/.xchat2/sounds/akk.wav"
+alias screenshot="scrot -b -s screenshot.jpg"
+alias thes="dict -h localhost -d moby-thesaurus"
+
+# Spelling check
+sp() {
+  spell $* | sort | uniq
+}
+
+# Some handy battery scripts from d:
+bat() {
+  #cat /proc/acpi/battery/BAT1/state
+  #cat /proc/acpi/battery/BAT1/info
+  acpitool -B | egrep "^ *[CPR][ehr]"
+}
+
+batt() {
+  #cat /proc/acpi/battery/BAT1/state
+  #cat /proc/acpi/battery/BAT1/info
+  acpitool -B
+}
+
+volts() {
+  acpi -i
+  calc `cat /sys/class/power_supply/BAT0/voltage_now` / 1000000
+  acpitool -B | grep Present
+}
+
+# Playing DVDs with mplayer. f => fullscreen, v -> no subtitles
+alias playdvd="mplayer dvd://1 -alang en"
+
+# Making a PDF from a bunch of slides
+alias talk2pdf='qhtmlprint $( fgrep .html slides.js  | grep -v // | sed -e "s/\",/\"/" -e "s/\"//g" ) '
+alias talk2pdf1024='qhtmlprint -1024 $( fgrep .html slides.js  | grep -v // | sed -e "s/\",/\"/" -e "s/\"//g" ) '
+alias talk2pdf1366='qhtmlprint -1366 $( fgrep .html slides.js  | grep -v // | sed -e "s/\",/\"/" -e "s/\"//g" ) '
+
+# Reduce the size of a PDF. Usage: pdfreduce infile.pdf outfile.pdf
+# http://ubuntuforums.org/showthread.php?t=1133357
+# You can also replace /screen with /ebook for slightly higher image quality.
+# This may cause vector diagrams to be removed, so be sure to check
+# before vs. after.
+# Can experiment with removing -dCompatibilityLevel=1.4 -dPDFSETTINGS=/screen
+# or just -dPDFSETTINGS=/screen.
+pdfreduce() {
+    gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/screen -dNOPAUSE -dQUIET -dBATCH -sOutputFile="$2" $1
+}
+
+# Which printers are available? lpstat -p -d also works.
+alias whichprinters='lpstat -a'
+
+# lp inconsistently decides to use zero margins. When it does, this helps.
+# (In theory, adding -o page-top=17 should add a top margin, but in
+# 2014 this seems to make a negative margin, dropping the first few
+# lines. All hail Linux printing!)
+alias lpp='lp -o page-left=38'
+
+# Mirror a website on a directory. Be sure to include an end slash
+# on the URL!
+mirror() {
+    d=$1
+    if [[ $d =~ '.*/$' ]]; then
+        wget -np -r $d
+    else
+        echo "$d needs to end with a slash"
+    fi
+}
+
+# What's the current time in UT / GMT?
+ut() {
+    date -u $*
+}
+
+# Convert a fixed date (e.g. for a meeting) from UT/GMT.
+# date -d 'Tue November 12 18:00 UTC' or date -d '18:00 UTC next Friday'
+fromut() {
+    date -d $*
+}
+
+# Subtract dates
+datediff() {
+    d1=$(date -d "$1" +%s)
+    d2=$(date -d "$2" +%s)
+    echo $(( (d1 - d2) / 86400 )) days
+    echo $(( (d1 - d2) / 86400 / 7. )) weeks
+    echo $(( (d1 - d2) / 86400 / 7 )) weeks $(( (d1 - d2) / 86400 % 7 )) days
+}
+
+# Tell aptitude not to limit descriptions to the terminal width
+alias aptitude='/usr/bin/aptitude --disable-columns'
+
+# Adjust for day or nighttime monitor modes
+alias day="xrandr --output HDMI1 --brightness 1.0"
+alias night="xrandr --output HDMI1 --brightness .8"
+
+alias kindle="wine ~/.wine/drive_c/Program\ Files/Amazon/Kindle/Kindle.exe"
+# alias adobeDE="wine ~/.wine/drive_c/Program\ Files/Adobe/Adobe\ Digital\ Editions/digitaleditions.exe"
+alias adobeDE="cxrun ~/.cxoffice/ADE_4/drive_c/Program\ Files/Adobe/Adobe\ Digital\ Editions\ 4.5/DigitalEditions.exe"
+
+# R has no way to tell it not to prompt annoyingly to save the environment
+# every time you quit, except as a commandline flag:
+alias R="/usr/bin/R --no-save"
+
+# Convert temperatures between F and C, because units' stupid syntax
+# is impossible to remember. (If ctemp isn't installed.)
+c2f() {
+    units "tempC($1)" tempF
+}
+f2c() {
+    units "tempF($1)" tempC
+}
+
 alias booksync='rsync -av --delete --size-only --exclude .FBReader ~/Docs/droidsd/Books/'
 
 # Always run sqlite inside rlwrap
@@ -1666,6 +1698,22 @@ remove_newlines() {
 
 localurl() {
     ( for url in $* ; remove_newlines $url ) | ssh shallowsky.com 'cat >> web/feedme/feeds/localurls'
+}
+
+# I can never remember nmap arguments
+alias portscan="nmap -v -sT localhost"
+
+# chroot to alternate partition /partitionname in order to update it
+chroot-update() {
+    partitionname=$1
+    titlebar $partitionname chroot
+    sudo mount /$partitionname
+    sudo mount --bind /proc /$partitionname/proc
+    sudo mount --bind /sys /$partitionname/sys
+    sudo mount --bind /dev /$partitionname/dev
+    sudo mount --bind /dev/pts /$partitionname/dev/pts
+    sudo mount --bind /boot /$partitionname/boot
+    sudo chroot /$partitionname
 }
 
 ###################################################
@@ -1741,30 +1789,6 @@ gitprompt() {
 
   setopt prompt_subst
   PROMPT='${vcs_info_msg_0_}%# '
-}
-
-# I can never remember nmap arguments
-alias portscan="nmap -v -sT localhost"
-
-# chroot to alternate partition /partitionname in order to update it
-chroot-update() {
-    partitionname=$1
-    titlebar $partitionname chroot
-    sudo mount /$partitionname
-    sudo mount --bind /proc /$partitionname/proc
-    sudo mount --bind /sys /$partitionname/sys
-    sudo mount --bind /dev /$partitionname/dev
-    sudo mount --bind /dev/pts /$partitionname/dev/pts
-    sudo mount --bind /boot /$partitionname/boot
-    sudo chroot /$partitionname
-}
-
-#
-# echo_and_do something.
-#
-echo_and_do() {
-  echo $*
-  $*
 }
 
 ######################################################
