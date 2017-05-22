@@ -420,6 +420,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Match paren.  from http://grok2.tripod.com/
+;; bind to C-x %
 (defun match-paren (arg)
   "Go to the matching paren if on a paren; otherwise insert %."
   (interactive "p")
@@ -448,6 +449,31 @@
   (replace-string "\r" "")
   ;(message "fixm")
 )
+
+;; A fix for DOuble CApitals from a slow left pinky.
+;; Emacs is wonderful. :-)
+;; https://emacs.stackexchange.com/questions/13970/fixing-double-capitals-as-i-type/13975
+(defun dcaps-to-scaps ()
+  "Convert word in DOuble CApitals to Single Capitals."
+  (interactive)
+  (and (= ?w (char-syntax (char-before)))
+       (save-excursion
+         (and (if (called-interactively-p)
+                  (skip-syntax-backward "w")
+                (= -3 (skip-syntax-backward "w")))
+              (let (case-fold-search)
+                (looking-at "\\b[[:upper:]]\\{2\\}[[:lower:]]"))
+              (capitalize-word 1)))))
+
+(add-hook 'post-self-insert-hook #'dcaps-to-scaps nil 'local)
+
+(define-minor-mode dubcaps-mode
+  "Toggle `dubcaps-mode'.  Converts words in DOuble CApitals to Single Capitals as you type."
+  :init-value nil
+  :lighter (" dubcaps")
+  (if dubcaps-mode
+      (add-hook 'post-self-insert-hook #'dcaps-to-scaps nil 'local)
+    (remove-hook 'post-self-insert-hook #'dcaps-to-scaps 'local)))
 
 ;; Kill all Buffers without prompting.
 ;; Modified from kill-some-buffers in files.el, which prompts too much.
@@ -657,6 +683,7 @@
   (global-set-key (kbd "C-;") 'insert-date)
   (local-set-key (kbd "C-:") 'insert-yesterday-date)
   (global-set-key (kbd "C-:") 'insert-yesterday-date)
+  (dubcaps-mode t)
   )
 (setq text-mode-hook 'text-indent-hook)
 
@@ -868,6 +895,8 @@
                       ))
          (excpath (concat "/usr/bin/" progname))
          )
+    ; (message (format "filename: %s, progname: %s" imgfile progname))
+    ; (sleep-for 3)
     (when (not (file-exists-p imgdir))
       ;; Make the img directory if it's not there yet
       (make-directory imgdir t))
