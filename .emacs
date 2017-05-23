@@ -1067,10 +1067,18 @@
   )
 (add-hook 'archive-mode-hook 'archive-hook)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; auto-mode-alist: Modes to use on specific files.
 ;; Kinda weird that programming modes can't sort this out themselves.
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Opening any file with a name ending in "browse" opens in
+;; ebrowse-tree-mode ("C++ Tree" mode).
+;; Stop anything from opening automatically in that mode
+;; (I can't find a way to remove only the "browse" rule).
+(rassq-delete-all 'ebrowse-tree-mode auto-mode-alist)
+
+;; Now add modes for files and directories I use:
 (mapc (apply-partially 'add-to-list 'auto-mode-alist)
       '(
 
@@ -1125,6 +1133,7 @@
         ("README" . text-wrap-mode)
 ;; Book used to be longlines mode, but that was too flaky.
         ("Docs/gimp/book/" . text-wrap-mode)
+
         ("linux-.*/" . linux-c-mode)
 
 ;; iimage mode is so cool!
