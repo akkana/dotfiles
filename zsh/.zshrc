@@ -61,7 +61,7 @@ typeset -U PATH
 
 # Set path
 arch=$(uname -m)
-export PATH=$HOME/bin:$HOME/bin/$arch:/opt/cxoffice/bin:/usr/local/bin:/usr/local/gimp-git/bin:$PATH:.:/usr/sbin:/sbin:$HOME/outsrc/android-sdk-linux/platform-tools:$HOME/outsrc/android-sdk-linux/tools
+export PATH=$HOME/bin:$HOME/bin/linux-$arch:/opt/cxoffice/bin:/usr/local/bin:/usr/local/gimp-git/bin:$PATH:.:/usr/sbin:/sbin:$HOME/outsrc/android-sdk-linux/platform-tools:$HOME/outsrc/android-sdk-linux/tools
 
 export PYTHONPATH=$HOME/bin/pythonpath:$HOME/bin
 
@@ -750,6 +750,8 @@ df() {
     /bin/df -hTx tmpfs -x devtmpfs -x rootfs
 }
 
+alias fumount="fusermount -u"
+
 # Mount encrypted SD card:
 cryptmount() {
     device=$1
@@ -1107,8 +1109,8 @@ check_holds() {
 # was supposed to do.
 #
 # Set each one up once with:
-# virtualenv --system-site-packages $HOME/.python2env (python2)
-# python3 -m venv --system-site-packages .python3env (python3)
+# virtualenv --system-site-packages $HOME/.python2env-64 (python2)
+# python3 -m venv --system-site-packages .python3env-64 (python3)
 
 switchpythonenv() {
     if [[ x$1 == x ]]; then
@@ -1132,7 +1134,7 @@ alias python2env='switchpythonenv 2'
 alias python3env='switchpythonenv 3'
 
 # Make a temporary Python virtualenv for testing something.
-# This is separate from the 
+# This is separate from the virtualenvs used for everyday life.
 # Remove all special PATH and PYTHONPATH elements like ~/bin.
 # This still leaves the problem of ~/.local, which pip and venv
 # will use in preference to the venv.
@@ -1160,6 +1162,30 @@ pythonwhich() {
 }
 
 #############################################################
+# Python help functions. Get help on a Python class in a
+# format that can be piped through grep, redirected to a file, etc.
+# Usage: pythonhelp [module.]class [module.]class ...
+pythonXhelp() {
+    python=$1
+    shift
+    for f in $*; do
+        if [[ $f =~ '.*\..*' ]]; then
+            module=$f:r
+            obj=$f:e
+            s="from ${module} import ${obj}; help($obj)"
+        else
+            module=''
+            obj=$f
+            s="help($obj)"
+        fi
+        $python -c $s
+    done
+}
+alias pythonhelp="pythonXhelp python"
+alias python2help="pythonXhelp python2"
+alias python3help="pythonXhelp python3"
+
+#############################################################
 # Android-related aliases
 
 # Some aliases for getting files from Android KitKat via adb,
@@ -1182,7 +1208,7 @@ pullscreenshot() {
   adb pull /sdcard/Pictures/Screenshots/. .
   for f in *.png; do
     echo $f
-    adb shell rm $androidSD/Android/data/net.osmand.plus/files/tracks/rec/$f
+    adb shell rm /sdcard/Pictures/Screenshots/$f
   done
 }
 
