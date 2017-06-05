@@ -493,6 +493,8 @@
 ;; into one very long line) and removes any blank lines that
 ;; previously separated paragraphs.
 ;;
+;; XXX Should protect runs of several short lines too, somehow.
+;; XXX Should also handle list lines starting with e.g. 1. 2.
 (defun wp-munge () "un-fill paragraphs and remove blank lines" (interactive)
   (if (not (use-region-p)) (mark-whole-buffer))
   (let ((save-fill-column fill-column)
@@ -502,25 +504,75 @@
     ;(message (format "beginning: %s, end: %s" rstart rend))
     ;(sleep-for 3)
 
-    ; First, try to protect lines that start with - or * since they
-    ; might be outlines and shouldn't be merged with adjacent lines.
-    (replace-regexp "^\* " "\n* " nil rstart rend)
-    (replace-regexp "^- "  "\n- " nil rstart rend)
+    ;; ; First, try to protect lines that start with - or * since they
+    ;; ; might be outlines and shouldn't be merged with adjacent lines.
+    ;; (replace-regexp "^\* " "\n* " nil rstart rend)
+    ;; (replace-regexp "^- "  "\n- " nil rstart rend)
+    ;; ; Also protect runs of several short lines together
+    ;; (replace-regexp "^\\(.\\{1,55\\}\\)$" "\n\\1" nil rstart rend)
+
+    ; For all short lines, add an extra line break after them.
+    ; This should get a lot of things like list items, titles etc.
+    (replace-regexp "^\\(.\\{1,45\\}\\)$" "\\1\n" nil rstart rend)
+
+    ; Also add a line break after longer lines that start with
+    ; - or * or something like 1. or a. since they're probably list items.
+    ;;(replace-regexp "^\\s-*\\(\\*\\|-\\|[1-9a-zA-z]+\\.\\) +\\(.\\{56,\\}\\)$"
+    ;;                "\n\\1 \\2" nil rstart rend)
+
+    ; Lines that start with - or * or something like 1. or a.
+    ; followed by a space followed by more content are list lines, and
+    ; have to be separated by blank lines, otherwise fill-* will merge them.
+    (replace-regexp "^\\s-*\\(-\\|\\*\\|[1-9a-zA-z]+\\.\\)\\s-+\\(.+\\)$"
+                    "\n\\1 \\2" nil rstart rend)
 
     ; Fill all paragraphs
     (set-fill-column 1000000)
     (fill-individual-paragraphs rstart rend)
 
-    ; Remove those blank lines we added
-    (replace-regexp "\n\n\* " "\n* " nil rstart rend)
-    (replace-regexp "\n\n- "  "\n- " nil rstart rend)
+    ;; Now try to eliminate some of those extra lines we added earlier.
 
-    ; Deletion of blank lines currently disabled
-    ;(delete-matching-lines "^$")
+    ; Remove those blank lines we added after short lines.
+    (replace-regexp "^\\(.\\{1,45\\}\\)\n\n" "\\1\n" nil rstart rend)
 
-    ; restore the previous fill column
+    ; Replace runs of more than one blank line with a single one
+    (replace-regexp "\n\\{3,\\}" "\n\n" nil rstart rend)
+
+    ; Remove extra newline after long list lines:
+    (replace-regexp "^\\s-*\\(-\\|\\*\\|[1-9a-zA-z]+\\.\\)\\s-+\\(.\\{46,\\}\\)\n\n"
+                    "\\1 \\2\n" nil rstart rend)
+
+    ;; ; Deletion of blank lines currently disabled
+    ;; ;(delete-matching-lines "^$")
+
+    ;; ; restore the previous fill column
     (set-fill-column save-fill-column)
 ))
+
+(defun foo () "" (interactive)
+  (if (not (use-region-p)) (mark-whole-buffer))
+  (let (
+        (rstart           (region-beginning))
+        (rend             (region-end)))
+
+    (replace-regexp "^\\s-*\\(-\\|\\*\\|[1-9a-zA-z]+\\.\\)\\s-+\\(.+\\)$"
+                    "\n\\1 \\2" nil rstart rend)
+))
+
+(defun testmunge () "" (interactive)
+  (if (not (use-region-p)) (mark-whole-buffer))
+  (let (
+        (rstart           (region-beginning))
+        (rend             (region-end)))
+    (atomic-change-group
+      (replace-regexp "^\\(.\\{1,55\\}\\)$" "\\1\n" nil rstart rend)
+      (replace-regexp "^\\(\\*\\|-\\|[1-9a-zA-z]+\\.\\) +\\(.\\{56,\\}\\)$"
+                      "\\1.\\2\n" nil rstart rend)
+      ;(replace-regexp "^\* " "\n* " nil rstart rend)
+      ;(replace-regexp "^- "  "\n- " nil rstart rend)
+
+      ; (replace-regexp "^\\(.\\{1,55\\}\\)\n\\(.\\{1,55\\}\\)$" "xx\\1yy\\2" nil rstart rend)
+      )))
 
 (defun wp-unmunge () "fill paragraphs and separate them with blank lines"
   (interactive)
