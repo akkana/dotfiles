@@ -428,20 +428,6 @@
 	((looking-at "\\s\)") (forward-char 1) (backward-list 1))
 	(t (self-insert-command (or arg 1)))))
 
-;; Run this on a buffer inside a <pre> to convert chars like < into entities.
-(defun unhtml (start end)
-  (interactive "r")
-  (save-excursion
-    (save-restriction
-      (narrow-to-region start end)
-      (goto-char (point-min))
-      (replace-string "&" "&amp;")
-      (goto-char (point-min))
-      (replace-string "<" "&lt;")
-      (goto-char (point-min))
-      (replace-string ">" "&gt;")
-      )))
-
 (defun fixm ()
   "Change line breaks to Unix style."
   (interactive)
@@ -492,9 +478,6 @@
 ;; this un-fills all the paragraphs (i.e. turns each paragraph
 ;; into one very long line) and removes any blank lines that
 ;; previously separated paragraphs.
-;;
-;; XXX Should protect runs of several short lines too, somehow.
-;; XXX Should also handle list lines starting with e.g. 1. 2.
 (defun wp-munge () "un-fill paragraphs and remove blank lines" (interactive)
   (if (not (use-region-p)) (mark-whole-buffer))
   (let ((save-fill-column fill-column)
@@ -504,21 +487,9 @@
     ;(message (format "beginning: %s, end: %s" rstart rend))
     ;(sleep-for 3)
 
-    ;; ; First, try to protect lines that start with - or * since they
-    ;; ; might be outlines and shouldn't be merged with adjacent lines.
-    ;; (replace-regexp "^\* " "\n* " nil rstart rend)
-    ;; (replace-regexp "^- "  "\n- " nil rstart rend)
-    ;; ; Also protect runs of several short lines together
-    ;; (replace-regexp "^\\(.\\{1,55\\}\\)$" "\n\\1" nil rstart rend)
-
     ; For all short lines, add an extra line break after them.
     ; This should get a lot of things like list items, titles etc.
     (replace-regexp "^\\(.\\{1,45\\}\\)$" "\\1\n" nil rstart rend)
-
-    ; Also add a line break after longer lines that start with
-    ; - or * or something like 1. or a. since they're probably list items.
-    ;;(replace-regexp "^\\s-*\\(\\*\\|-\\|[1-9a-zA-z]+\\.\\) +\\(.\\{56,\\}\\)$"
-    ;;                "\n\\1 \\2" nil rstart rend)
 
     ; Lines that start with - or * or something like 1. or a.
     ; followed by a space followed by more content are list lines, and
@@ -542,10 +513,10 @@
     (replace-regexp "^\\s-*\\(-\\|\\*\\|[1-9a-zA-z]+\\.\\)\\s-+\\(.\\{46,\\}\\)\n\n"
                     "\\1 \\2\n" nil rstart rend)
 
-    ;; ; Deletion of blank lines currently disabled
-    ;; ;(delete-matching-lines "^$")
+    ; Deletion of blank lines currently disabled
+    ;(delete-matching-lines "^$")
 
-    ;; ; restore the previous fill column
+    ; restore the previous fill column
     (set-fill-column save-fill-column)
 ))
 
@@ -760,6 +731,8 @@
 (add-to-list 'html-tag-alist '("h2"))
 (add-to-list 'html-tag-alist '("h3"))
 (add-to-list 'html-tag-alist '("h3"))
+(add-to-list 'html-tag-alist '("h4"))
+(add-to-list 'html-tag-alist '("h5"))
 
 ;; Create a basic HTML page template -- I get tired of typing this all the time.
 (defun newhtml ()
@@ -796,6 +769,12 @@
 
   ;(local-set-key "\C-m" (lambda () (interactive) (insert "\n")))
 
+  ;; browse-url-of-buffer is on C-c C-v. Set it to quickbrowse:
+  (setq browse-url-browser-function 'browse-url-generic
+        browse-url-generic-program "quickbrowse")
+  ;; More info, like how to write functions to do tabs or reload:
+  ;; https://www.emacswiki.org/emacs/BrowseUrl#toc5
+
   ;; And finally, a generic shorthand to use with other tags:
   (local-set-key "\C-ct"  (lambda () (interactive) (sgml-tag)))
 
@@ -820,6 +799,20 @@
   ;(sleep-for 3)
   )
 (setq sgml-mode-hook 'html-hook)
+
+;; Run this on a buffer inside a <pre> to convert chars like < into entities.
+(defun unhtml (start end)
+  (interactive "r")
+  (save-excursion
+    (save-restriction
+      (narrow-to-region start end)
+      (goto-char (point-min))
+      (replace-string "&" "&amp;")
+      (goto-char (point-min))
+      (replace-string "<" "&lt;")
+      (goto-char (point-min))
+      (replace-string ">" "&gt;")
+      )))
 
 ;; A mode for editing tab-separated tables, or any other file
 ;; where you want TAB to insert a tab. (You wouldn't think that
