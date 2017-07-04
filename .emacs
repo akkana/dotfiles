@@ -279,15 +279,6 @@
 ;; or not do it at all (I can ^X^S frequently):
 (setq auto-save-default nil)
 
-;; don't paste syntax highlight color into buffers where it's meaningless.
-;; But none of these help, alas.
-;(setq yank-excluded-properties t)
-;(add-to-list 'yank-excluded-properties 'font)
-;(add-to-list 'yank-excluded-properties 'font-lock-face)
-; You can use this to turn off colors on a block of text:
-(defun decolorize () (interactive)
-  (set-text-properties (point) (mark) nil))
-
 ;; make sure the tab width is right:
 ;(set-variable "tab-width" 8)
 ;(set-variable "default-tab-width" 8)
@@ -387,8 +378,46 @@
 
 ;; But those settings don't do it: C-y is still inconsistent,
 ;; sometimes works and sometimes doesn't.
-(global-set-key "\C-y" (lambda () (interactive)
-                         (insert (x-selection 'PRIMARY))))
+;(global-set-key "\C-y" (lambda () (interactive)
+;                         (insert (x-selection 'PRIMARY))))
+
+;; don't paste syntax highlight color into buffers where it's meaningless.
+;; But none of these help, alas.
+;; (setq yank-excluded-properties t)
+;; (add-to-list 'yank-excluded-properties 'font)
+;; (add-to-list 'yank-excluded-properties 'font-lock-face)
+;; However, these do work:
+
+(defun yank-without-colors () (interactive)
+       (insert (substring-no-properties
+                (x-selection 'PRIMARY))))
+(global-set-key "\C-y" 'yank-without-colors)
+
+;; mouse-set-point seems like what I should need here,
+;; but it takes an event and I can't find any way of how
+;; to get an event it will accept.
+;; (defun mouse-paste-without-colors1 (*click)
+;;   (interactive "e")
+;;   (let ((p1 (posn-point (event-start *click))))
+;;     (goto-char p1)
+;;     (yank-without-colors)))
+;; (defun mouse-paste-without-colors2 (*click)
+;;   (interactive "e")
+;;   (mouse-set-point e)
+;;   (yank-without-colors))
+
+(defun mouse-paste-without-colors (e)
+  (interactive "e")
+  (goto-char (posn-point (event-start e)))
+  (yank-without-colors))
+(global-set-key (kbd "<mouse-2>") 'mouse-paste-without-colors)
+
+; You can use this to turn off colors on a block of text:
+(defun decolorize () (interactive)
+  (set-text-properties (point) (mark) nil))
+
+(defun decolorize2 () (interactive)
+  (remove-text-properties (point) (mark)))
 
 ;;;;;;;;;;;;; End X Selection / Clipboard behavior
 
@@ -652,17 +681,33 @@
 ;; So define two derived modes for that, and we'll use auto-mode-alist
 ;; to choose them based on filename.
 (define-derived-mode html-wrap-mode html-mode "HTML wrap mode"
+  "HTML mode, plus autofill and flyspell"
+
+  (message "HTML wrap mode")
+  (sleep-for 3)
+
   (auto-fill-mode)
+  (flyspell-mode 1)
+  (flyspell-buffer)
+
   ;; New annoyance in emacs24: every time you save an html file,
   ;; it calls a browser on it, replacing whatever's in your current
   ;; browser window.
   (html-autoview-mode -1)
+  )
 
-)
+;;  (if (string-match (buffer-local-value 'major-mode (current-buffer))
+;;                    "html-mode")
+;;  (if (eq (buffer-local-value 'major-mode (current-buffer)) 'html-mode)
+
 (define-derived-mode text-wrap-mode text-mode "Text wrap mode"
-  (auto-fill-mode))
+  "Text mode, plus autofill and flyspell"
+  (auto-fill-mode)
+  (flyspell-mode 1)
+  (flyspell-buffer)
+  )
 
-;; Don't fill when hitting return, only on space:
+;; Don't autofill when hitting return, only on space:
 (set-char-table-range auto-fill-chars 10 nil)
 
 ;; In text mode, I don't want it auto-indenting for the first
@@ -696,11 +741,11 @@
    ;;   (indent-according-to-mode))
    ))
 
-(defun text-indent-hook ()
+(defun text-hook ()
   (local-set-key "\C-m" 'newline-and-text-indent)
   ; Initializing flyspell on a large buffer takes forever -- like, MINUTES.
   ;; So, only use it when we really need it.
-  ; (flyspell-mode 1)
+  ;(flyspell-mode 1)
   ;(flyspell-buffer)
   (local-set-key (kbd "C-;") 'insert-date)
   (global-set-key (kbd "C-;") 'insert-date)
@@ -708,7 +753,8 @@
   (global-set-key (kbd "C-:") 'insert-yesterday-date)
   (dubcaps-mode t)
   )
-(setq text-mode-hook 'text-indent-hook)
+
+(add-hook 'text-mode-hook 'text-hook)
 
 ;;
 ;; HTML-mode definitions:
@@ -755,6 +801,32 @@
 ;;(with-eval-after-load ".*\..html"
 ;;  (newhtml))
 
+(defun newlwv ()
+  "Insert a template for an empty HTML page for the LWVNM website"
+  (interactive)
+  (insert "<?php\n"
+          "  $title = \"\";\n"
+          "\n"
+          "  require ($_SERVER['DOCUMENT_ROOT'] . \"/php/header.php\");\n"
+          "?>\n"
+          "\n"
+          "<p>\n"
+          "\n"
+          "<?php\n"
+          "require ($_SERVER['DOCUMENT_ROOT'] . \"/php/footer.php\");\n"
+          "?>\n"
+          )
+  ;; goto-char counts from the beginning of the document.
+  (goto-char 19)
+  )
+
+; Prevent -- dashed comments -- from screwing up auto-fill mode in sgml-mode.
+(defun sgml-comment-indent-new-line (&optional soft)
+  (save-excursion (forward-char -1) (delete-horizontal-space))
+  (delete-horizontal-space)
+  (newline-and-indent))
+  ;(comment-indent-new-line soft))
+
 ;; Key bindings and such can be done in the mode hook.
 (defun html-hook ()
   ;; Define keys for inserting tags in HTML mode:
@@ -788,17 +860,21 @@
   ;; but alas it has zero effect that I can find.
   ;;(setq sgml-specials nil)
 
-  (flyspell-mode 1)
-
-  ;; s-suffix? is like Python endswith
   (if (and (= (buffer-size) 0)
            (string-suffix-p ".html" (buffer-file-name)))
-      (newhtml) )
+      (if (string-match-p "/lwvweb/" (buffer-file-name))
+          (newlwv)
+          (if (not (or (string-match-p "/blog/" (buffer-file-name))
+                       (string-match-p "/blogfiles/" (buffer-file-name))))
+              (newhtml) ) ) )
 
-  (message "Ran html-hook")
+  ;; Turn off flyspell; we'll turn it on only in html-wrap mode.
+  ;(flyspell-mode 0)
+
+  ;(message "Ran html-hook")
   ;(sleep-for 3)
   )
-(setq sgml-mode-hook 'html-hook)
+(add-hook 'sgml-mode-hook 'html-hook)
 
 ;; Run this on a buffer inside a <pre> to convert chars like < into entities.
 (defun unhtml (start end)
@@ -1143,10 +1219,12 @@
         ("\\.scm$" . scheme-mode)
         ("\\.blx$" . html-wrap-mode)
         ("\\.html$" . html-wrap-mode)
-        ("\\.xml$" . xml-mode)
-        ("\\.gpx$" . xml-mode)
+        ;("\\.xml$" . xml-mode)
+        ;("\\.gpx$" . xml-mode)
         ("\\.js$" . javascript-mode)
         ("\\.r$" . r-mode)
+        ("\\.gpx$" . xml-mode)
+        ("\\.kml$" . xml-mode)
         ("\\.img$" . text-img-mode)
         ("\\.zsh\\'" . sh-mode)
 
