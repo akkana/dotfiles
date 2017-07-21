@@ -382,35 +382,43 @@
 ;                         (insert (x-selection 'PRIMARY))))
 
 ;; don't paste syntax highlight color into buffers where it's meaningless.
-;; But none of these help, alas.
-;; (setq yank-excluded-properties t)
-;; (add-to-list 'yank-excluded-properties 'font)
-;; (add-to-list 'yank-excluded-properties 'font-lock-face)
-;; However, these do work:
+;; In emacs 25 this seems to work, but it doesn't work in emacs 24.
+(add-to-list 'yank-excluded-properties 'font)
+(add-to-list 'yank-excluded-properties 'font-lock-face)
 
-(defun yank-without-colors () (interactive)
-       (insert (substring-no-properties
-                (x-selection 'PRIMARY))))
-(global-set-key "\C-y" 'yank-without-colors)
+;; In emacs24, yank-excluded-properties doesn't work.
+;; However, this works for Ctrl-Y:
+(if (and (boundp 'emacs-major-version)
+         (< emacs-major-version 25))
 
-;; mouse-set-point seems like what I should need here,
-;; but it takes an event and I can't find any way of how
-;; to get an event it will accept.
-;; (defun mouse-paste-without-colors1 (*click)
-;;   (interactive "e")
-;;   (let ((p1 (posn-point (event-start *click))))
-;;     (goto-char p1)
-;;     (yank-without-colors)))
-;; (defun mouse-paste-without-colors2 (*click)
-;;   (interactive "e")
-;;   (mouse-set-point e)
-;;   (yank-without-colors))
+    (progn
+      (defun yank-without-colors () (interactive)
+             (insert (substring-no-properties
+                      (x-selection 'PRIMARY))))
+      (global-set-key "\C-y" 'yank-without-colors)
 
-(defun mouse-paste-without-colors (e)
-  (interactive "e")
-  (goto-char (posn-point (event-start e)))
-  (yank-without-colors))
-(global-set-key (kbd "<mouse-2>") 'mouse-paste-without-colors)
+      ;; Unfortunately there seems to be no way in emacs24 to get
+      ;; middlemouse to paste without colors.
+      ;; You can try things like this:
+      ;;
+      ;; (defun mouse-paste-without-colors (e)
+      ;;   (interactive "e")
+      ;;   (goto-char (posn-point (event-start e)))
+      ;;   (insert (substring-no-properties (x-selection 'PRIMARY)))
+      ;;   )
+      ;; (global-set-key (kbd "<mouse-2>") 'mouse-paste-without-colors)
+      ;;
+      ;; but then something happens after the paste that stomps the
+      ;; primary X selection and replaces it with a bunch of other crap.
+      ;; That happens in emacs25 too, but fortunately emacs25 does
+      ;; the right thing with yank-excluded-properties
+      ;; so we don't need these rebindings.
+      ;; Nobody seems to know why this is happening.
+      ;; There's something called <down-mouse-2> but it happens
+      ;; before <mouse-2>, not after, and binding it to 'nop doesn't help.
+      ;; There's no <up-mouse-2>.
+    )
+)
 
 ; You can use this to turn off colors on a block of text:
 (defun decolorize () (interactive)
@@ -684,7 +692,6 @@
   "HTML mode, plus autofill and flyspell"
 
   (message "HTML wrap mode")
-  (sleep-for 3)
 
   (auto-fill-mode)
   (flyspell-mode 1)
