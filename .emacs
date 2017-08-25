@@ -466,7 +466,7 @@
 	(t (self-insert-command (or arg 1)))))
 
 (defun fixm ()
-  "Change line breaks to Unix style."
+  "Change line breaks to Unix style. This no longer works because emacs is all tolerant now of DOS line endings."
   (interactive)
   (set-buffer-file-coding-system 'utf-8-unix t)
   (replace-string "\r" "")
@@ -1206,14 +1206,14 @@
 ;; (I can't find a way to remove only the "browse" rule).
 (rassq-delete-all 'ebrowse-tree-mode auto-mode-alist)
 
-;; Now add modes for files and directories I use:
+;; Fallback defaults: these will only be used if no other mode is found.
+(setq auto-mode-alist (append auto-mode-alist
+                              '(("Docs/" . text-wrap-mode)) ))
+
+;; File types -- too bad emacs doesn't handle most of these automatically.
+;; These will override any existing mode:
 (mapc (apply-partially 'add-to-list 'auto-mode-alist)
       '(
-
-;; A default for Docs/, must be before the competing Docs/* definitions:
-        ("Docs/" . text-wrap-mode)
-
-;; file types -- too bad emacs doesn't handle most of these automatically.
         ("Tags" . text-mode)
         ("\\.epub$" . archive-mode)
         ("\\.kmz$" . archive-mode)
