@@ -272,7 +272,7 @@ titlebar() {
 ##################
 # Recursive greps
 gr() {
-  find . \( -type f -and -not -name '*.o' -and -not -name '*.so' -and -not -name '*.a' -and -not -name '*.pyc' -and -not -name '*.jpg' -and -not -name '*.JPG' -and -not -name '*.png' -and -not -name '*.xcf*' -and -not -name '*.gmo' -and -not -name '.intltool*' -and -not -name '*.po' -and -not -name 'po' -and -not -name '*.tar*' -and -not -name '*.zip' -or -name '.metadata' -prune \) -print0 | xargs -0 grep $* /dev/null | fgrep -v .svn | fgrep -v .git
+  find . \( -type f -and -not -name '*.o' -and -not -name '*.so' -and -not -name '*.a' -and -not -name '*.pyc' -and -not -name '*.jpg' -and -not -name '*.JPG' -and -not -name '*.png' -and -not -name '*.xcf*' -and -not -name '*.gmo' -and -not -name '.intltool*' -and -not -name '*.po' -and -not -name 'po' -and -not -name '*.tar*' -and -not -name '*.zip' -or -name '.metadata' -or -name 'build' -prune \) -print0 | xargs -0 grep $* /dev/null | fgrep -v .svn | fgrep -v .git
 }
 zgr() {
   find . \( -type f -and -not -name '*.o' -and -not -name '*.so' -and -not -name '*.a' -and -not -name '*.pyc' -and -not -name '*.jpg' -and -not -name '*.JPG' -and -not -name '*.png' -and -not -name '*.xcf*' -and -not -name 'po' -and -not -name '*.tar*' -and -not -name '*.zip' -or -name '.metadata' -prune \) -print0 | xargs -0 zgrep $* /dev/null | fgrep -v .svn | fgrep -v .git
@@ -418,20 +418,17 @@ checkallgit() {
     NONE='\033[00m'
     RED='\033[01;31m'
 
-    pushd ~
     foreach repo ($myrepos)
-        cd ~/src/$repo
-        # -uno means untracked: no, i.e. ignore untracked files.
-        if [[ $# == 0 && -n "$(git status --porcelain -uno)" ]]; then
-            echo "$RED$repo : dirty$NONE"
-            # git status
-        elif [[ -n $(git for-each-ref --format="%(refname:short) %(push:track)" refs/heads | fgrep '[ahead') ]]; then
-            echo "$RED$repo : clean but unpushed$NONE"
-        else
+        gitbranchsync -cs $HOME/src/$repo
+        exitcode=$?
+        if [[ $exitcode == 2 ]]; then
+            echo $RED$repo ": uncommitted files$NONE"
+        elif [[ $exitcode == 1 ]]; then
+            echo $RED$repo ": clean but unpushed$NONE"
+        elif [[ $exitcode == 0 ]]; then
             echo $repo ": clean"
         fi
     end
-    popd
 }
 
 # Update all my git repositories:
@@ -440,10 +437,52 @@ allgit() {
     foreach repo ($myrepos)
         echo $repo :
         cd ~/src/$repo
-        # Fetch all branches, so it's be safe to go offline.
-        # The --all is probably not needed in most cases,
-        # except perhaps for repos where the remote is forked
-        # from an upstream remote.
+
+        gitbranchsync -ft
+        git pull --all
+    end
+    popd
+}
+
+oldallgit() {
+    pushd ~
+    foreach repo ($myrepos)
+        echo $repo :
+        cd ~/src/$repo
+        # It's unbelievable that git makes it so difficult to pull
+        # all branches. New branches aren't automatically tracked;
+        # you have to list remote branches and track them one by one.
+        # And there's apparently no way to say "show me the remote
+        # branches that don't have a local branch yet".
+        # This works, but gives errors for anything that's already tracked:
+        # git branch -r | grep -v '\->' | while read remote; do git branch --track "${remote#origin/}" "$remote"; done
+        # This also works but gives tons more errors:
+        # for remote in `git branch -r`; do git branch --track ${remote#origin/} $remote; done
+
+        # XXX This doesn't get work yet: apparently we have to do a git
+        # pull first, so we'll see the remote branches (with or without --all>);
+        # but then we have to do another git pull --all afterward to
+        # fetch them. Need to check and test this.
+
+        # Useful reading:
+        # https://stackoverflow.com/questions/28377688/git-remote-show-origin-why-all-branches-show-tracked-even-when-some-arent#28379132
+        # git remote show origin
+
+        # This is apparently how to save command output to a zsh array:
+        localbranches=("${(@f)$(git branch | sed 's/..//')}")
+        remotebranches=("${(@f)$(git branch -a | grep remotes | grep -v HEAD | grep -v master | sed 's_remotes/origin/__' | sed 's/..//')}")
+        for branch in $remotebranches
+        do
+            echo "Checking branch $branch"
+            # Is branch in the zsh array localbranches?
+            # (r) is called "reverse subscripting".
+            if [[ ${localbranches[(r)$branch]} != $branch ]]; then
+                echo "Tracking new remote branch $branch"
+                git branch --track ${branch#remotes/origin/} $branch
+            fi
+        done
+
+        # Now that all the branches are tracked, we can
         git pull --all
 
         # The once-maintainer of git-up (github.com/aanand/git-up)
@@ -588,6 +627,11 @@ kmz2gpx() {
 gpx2kml() {
     # :t takes the basename, :r removes the extension
     gpsbabel -i gpx -f $1 -o kml -F $1:t:r.kml
+}
+
+# Weirdly, gpsbabel can't handle geojson.
+gpx2geojson() {
+    ogr2ogr -f GeoJSON $1:t:r.geojson $1
 }
 
 # ESRI shapefiles to KML. Use the .shp and ignore the other files.
@@ -776,10 +820,12 @@ else
 fi
 alias uncrypt='cryptunmount crypt'
 
-# Serial connections to plug computers:
+# Serial connections to embedded computers:
 #alias plug='minicom -D /dev/ttyUSB1 -b 115200'
 alias plug='screen /dev/ttyUSB1 115200'
 alias guru='screen /dev/ttyUSB0 115200'
+# For the Raspberry Pi, the serial port connections are
+# 6=black, 8=white, 10=green
 alias rpi='titlebar "Raspberry Pi"; screen /dev/ttyUSB0 115200; titlebar "local"'
 alias pion='titlebar "Raspberry Pi Pion"; ssh -X pi@pion; titlebar "local"'
 
@@ -1051,8 +1097,13 @@ newhexchat() {
     git checkout master
     git merge upstream/master
 
-    make -j4
-    make install
+    # make -j4
+    # make install
+
+    # http://hexchat.readthedocs.io/en/latest/building.html#unix
+    meson build
+    ninja -C build
+    sudo ninja -C build install
 
     popd_maybe
 }
@@ -1110,9 +1161,22 @@ check_holds() {
 #
 # Set each one up once with:
 # virtualenv --system-site-packages $HOME/.python2env-64 (python2)
+#   (requires virtualenv and python-virtualenv)
 # python3 -m venv --system-site-packages .python3env-64 (python3)
+#   (requires python3-venv)
+
+nopythonenv() {
+    if type deactivate >/dev/null ; then
+        deactivate
+    fi
+    if type deactivate >/dev/null ; then
+        deactivate
+    fi
+}
 
 switchpythonenv() {
+    nopythonenv
+
     if [[ x$1 == x ]]; then
         vers=2
     else
@@ -1123,15 +1187,20 @@ switchpythonenv() {
     else
         archbits=32
     fi
-    if type deactivate >/dev/null ; then
-        deactivate
+
+    if [[ $vers == 23 ]]; then
+        echo Using both Python 2 and 3 envs on ${archbits} bit
+        VIRTUAL_ENV_DISABLE_PROMPT=1 source $HOME/.python2env-${archbits}/bin/activate
+        VIRTUAL_ENV_DISABLE_PROMPT=1 source $HOME/.python3env-${archbits}/bin/activate
+    else
+        echo Switching Python envs to python${vers}, ${archbits} bit
+        VIRTUAL_ENV_DISABLE_PROMPT=1 source $HOME/.python${vers}env-${archbits}/bin/activate
     fi
-    echo Switching Python envs to python${vers}, ${archbits} bit
-    VIRTUAL_ENV_DISABLE_PROMPT=1 source $HOME/.python${vers}env-${archbits}/bin/activate
 }
 
 alias python2env='switchpythonenv 2'
 alias python3env='switchpythonenv 3'
+alias python23env='switchpythonenv 23'
 
 # Make a temporary Python virtualenv for testing something.
 # This is separate from the virtualenvs used for everyday life.
@@ -1711,6 +1780,10 @@ alias tcolors='printf "\e[%dm%d dark\e[0m  \e[%d;1m%d bold\e[0m\n" {30..37}{,,,}
 # I can never remember the ever-changing CUPS commands to talk to
 # printers from the cmdline.
 alias printers='lpstat -s; echo; echo You can print with lp -d printername'
+
+# A couple of electronics cheatsheets:
+alias gpio='pho -P ~/Docs/pi-w-book/ch2/images/raspi-gpio.jpg &'
+alias resistors='pho -P ~/Docs/hardware/resistors.jpg &'
 
 # Now that we're running feeds on shallowsky.com,
 # local/xtra urls have to be saved there too.
