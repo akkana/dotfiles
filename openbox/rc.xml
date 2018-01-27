@@ -92,6 +92,7 @@
     </application>
     <application name="dclock">
       <decor>no</decor>
+      <desktop>all</desktop>
       <!-- position doesn't work here: use -geometry in menu.xml instead
       <position>
         <x>-0</x>
@@ -127,13 +128,16 @@
         <execute>/usr/bin/xterm</execute>
       </action>
     </keybind>
+    <!-- 
     <keybind key="W-F9">
       <action name="ShowMenu">
         <menu>root-menu</menu>
       </action>
     </keybind>
+     -->
 
     <!-- key bindings for the desktop -->
+    <!-- xbrightness/xgamma no longer work:
     <keybind key="W-F5">
       <action name="Execute">
         <execute>/home/akkana/bin/linux/xbrightness -4298</execute>
@@ -142,6 +146,39 @@
     <keybind key="W-F6">
       <action name="Execute">
         <execute>/home/akkana/bin/linux/xbrightness +4298</execute>
+      </action>
+    </keybind>
+     Replaced by xrandr-based script: -->
+
+    <keybind key="W-F5">
+      <action name="Execute">
+        <execute>/home/akkana/bin/xbright -.1</execute>
+      </action>
+    </keybind>
+    <keybind key="W-F6">
+      <action name="Execute">
+        <execute>/home/akkana/bin/xbright +.1</execute>
+      </action>
+    </keybind>
+
+    <!-- Emergency "Use all connected displays" key on F7.
+         This is supposed to happen automatically when resuming from sleep
+         using ACPI scripts, but that stopped working some releases back
+         because the ACPI scripts don't get executed reliably at the right time.
+         Unfortunately this still doesn't work reliably and I'm not sure why.
+         Sometimes it just doesn't seem to register the key binding at all.
+         xrandr minus-minus-auto is another possible thing to run
+         (minus-minus because the XML parser for this file is too
+         stupid to handle two dashes inside an XML comment).
+      -->
+    <keybind key="W-F7">
+      <action name="Execute">
+        <execute>/home/akkana/bin/check-monitors</execute>
+      </action>
+    </keybind>
+    <keybind key="XF86Display">
+      <action name="Execute">
+        <execute>/home/akkana/bin/check-monitors</execute>
       </action>
     </keybind>
 
@@ -166,6 +203,11 @@
     <keybind key="XF86AudioRaiseVolume">
       <action name="Execute">
         <execute>/home/akkana/bin/louder</execute>
+      </action>
+    </keybind>
+    <keybind key="XF86AudioMute">
+      <action name="Execute">
+        <execute>amixer set Master toggle</execute>
       </action>
     </keybind>
 
@@ -291,9 +333,11 @@
     <keybind key="A-F8">
       <action name="Resize"/>
     </keybind>
+    <!-- 
     <keybind key="A-F9">
       <action name="Iconify"/>
     </keybind>
+     -->
     <keybind key="A-space">
       <action name="ShowMenu">
         <menu>client-menu</menu>
@@ -539,6 +583,9 @@
         </action>
       </mousebind>
        -->
+      <!-- remove mousewheel bindings on laptop,
+           since the trackpad is so flaky about seeing 2-finger taps as scrolls.
+       -->
       <mousebind button="Up" action="Press">
         <action name="DesktopPrevious"/>
       </mousebind>
@@ -551,6 +598,7 @@
       <mousebind button="A-Down" action="Press">
         <action name="DesktopNext"/>
       </mousebind>
+
       <mousebind button="Left" action="Press">
         <action name="Focus"/>
         <action name="Raise"/>
@@ -561,6 +609,7 @@
           <menu>client-list-combined-menu</menu>
         </action>
       </mousebind>
+      <!--
       <mousebind button="Middle" action="Press">
         <action name="Execute">
           <execute>sh -c 'firefox `pyclip`'</execute>
@@ -569,6 +618,17 @@
       <mousebind button="C-Middle" action="Press">
         <action name="Execute">
           <execute>sh -c 'firefox -new-tab `pyclip`'</execute>
+        </action>
+      </mousebind>
+       -->
+      <mousebind button="Middle" action="Press">
+        <action name="Execute">
+          <execute>browserclip</execute>
+        </action>
+      </mousebind>
+      <mousebind button="C-Middle" action="Press">
+        <action name="Execute">
+          <execute>browserclip -new-tab</execute>
         </action>
       </mousebind>
       <mousebind button="Right" action="Press">

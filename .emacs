@@ -872,7 +872,8 @@
       (if (string-match-p "/lwvweb/" (buffer-file-name))
           (newlwv)
           (if (not (or (string-match-p "/blog/" (buffer-file-name))
-                       (string-match-p "/blogfiles/" (buffer-file-name))))
+                       (string-match-p "/blogfiles/" (buffer-file-name))
+                       (string-match-p "/Preso/" (buffer-file-name))))
               (newhtml) ) ) )
 
   ;; Turn off flyspell; we'll turn it on only in html-wrap mode.
@@ -959,7 +960,6 @@
 (defun rich-style (style)
   (let* ((start (if (use-region-p)
                     (region-beginning) (line-beginning-position)))
-                    
          (end   (if (use-region-p)
                     (region-end)  (line-end-position))))
     (cond
@@ -1207,8 +1207,9 @@
 (rassq-delete-all 'ebrowse-tree-mode auto-mode-alist)
 
 ;; Fallback defaults: these will only be used if no other mode is found.
-(setq auto-mode-alist (append auto-mode-alist
-                              '(("Docs/" . text-wrap-mode)) ))
+;(setq auto-mode-alist (append auto-mode-alist
+;                              '(("Docs/" . text-wrap-mode)) ))
+(add-to-list 'auto-mode-alist '("Docs/" . text-wrap-mode) t)
 
 ;; File types -- too bad emacs doesn't handle most of these automatically.
 ;; These will override any existing mode:

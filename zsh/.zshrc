@@ -61,7 +61,7 @@ typeset -U PATH
 
 # Set path
 arch=$(uname -m)
-export PATH=$HOME/bin:$HOME/bin/linux-$arch:/opt/cxoffice/bin:/usr/local/bin:/usr/local/gimp-git/bin:$PATH:.:/usr/sbin:/sbin:$HOME/outsrc/android-sdk-linux/platform-tools:$HOME/outsrc/android-sdk-linux/tools
+export PATH=$HOME/bin:$HOME/bin/linux-$arch:/opt/cxoffice/bin:/usr/local/bin:/usr/local/gimp-git/bin:$PATH:.:/usr/sbin:/sbin:$HOME/outsrc/android-sdk-linux/platform-tools:$HOME/outsrc/android-sdk-linux/tools:$HOME/.local/bin
 
 export PYTHONPATH=$HOME/bin/pythonpath:$HOME/bin
 
@@ -134,11 +134,15 @@ if [[ $USER == akkana ]]; then
   # PS1=$'%{\e[1m%}<'$(hostname)$primes$'>-%{\e[0m%} '
   #PS1='%K{white}%F{blue}<'$(hostname)$primes$'>- %f%k'
   hostname=$(hostname)
-  if [[ $hostname == raspberrypi ]]; then
+
+  # If we're on a raspberry pi or similar ARM platform, use a different color:
+  if [[ $(uname -a) =~ armv7l ]]; then
+    echo "We're on a raspberry pi"
     PS1='%F{green}<'$hostname$primes$'>- %f%k'
   else
     PS1='%F{blue}<'$hostname$primes$'>- %f%k'
   fi
+
 elif [[ $USER == root ]]; then
   #PS1=$'%{\e[1m%}#['$(hostname)$primes$']#%{\e[0m%} '
   PS1='%K{white}%F{red}['$hostname$primes$'#]- %f%k'
@@ -236,15 +240,18 @@ llt() { /bin/ls -laSHFLt $* ; }
 llth() { /bin/ls -lFSHLt $* | head -20 ; }
 
 # There are lots of ways to list only directories. Here are some:
-#lsdirs1() { env ls -1FH "$1" | sed -n 's|/$||p' | column; }
-#
-#lsdirs2() {
-#  (cd $1; /bin/ls -d `/bin/ls -1F | grep / | sed 's_/$__'`)
-#}
+
+# Next two work except for dirs with spaces in the name:
+lsdirs1() {
+  (cd $1; /bin/ls -d `/bin/ls -1F | grep / | sed 's_/$__'`)
+}
 
 lsdirs() { 
   echo `/bin/ls -1F $@ | grep / | sed 's_/$__'`| tr -s ' ' '\n' | paste - - - | column -x -t -c3
 }
+
+# This one doesn't actually work:
+# lsdirs2() { env ls -1FH "$1" | sed -n 's|/$||p' | column; }
 
 alias m=mutt
 alias j=jobs
@@ -287,7 +294,10 @@ rgr() {
   find . \( -name '*.rb' -or -name '*.rhtml' \) -print0 | xargs -0 grep $* /dev/null | fgrep -v .svn
 }
 htgr() {
-  find . -name '*.*htm*' -print0 | xargs -0 grep $* /dev/null
+  find . -name '*.*htm*' -and -not -name 'webhits*' -prune -print0 | xargs -0 grep $* /dev/null
+}
+pygr() {
+  find . -name '*.py' -print0 | xargs -0 grep $* /dev/null
 }
 jgr() {
   find . -name '*.js' -print0 | xargs -0 grep $* /dev/null
@@ -417,18 +427,24 @@ checkallgit() {
     BOLD='\033[1m'
     NONE='\033[00m'
     RED='\033[01;31m'
+    out=""
 
     foreach repo ($myrepos)
+        echo -n "$repo ... "
         gitbranchsync -cs $HOME/src/$repo
         exitcode=$?
         if [[ $exitcode == 2 ]]; then
-            echo $RED$repo ": uncommitted files$NONE"
+            out="$out\n$RED$repo : uncommitted files$NONE"
         elif [[ $exitcode == 1 ]]; then
-            echo $RED$repo ": clean but unpushed$NONE"
+            out="$out\n$RED$repo : clean but unpushed$NONE"
         elif [[ $exitcode == 0 ]]; then
-            echo $repo ": clean"
+            out="$out\n$repo: clean"
         fi
     end
+
+    echo
+    echo $out
+    unset out
 }
 
 # Update all my git repositories:
@@ -583,6 +599,14 @@ getreal() {
 # Then transcode it with:
 # lame --tg Other --ta artist -tl album file.wav file.mp3
 
+# Get resolution of a movie file:
+moviesize() {
+    for f in $*; do
+        echo "$f:"
+        ffprobe -v quiet -print_format json -show_format -show_streams "$1" | egrep '(width|height)'
+    done
+}
+
 ######## end video aliases
 
 ######## Some format changing commands
@@ -696,9 +720,10 @@ screenblankon() {
 }
 
 # Connect to a projector on the VGA port:
-alias projector='xrandr --output VGA1 --mode 1024x768; noscreenblank'
+alias projector='xrandr --output VGA-1 --mode 1024x768; noscreenblank'
 # and on the HDMI port:
-alias projectorh='xrandr --output HDMI1 --mode 1024x768'
+# alias projectorh='xrandr --output HDMI1 --mode 1024x768'
+alias projectorh='xrandr --output HDMI-1 --mode 1024x768; noscreenblank'
 
 # and set video back to normal:
 # alias monitor='xrandr --output HDMI1 --mode 1680x1050 --output VGA1 --off --output LVDS1 --off'
@@ -826,10 +851,26 @@ alias plug='screen /dev/ttyUSB1 115200'
 alias guru='screen /dev/ttyUSB0 115200'
 # For the Raspberry Pi, the serial port connections are
 # 6=black, 8=white, 10=green
-alias rpi='titlebar "Raspberry Pi"; screen /dev/ttyUSB0 115200; titlebar "local"'
+alias rpi='titlebar "Raspberry Pi"; echo "black=Gnd white=TX green=RX"; echo "Disconnect with Ctrl-backquote d"; screen /dev/ttyUSB0 115200; titlebar "local"'
 alias pion='titlebar "Raspberry Pi Pion"; ssh -X pi@pion; titlebar "local"'
 
-# Connect/disconnect from a docking station. Obsoleted by shell script.
+# Find a Raspberry Pi attached to the local network:
+localpi() {
+    echo_and_do fping -a -r1 -g 192.168.1.0/24 |& grep -v Unreachable
+    echo
+    echo "Now running arp and looking up MACs:"
+    echo_and_do  arp -n | fgrep " b8:27:eb"
+}
+
+# Show everybody connected to the local net:
+localnet() {
+    echo_and_do fping -a -r1 -g 192.168.1.0/24 |& grep -v Unreachable
+    echo
+    echo "Now running arp and looking up MACs:"
+    echo_and_do arp -n |& grep -v incomplete |& mac_lookup
+}
+
+# Connect/disconnect from a docking station. Obsoleted by check-monitors script.
 #alias dock='xrandr --output VGA1 --mode 1600x900; hsetroot -center `find -L $HOME/Backgrounds -name "*.*" | randomline`; xrandr --output LVDS1 --off'
 #alias undock='xrandr --output LVDS1 --mode 1280x800; hsetroot -center `find -L $HOME/Backgrounds -name "*.*" | randomline`'
 
@@ -1022,24 +1063,79 @@ sayuk() {
 ################################################
 # Build/development helpers
 
-# I get tired of all the multiple steps to update gimp now that it
-# requires three separate repositories.
+# update-clone dir repo: if dir already exists, go there and git pull,
+# else make the directory and clone repo into it.
+# Either way, we should end up in the directory with an up-to-date repo.
+pull-clone() {
+    d=$1
+    repo=$2
+    if [ -d $SRCDIR/libmypaint ]; then
+        cd $d
+        git pull
+    else
+        mkdir -p $d
+        cd $d
+        git clone $repo
+    fi
+}
+
+# When GIMP needs to be rebuilt from scratch -- this also serves as
+# a cheatsheet for requirements. Not yet tested.
+gimpmaster-fresh() {
+    PREFIX=/usr/local/gimp-git
+    SRCDIR=$HOME/outsrc
+    pushd_maybe $SRCDIR
+
+    pull-clone https://github.com/mypaint/libmypaint.git $SRCDIR/libmypaint
+    make clean
+    ./autogen.sh --prefix=$PREFIX
+    ./configure
+
+    pull-clone https://github.com/Jehan/mypaint-brushes.git $SRCDIR/lmypaint-brushes
+    make clean
+    ./autogen.sh --prefix=$PREFIX
+    ./configure
+
+    pull-clone git://git.gnome.org/babl $SRCDIR/babl
+    make clean
+    ./autogen.sh --prefix=$PREFIX
+
+    pull-clone git://git.gnome.org/gegl $SRCDIR/gegl
+    make clean
+    ./autogen.sh --prefix=$PREFIX
+
+    pull-clone git://git.gnome.org/gimp $SRCDIR/gimp
+    make clean
+    ./autogen.sh --prefix=$PREFIX
+
+    popd_maybe
+}
+
+# I get tired of the myriad steps to update gimp now that it
+# requires so many repositories.
 gimpmaster() {
     # Make sure this exits on errors!
     setopt localoptions errreturn
+    export PKG_CONFIG_PATH=/usr/local/gimp-git/share/pkgconfig/
+    export CC=/usr/bin/gcc-6
 
-    # echo "Updating libmypaint ..."
     pushd_maybe ~/outsrc/libmypaint
-    # Don't do this every time. But if we did, this is what to do:
-    # git pull
-    # scons prefix=/usr/local/gimp-git/ enable_gegl=true
-    # sudo scons prefix=/usr/local/gimp-git/ enable_gegl=true install
-    # But now it uses configure/make like everything else,
-    # except that autogen.sh doesn't call configure:
+    echo "Updating libmypaint ..."
+    git pull
+    make -j4
+    make install
+
+    # Getting mypaint-brushes is complicated. Here's what I had to do:
+    # git clone https://github.com/Jehan/mypaint-brushes.git
+    # cd mypaint-brushes/
+    # git checkout --track -b v1.3.x origin/v1.3.x
     # ./autogen.sh --prefix=/usr/local/gimp-git
     # ./configure --prefix=/usr/local/gimp-git
-    # make -j4
-    # sudo make install
+    echo "Updating mypaint-brushes ..."
+    cd ~/outsrc/mypaint-brushes/
+    git pull
+    make -j4
+    make install
 
     echo "Updating babl ..."
     cd ~/outsrc/babl
@@ -1059,6 +1155,9 @@ gimpmaster() {
     make -j4
     make install
     popd_maybe
+
+    unset PKG_CONFIG_PATH
+    unset CC
 }
 
 # It often happens that some change in the build system makes autogen/configure
@@ -1160,9 +1259,9 @@ check_holds() {
 # was supposed to do.
 #
 # Set each one up once with:
-# virtualenv --system-site-packages $HOME/.python2env-64 (python2)
+# virtualenv --system-site-packages $HOME/.python2env-$archbits (python2)
 #   (requires virtualenv and python-virtualenv)
-# python3 -m venv --system-site-packages .python3env-64 (python3)
+# python3 -m venv --system-site-packages .python3env-$archbits (python3)
 #   (requires python3-venv)
 
 nopythonenv() {
@@ -1194,6 +1293,7 @@ switchpythonenv() {
         VIRTUAL_ENV_DISABLE_PROMPT=1 source $HOME/.python3env-${archbits}/bin/activate
     else
         echo Switching Python envs to python${vers}, ${archbits} bit
+        echo "VIRTUAL_ENV_DISABLE_PROMPT=1 source $HOME/.python${vers}env-${archbits}/bin/activate"
         VIRTUAL_ENV_DISABLE_PROMPT=1 source $HOME/.python${vers}env-${archbits}/bin/activate
     fi
 }
@@ -1260,17 +1360,13 @@ alias python3help="pythonXhelp python3"
 # Some aliases for getting files from Android KitKat via adb,
 # since the lack of usb-storage and autocomplete is such a pain.
 
-# There seems to be no way to remove multiple or wildcarded files via adb.
-# alias delallgpx='adb shell rm /mnt/extSdCard/Android/data/net.osmand.plus/tracks/rec/*'
-
 # Where is the SD card on my phone?
 # Under KitKat, it's at /storage/extSdCard.
 # Under Marshmallow, it's at /storage/nnnn-nnnn
-# Set androidSD in .zshrc.hostname.
+# Set androidSD in .zshrc.hostname: these aliases require it.
 
-# Where photos are stored on Android.
-# I have no idea where this magic code comes from,
-# but set androidDCIM in .zshrc.hostname.
+# There seems to be no way to remove multiple or wildcarded files via adb.
+# alias delallgpx='adb shell rm /mnt/extSdCard/Android/data/net.osmand.plus/tracks/rec/*'
 
 pullscreenshot() {
   pushd_maybe ~/Docs/gps/new
@@ -1308,8 +1404,10 @@ pullphotos() {
 }
 
 # But what if we don't have adb installed? Here's how to do it using gphoto2.
+# Set androidDCIM in .zshrc.hostname to something like /store_00020002
+# but unfortunately I don't know how to get the magic number.
 alias pullphotosg='gphoto2 --folder $androidDCIM/DCIM/Camera -P'
-alias delphotosg='gphoto2 --folder /store_00020002/DCIM/Camera -D'
+alias delphotosg='gphoto2 --folder $androidDCIM/DCIM/Camera -D'
 
 # And similar aliases for gpx:
 alias pullgpxg='gphoto2 --folder /store_00020002/Android/data/net.osmand.plus/files/tracks/rec -P'
@@ -1359,7 +1457,7 @@ whichspam() {
   if [[ x$whichfile == x ]]; then
     whichfile=subjectRejects
   fi
-  echo Searching in ~/Procmail/spast/$whichfile
+  echo Searching in ~/Procmail/spast/$whichfile for "$1"
   cat ~/Procmail/spast/$whichfile | while read line ; do
     #echo echo "$1" '| egrep -i --' "$line" '>/dev/null'
     #echo "$1" | egrep -i -- "$line" >/dev/null
@@ -1782,8 +1880,23 @@ alias tcolors='printf "\e[%dm%d dark\e[0m  \e[%d;1m%d bold\e[0m\n" {30..37}{,,,}
 alias printers='lpstat -s; echo; echo You can print with lp -d printername'
 
 # A couple of electronics cheatsheets:
-alias gpio='pho -P ~/Docs/pi-w-book/ch2/images/raspi-gpio.jpg &'
+alias gpio='pho -P ~/src/pi-zero-w-book/images/raspi-gpio.jpg &'
+alias gpio-official='pho -P ~/Docs/hardware/rpi/Pi-GPIO-header.png &'
+alias gpio-xyz='pho -P ~/Docs/hardware/rpi/raspberry-pi-pinout.png &'
+alias gpio-old='pho -P ~/Docs/hardware/rpi/rpi-gpio.jpg &'
 alias resistors='pho -P ~/Docs/hardware/resistors.jpg &'
+alias capacitors='quickbrowse ~/Docs/hardware/capacitors.html'
+alias voltagedivider='pho -P ~/Docs/hardware/voltage-divider.png &'
+alias attiny='pho -P ~/src/arduino/attiny/attiny85-pinout.jpg &'
+alias atmega='pho -P ~/Docs/hardware/atmega328-arduino-pinout.jpg &'
+alias isp='pho -P ~/Docs/hardware/ISP.png &'
+usbtinyisp() {
+    echo "MISO	yellow			VCC 	red"
+    echo "SCK	white			MOSI 	green"
+    echo "RESET	orange, red/black	GND 	black"
+    pho -P ~/web/blog/images/hardware/attiny-usbtinyISP_bb.jpg &
+    pho -P ~/Docs/hardware/ISP.png &
+}
 
 # Now that we're running feeds on shallowsky.com,
 # local/xtra urls have to be saved there too.

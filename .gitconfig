@@ -64,6 +64,11 @@
 	# Here's an easy way to merge them after checkout branchname:
 	update-branch = merge @{upstream}
 
+        # Show commits only to a particular branch (git log-branch branchname).
+        # Yet another thing zillions of people want to do that git makes
+        # ridiculously difficult.
+        log-branch = log --walk-reflogs
+
 # Oh, lovely. git 1.7.11 mandates having something here, but if you
 # pick the default (simple) then your .gitconfig won't work with
 # 1.7.10 or earlier. So you get to choose to be nagged every time
