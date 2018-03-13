@@ -2,8 +2,48 @@
 
 syntax on
 
+" In the 64-bit version of debian stretch, vim is grabbing the mouse
+" and doing unpredictable things with it instead of just letting
+" the terminal handle it.
+" Turns out I don't need it, but root does. Put it here in case
+" it becomes needed later.
+" set mouse=
+
 set background=light
+" Enable 256-bit colorscheme
+" set t_Co=256
 colorscheme akk
+
+" Try to move .viminfo out of my homedir.
+" But it's ignored. And why is it += anyway?
+set viminfo+=n~/.vim/viminfo
+
+" Options for vimdiff:
+if &diff
+    " And set the window size: Xdefaults is ignored for gvim.
+    set lines=58
+    set columns=180
+
+    " When resizing, keep the separator in the middle of the window:
+    autocmd VimResized * exec "normal \<C-w>="
+
+    " gvim's default color schemes are completely unreadable.
+    " Here's how to specify a particular scheme (but they're all bad):
+    " colorscheme some_other_scheme
+    " http://stackoverflow.com/questions/2019281/load-different-colorscheme-when-using-vimdiff
+
+    " And here's how to clean up and highlight the diff sections:
+    highlight DiffAdd    cterm=bold gui=none guibg=Yellow
+    highlight DiffDelete cterm=bold gui=none guibg=Yellow
+    highlight DiffChange cterm=bold gui=none guibg=Yellow
+    highlight DiffText   cterm=bold gui=none guibg=Yellow
+    " To remove syntax highlighting inside diff blocks,
+    " add guifg=Black to each of those highlight lines.
+    " The original also had ctermfg=10 ctermbg=17 in each line
+    " after the cterm bold.
+
+    nmap du :wincmd w<cr>:normal u<cr>:wincmd w<cr>
+endif
 
 " disable the evil alt screen
 " set t_ti= t_te=
@@ -20,10 +60,27 @@ map <leader>o o<CR><ESC>O
 " allow backspacing between lines
 set bs=2
 
+" Use one space, not two, after a period
+set nojoinspaces
+
 " Fix for a security bug, see http://www.guninski.com/vim1.html
 "set modelines=0
 " Yikes -- that turns off being able to use modelines at all! Not worth it.
 set modeline
+" Supposedly this prevents executing arbitrary commands inside modelines
+" in files I don't own.
+set secure
+
+" Highlight trailing whitespace.
+" set list shows it, set nolist un-shows it.
+" http://vim.wikia.com/wiki/Highlight_unwanted_spaces
+" set listchars=tab:>-,trail:-
+set listchars=trail:¬
+
+" Another way to highlight trailing whitespace.
+" You can also define a separate color, Whitespace (see colors/akk.vim)
+" but you still only have the basic 8 colors to work with.
+" match Whitespace '\s\+$'
 
 " Line and paragraph wrapping
 map <leader>l r<CR>J
@@ -145,3 +202,5 @@ endfu
 map <F1> <Esc>
 imap <F1> <Esc>
 
+" Use GIMP style for GIMP files -- see gimp/devel-docs/c.vim
+autocmd BufNewFile,BufRead /home/akkana/outsrc/gimp*/*.[ch] source /home/akkana/outsrc/gimp/devel-docs/c.vim
