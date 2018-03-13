@@ -49,13 +49,6 @@ setopt printexitvalue
 # Or this much more elaborate solution:
 # . $HOME/.zsh.printexit
 
-# zsh docs say it should be colon separated, but that doesn't work.
-# Or sometimes it does -- only on the laptop, for some reason,
-# when I'm not reading mail (maybe it's affected by mutt changing
-# the atime?) and it's super annoying there.
-#mailpath=($HOME/Msgs/in/Inbox $HOME/Msgs/in/whitelist)
-#MAIL=(0 $HOME/Msgs/in/Inbox $HOME/Msgs/in/whitelist)
-
 # Prevent any repeated entries in $PATH
 typeset -U PATH
 
@@ -63,7 +56,9 @@ typeset -U PATH
 arch=$(uname -m)
 export PATH=$HOME/bin:$HOME/bin/linux-$arch:/opt/cxoffice/bin:/usr/local/bin:/usr/local/gimp-git/bin:$PATH:.:/usr/sbin:/sbin:$HOME/outsrc/android-sdk-linux/platform-tools:$HOME/outsrc/android-sdk-linux/tools:$HOME/.local/bin
 
-export PYTHONPATH=$HOME/bin/pythonpath:$HOME/bin
+if (( ! ${+PYTHONPATH} )); then
+    export PYTHONPATH=$HOME/bin/pythonpath:$HOME/bin
+fi
 
 # Autocomplete in the python console:
 # https://python.readthedocs.io/en/v2.7.2/tutorial/interactive.html
@@ -136,9 +131,9 @@ if [[ $USER == akkana ]]; then
   hostname=$(hostname)
 
   # If we're on a raspberry pi or similar ARM platform, use a different color:
-  if [[ $(uname -a) =~ armv7l ]]; then
-    echo "We're on a raspberry pi"
-    PS1='%F{green}<'$hostname$primes$'>- %f%k'
+  # if [[ -f /proc/device-tree/model ]]; then
+  if [[ $(uname -a) =~ armv ]]; then
+    PS1='%F{red}<'$hostname$primes$'>- %f%k'
   else
     PS1='%F{blue}<'$hostname$primes$'>- %f%k'
   fi
@@ -205,6 +200,59 @@ echo_and_do() {
   $*
 }
 
+##################
+# Some general aliases:
+alias m=mutt
+alias j=jobs
+alias pd=pushd
+# pd() { [[ $# == 0 ]] && set - -; builtin pushd "$@" }
+alias s=suspend
+
+alias beep="echo "
+alias ap="man -k"
+
+alias netscheme='sudo /home/akkana/src/netutils/netscheme'
+
+# Distros keeps changing the suspend command; make an alias that won't change:
+#alias zzz='sudo /etc/acpi/sleep.sh'
+alias zzz='sudo pm-suspend --auto-quirks'
+
+# Newer versions of xterm no longer support titlebar setting with
+# the documented sequence of \e]2. But \e]0 works, as long as you
+# don't set XTerm*allowSendEvents.
+titlebar() {
+  # echo ']]2;$*'
+  echo -e "\033]0; $* \007"
+}
+
+# Copy the primary selection into the clipboard:
+alias primary2clip='xsel -p | xsel -i -b'
+# and vice versa:
+alias clip2primary='xsel -b | xsel -i -p'
+
+# Tail the procmail log file, for when I'm expecting mail:
+alias proctail="tail -f Procmail/log | egrep -v '^procmail'"
+
+# What's the complement of a number, e.g. the fmask in fstab to get
+# a given file mode for vfat files? Sample usage: invert 755
+invertmask() {
+    python -c "print '0%o' % (0777 - 0$1)"
+    # This also works:
+    # python -c "print '0%o' % (~(0777 & 0$1) & 0777)"
+}
+
+phof () {
+    imglist=(`fotogr $*`)
+    if [[ -z $imglist ]]; then
+        echo no match
+        return
+    fi
+    pho $imglist
+}
+
+##################
+# Alias related to file finding and listing:
+
 show_symlinks() {
     for f in $*; do
         # Remove terminal slash.
@@ -253,28 +301,39 @@ lsdirs() {
 # This one doesn't actually work:
 # lsdirs2() { env ls -1FH "$1" | sed -n 's|/$||p' | column; }
 
-alias m=mutt
-alias j=jobs
-alias pd=pushd
-# pd() { [[ $# == 0 ]] && set - -; builtin pushd "$@" }
-alias s=suspend
-
-alias beep="echo "
-alias ap="man -k"
-
-alias netscheme='sudo /home/akkana/src/netutils/netscheme'
-
-# Distros keeps changing the command, so make an alias I can maintain.
-#alias zzz='sudo /etc/acpi/sleep.sh'
-alias zzz='sudo pm-suspend --auto-quirks'
-
-# Newer versions of xterm no longer support titlebar setting with
-# the documented sequence of \e]2. But \e]0 works, as long as you
-# don't set XTerm*allowSendEvents.
-titlebar() {
-  # echo ']]2;$*'
-  echo -e "\033]0; $* \007"
+# pushd, but not if we're already at the target directory
+# or if we're currently home.
+# Use in other scripts that need to save the previous directory.
+pushd_maybe() {
+    cwd=`pwd`
+    if [[ x$1 == x$cwd ]]; then
+        return
+    fi
+    if [[ x$cwd == x$HOME ]]; then
+        cd $1
+    else
+        pushd $1
+    fi
 }
+
+popd_maybe() {
+    # $dirstack isn't documented anywhere near pushd/popd/dirs,
+    # but it works. Apparently it's documented with the zsh/parameters
+    # module in zshmodules(1).
+    if [[ $#dirstack > 0 ]]; then
+        popd
+    fi
+}
+
+# Various ways of finding disk hogs:
+bigfiles() {
+    du -h $1 | grep '[0-9\.]\+G'
+    echo
+    echo Also consider trying ducks or ncdu
+}
+
+# Another big files finder:
+alias ducks='du -cks * |sort -rn |head -11'
 
 ##################
 # Recursive greps
@@ -366,57 +425,6 @@ grepall() {
 
 # End grep aliases
 
-phof () {
-    imglist=(`fotogr $*`)
-    if [[ -z $imglist ]]; then
-        echo no match
-        return
-    fi
-    pho $imglist
-}
-
-# Copy the primary selection into the clipboard:
-alias primary2clip='xsel -p | xsel -i -b'
-# and vice versa:
-alias clip2primary='xsel -b | xsel -i -p'
-
-# Tail the procmail log file, for when I'm expecting mail:
-alias proctail="tail -f Procmail/log | egrep -v '^procmail'"
-
-# What's the complement of a number, e.g. the fmask in fstab to get
-# a given file mode for vfat files? Sample usage: invert 755
-invertmask() {
-    python -c "print '0%o' % (0777 - 0$1)"
-    # This also works:
-    # python -c "print '0%o' % (~(0777 & 0$1) & 0777)"
-}
-
-# end greps
-
-# pushd, but not if we're already at the target directory
-# or if we're currently home.
-# Use in other scripts that need to save the previous directory.
-pushd_maybe() {
-    cwd=`pwd`
-    if [[ x$1 == x$cwd ]]; then
-        return
-    fi
-    if [[ x$cwd == x$HOME ]]; then
-        cd $1
-    else
-        pushd $1
-    fi
-}
-
-popd_maybe() {
-    # $dirstack isn't documented anywhere near pushd/popd/dirs,
-    # but it works. Apparently it's documented with the zsh/parameters
-    # module in zshmodules(1).
-    if [[ $#dirstack > 0 ]]; then
-        popd
-    fi
-}
-
 #######################################################
 ## Keep git repos up to date
 #######################################################
@@ -430,7 +438,8 @@ checkallgit() {
     out=""
 
     foreach repo ($myrepos)
-        echo -n "$repo ... "
+        echo
+        echo -n "=== $repo ... "
         gitbranchsync -cs $HOME/src/$repo
         exitcode=$?
         if [[ $exitcode == 2 ]]; then
@@ -456,60 +465,6 @@ allgit() {
 
         gitbranchsync -ft
         git pull --all
-    end
-    popd
-}
-
-oldallgit() {
-    pushd ~
-    foreach repo ($myrepos)
-        echo $repo :
-        cd ~/src/$repo
-        # It's unbelievable that git makes it so difficult to pull
-        # all branches. New branches aren't automatically tracked;
-        # you have to list remote branches and track them one by one.
-        # And there's apparently no way to say "show me the remote
-        # branches that don't have a local branch yet".
-        # This works, but gives errors for anything that's already tracked:
-        # git branch -r | grep -v '\->' | while read remote; do git branch --track "${remote#origin/}" "$remote"; done
-        # This also works but gives tons more errors:
-        # for remote in `git branch -r`; do git branch --track ${remote#origin/} $remote; done
-
-        # XXX This doesn't get work yet: apparently we have to do a git
-        # pull first, so we'll see the remote branches (with or without --all>);
-        # but then we have to do another git pull --all afterward to
-        # fetch them. Need to check and test this.
-
-        # Useful reading:
-        # https://stackoverflow.com/questions/28377688/git-remote-show-origin-why-all-branches-show-tracked-even-when-some-arent#28379132
-        # git remote show origin
-
-        # This is apparently how to save command output to a zsh array:
-        localbranches=("${(@f)$(git branch | sed 's/..//')}")
-        remotebranches=("${(@f)$(git branch -a | grep remotes | grep -v HEAD | grep -v master | sed 's_remotes/origin/__' | sed 's/..//')}")
-        for branch in $remotebranches
-        do
-            echo "Checking branch $branch"
-            # Is branch in the zsh array localbranches?
-            # (r) is called "reverse subscripting".
-            if [[ ${localbranches[(r)$branch]} != $branch ]]; then
-                echo "Tracking new remote branch $branch"
-                git branch --track ${branch#remotes/origin/} $branch
-            fi
-        done
-
-        # Now that all the branches are tracked, we can
-        git pull --all
-
-        # The once-maintainer of git-up (github.com/aanand/git-up)
-        # says this works in git 2.9 to merge changes into each branch.
-        # Unfortunately Debian is still on git 2.1.4.
-        # git pull --rebase --autostash
-
-        # Once these are pulled, the game isn't necessarily won.
-        # On any but the current branch, the changes will still
-        # need to be merged into that branch.
-        # Use the git update-branch alias I've set up in .gitconfig.
     end
     popd
 }
@@ -562,7 +517,8 @@ else
   alias reboot="sudo shutdown -r now"
 fi
 
-######## audio/video aliases
+######################################
+# audio/video aliases
 
 # mencoder options are black magic.
 # This works for converting Minolta quicktime .mov to mpeg:
@@ -571,6 +527,7 @@ mov2mpg1() {
   # mencoder $1 -oac pcm -ovc lavc -lavcopts vcodec=mpeg1video -o $2
   echo Sorry, not sure of the new mencoder args
 }
+
 # -lavc is ffmpeg, and the default codec is divx:
 mov2divx() {
   # mencoder has changed its arg structure and this no longer works
@@ -607,29 +564,21 @@ moviesize() {
     done
 }
 
+# Playing DVDs with mplayer. f => fullscreen, v -> no subtitles
+alias playdvd="mplayer dvd://1 -alang en"
+
 ######## end video aliases
 
-######## Some format changing commands
-# Use LibreOffice to convert doc to html:
-LOdoc2html() {
-    libreoffice --headless --convert-to html:HTML --outdir doc2html $1
-}
+########
+# Some format conversion commands:
 
-# Extract text out of a ppt:
-# http://superuser.com/questions/661315/tools-to-extract-text-from-powerpoint-pptx-in-linux
-ppt2txt() {
-    unzip -qc "$1" ppt/slides/slide*.xml | grep -oP '(?<=\<a:t\>).*?(?=\</a:t\>)'
-}
-
+# Prettyprint a JSON file:
 ppjson() {
     # This works but reorders the json:
     # python -m json.tool $*
     # This doesn't and is just as fast:
     jq . $*
 }
-
-# Clean up libreoffice HTML conversions:
-# tidy -q -config ~/tidy_options.conf -i /tmp/LWVNM\ Convention\ 2015\ Minutes.html | sed -e 's/ class="[cP][0-9]*"//g' -e 's/ class="[cP][0-9]* [cP][0-9]*"//g' > /tmp/tidied.html
 
 ################################################
 # Various GPS conversions
@@ -684,7 +633,6 @@ gpx2utm() {
 }
 
 # End GPS conversions
-################################################
 
 ######## end format changing commands
 
@@ -697,14 +645,8 @@ cleanssh() {
   echo Use ssh-keygen -R $1
 }
 
-# Get the temperature from /proc/acpi/thermal_zone/THRM/temperature
-# and convert it to F
-#alias temp="cat /proc/acpi/thermal_zone/*/temperature"
-alias temp=sensors
-
-########## Presentations:
-# Fiddle with external monitor/audio connections,
-# and other aliases useful for presentations:
+################################################
+# Presentations:
 
 # Enable/disable screen blanking.
 # Note: xset -q will show settings.
@@ -732,6 +674,9 @@ alias noprojector='xrandr --auto; screenblankon'
 
 # Send all audio output to HDMI.
 # Usage: hdmisound [on|off], default is on.
+# Note: this is unreliable: it switches off after a short time
+# and then when it auto-switches back on, you'll miss the first
+# few seconds of a sound. Maybe they'll eventually fix that bug.
 hdmisound() {
     if [[ $1 == 'off' ]]; then
         if [[ -f ~/.asoundrc ]]; then
@@ -758,7 +703,7 @@ pcm.dmixer {
     buffer_size 4096
   }
 }
- 
+
 pcm. !default {
   type plug
   slave.pcm "dmixer"
@@ -769,20 +714,27 @@ EOF
 }
 # End external monitor/audio connections
 
-# For presentations
+# Large-type versions of terminal and emacs, for presentations:
 # alias bigterm="rxvt -geometry 80x33 -fn '-*-lucidatypewriter-*-*-*-*-19-*-*-*-*-*-*-*'"
 alias bigterm="rxvt -fn terminus-iso8859-2-bold-18"
 # alias noteterm="nohup xterm -geometry 30x34+1025+0 -fn '-*-terminus-bold-*-*-*-22-*-*-*-*-*-*-*' &"
 alias noteterm="nohup xterm -geometry 33x37+1025+0 -fn '-*-terminus-bold-*-*-*-20-*-*-*-*-*-*-*' &"
+
 # For notes during planetarium shows:
 # red/black for night vision, narrow to show two at once on a laptop.
 alias planeterm="nohup rxvt -geometry 62x45 -fn terminus-iso8859-2-bold-18 -bg black -fg red &"
+
+# Making a PDF from a bunch of slides
+alias talk2pdf='qhtmlprint $( fgrep .html slides.js  | grep -v // | sed -e "s/\",/\"/" -e "s/\"//g" ) '
+alias talk2pdf1024='qhtmlprint -1024 $( fgrep .html slides.js  | grep -v // | sed -e "s/\",/\"/" -e "s/\"//g" ) '
+alias talk2pdf1366='qhtmlprint -1366 $( fgrep .html slides.js  | grep -v // | sed -e "s/\",/\"/" -e "s/\"//g" ) '
 
 ########## End presentation-related aliases
 
 # Photo alias: Delete all .cr2 files that don't have a corresponding .jpg.
 # (That way I can manage my jpgs with metapho and anything deleted, I
 # can easily delete the corresponding raw file as well.)
+# This doubles as a reminder of how to do fancy pattern subs in zsh scripts.
 # Assume the current directory.
 delcr2() {
     echo Removing *.cr2(e:'[[ ! -e ${REPLY%.cr2}.jpg ]]':)
@@ -790,10 +742,11 @@ delcr2() {
     rm *.cr2(e:'[[ ! -e ${REPLY%.cr2}.jpg ]]':)
 }
 
-########## Mount-related aliases
+############################################
+# Mount-related aliases
 
 # Mount and df no longer suffice to show mounted filesystems,
-# since they show so much irrelevant crap now.
+# since they show so much irrelevant virtual filesystem crap now.
 # Here are ways to clean them up:
 mount() {
     if [[ $# -ne 0 ]]; then
@@ -834,16 +787,12 @@ cryptunmount() {
     sudo cryptsetup remove $name
 }
 
-if [[ $HOST == 'vaiolin' ]]; then
-  alias crypt='cryptmount /dev/mmcblk0p2 crypt'
-#elif [[ $HOST == 'imbrium' ]]; then
-#  # Should base this on whether /dev/sd[b-e] already exist
-#  alias crypt='cryptmount /dev/sdf3 crypt'
-else
-  #alias crypt='cryptmount /dev/sdc3 crypt'
-  alias crypt='cryptmount /dev/disk/by-uuid/170f3caa-412f-41b7-90a8-1c1b149cec8c crypt'
-fi
-alias uncrypt='cryptunmount crypt'
+# Mount an encrypted disk with cryptmount dev mountpoint.
+# alias crypt='cryptmount /dev/something crypt'
+# alias uncrypt='cryptunmount crypt'
+
+#########################################
+# Raspberry Pi and other embedded computers:
 
 # Serial connections to embedded computers:
 #alias plug='minicom -D /dev/ttyUSB1 -b 115200'
@@ -854,9 +803,15 @@ alias guru='screen /dev/ttyUSB0 115200'
 alias rpi='titlebar "Raspberry Pi"; echo "black=Gnd white=TX green=RX"; echo "Disconnect with Ctrl-backquote d"; screen /dev/ttyUSB0 115200; titlebar "local"'
 alias pion='titlebar "Raspberry Pi Pion"; ssh -X pi@pion; titlebar "local"'
 
+# Get my current network number, e.g. 192.168.1.0/24
+mynet() {
+    addr=$(ip addr show wlan0 2>/dev/null || ip addr show eth0)
+    echo $addr | grep -w inet | awk '{print $2}' | sed 's_\.[0-9]*/\([0-9]*\)_.0/\1_'
+}
+
 # Find a Raspberry Pi attached to the local network:
 localpi() {
-    echo_and_do fping -a -r1 -g 192.168.1.0/24 |& grep -v Unreachable
+    echo_and_do fping -a -r1 -g $(mynet) |& grep -v Unreachable
     echo
     echo "Now running arp and looking up MACs:"
     echo_and_do  arp -n | fgrep " b8:27:eb"
@@ -864,15 +819,30 @@ localpi() {
 
 # Show everybody connected to the local net:
 localnet() {
-    echo_and_do fping -a -r1 -g 192.168.1.0/24 |& grep -v Unreachable
+    echo_and_do fping -a -r1 -g $(mynet) |& grep -v Unreachable
     echo
     echo "Now running arp and looking up MACs:"
     echo_and_do arp -n |& grep -v incomplete |& mac_lookup
 }
 
-# Connect/disconnect from a docking station. Obsoleted by check-monitors script.
-#alias dock='xrandr --output VGA1 --mode 1600x900; hsetroot -center `find -L $HOME/Backgrounds -name "*.*" | randomline`; xrandr --output LVDS1 --off'
-#alias undock='xrandr --output LVDS1 --mode 1280x800; hsetroot -center `find -L $HOME/Backgrounds -name "*.*" | randomline`'
+# A some electronics cheatsheets:
+alias gpio='pho -P ~/src/pi-zero-w-book/images/raspi-gpio.jpg &'
+alias gpio-official='pho -P ~/Docs/hardware/rpi/Pi-GPIO-header.png &'
+alias gpio-xyz='pho -P ~/Docs/hardware/rpi/raspberry-pi-pinout.png &'
+alias gpio-old='pho -P ~/Docs/hardware/rpi/rpi-gpio.jpg &'
+alias resistors='pho -P ~/Docs/hardware/resistors.jpg &'
+alias capacitors='quickbrowse ~/Docs/hardware/capacitors.html'
+alias voltagedivider='pho -P ~/Docs/hardware/voltage-divider.png &'
+alias attiny='pho -P ~/src/arduino/attiny/attiny85-pinout.jpg &'
+alias atmega='pho -P ~/Docs/hardware/atmega328-arduino-pinout.jpg &'
+alias isp='pho -P ~/Docs/hardware/ISP.png &'
+usbtinyisp() {
+    echo "MISO	yellow			VCC 	red"
+    echo "SCK	white			MOSI 	green"
+    echo "RESET	orange, red/black	GND 	black"
+    pho -P ~/web/blog/images/hardware/attiny-usbtinyISP_bb.jpg &
+    pho -P ~/Docs/hardware/ISP.png &
+}
 
 ####################################################
 # zsh-specific options:
@@ -1038,28 +1008,6 @@ bindkey '^X^D' describe-key-briefly
 ######## end zsh completion #######################
 ######## end zsh-specific options #################
 
-# Text to speech:
-# From commandlinefu:
-#say() { mplayer "http://translate.google.com/translate_tts?q=$1"; }
-# That no longer works (maybe google is refusing connections that
-# don't have a known browser string),
-# but this does, thanks Carla!
-# http://www.linux.com/learn/docs/660651-bag-of-fun-and-useful-random-linux-comman
-emplussen() {
-    str=$(echo $* | sed 's/ /\+/g')
-    echo $str
-}
-
-say() {
-    str=$(emplussen $*)
-    wget -q -O- -U Mozilla "http://translate.google.com/translate_tts?q=$str&tl=en-us" |cvlc - |play -t wav - -t wav -t alsa
-}
-
-sayuk() {
-    str=$(emplussen $*)
-    wget -q -O- -U Mozilla "http://translate.google.com/translate_tts?q=$str&tl=en-uk" |cvlc - |play -t wav - -t wav -t alsa
-}
-
 ################################################
 # Build/development helpers
 
@@ -1077,38 +1025,6 @@ pull-clone() {
         cd $d
         git clone $repo
     fi
-}
-
-# When GIMP needs to be rebuilt from scratch -- this also serves as
-# a cheatsheet for requirements. Not yet tested.
-gimpmaster-fresh() {
-    PREFIX=/usr/local/gimp-git
-    SRCDIR=$HOME/outsrc
-    pushd_maybe $SRCDIR
-
-    pull-clone https://github.com/mypaint/libmypaint.git $SRCDIR/libmypaint
-    make clean
-    ./autogen.sh --prefix=$PREFIX
-    ./configure
-
-    pull-clone https://github.com/Jehan/mypaint-brushes.git $SRCDIR/lmypaint-brushes
-    make clean
-    ./autogen.sh --prefix=$PREFIX
-    ./configure
-
-    pull-clone git://git.gnome.org/babl $SRCDIR/babl
-    make clean
-    ./autogen.sh --prefix=$PREFIX
-
-    pull-clone git://git.gnome.org/gegl $SRCDIR/gegl
-    make clean
-    ./autogen.sh --prefix=$PREFIX
-
-    pull-clone git://git.gnome.org/gimp $SRCDIR/gimp
-    make clean
-    ./autogen.sh --prefix=$PREFIX
-
-    popd_maybe
 }
 
 # I get tired of the myriad steps to update gimp now that it
@@ -1160,6 +1076,38 @@ gimpmaster() {
     unset CC
 }
 
+# When GIMP needs to be rebuilt from scratch -- this also serves as
+# a cheatsheet for requirements. Not yet tested.
+gimpmaster-fresh() {
+    PREFIX=/usr/local/gimp-git
+    SRCDIR=$HOME/outsrc
+    pushd_maybe $SRCDIR
+
+    pull-clone https://github.com/mypaint/libmypaint.git $SRCDIR/libmypaint
+    make clean
+    ./autogen.sh --prefix=$PREFIX
+    ./configure
+
+    pull-clone https://github.com/Jehan/mypaint-brushes.git $SRCDIR/lmypaint-brushes
+    make clean
+    ./autogen.sh --prefix=$PREFIX
+    ./configure
+
+    pull-clone git://git.gnome.org/babl $SRCDIR/babl
+    make clean
+    ./autogen.sh --prefix=$PREFIX
+
+    pull-clone git://git.gnome.org/gegl $SRCDIR/gegl
+    make clean
+    ./autogen.sh --prefix=$PREFIX
+
+    pull-clone git://git.gnome.org/gimp $SRCDIR/gimp
+    make clean
+    ./autogen.sh --prefix=$PREFIX
+
+    popd_maybe
+}
+
 # It often happens that some change in the build system makes autogen/configure
 # fail, which also prevents you from doing a make clean.
 # But sometimes, running autogen.sh with no arguments will fix this,
@@ -1207,34 +1155,7 @@ newhexchat() {
     popd_maybe
 }
 
-newhexchat-deb() {
-    # Can't set errreturn yet, because that will cause mv and rm
-    # (even with -f) to exit if there's nothing to remove.
-    pushd_maybe ~/outsrc/hexchat-debian
-    echo "Removing what was in old previously"
-    rm -rf old
-    echo "Moving everything here to old/"
-    mkdir old
-    mv *.* old/
-
-    # Make sure this exits on errors from here on.
-    setopt localoptions errreturn
-
-    echo "Getting source ..."
-    apt-get source hexchat
-    cd hexchat-2*
-    echo "Patching ..."
-    patch -p0 < ~/outsrc/hexchat-2.10.2.patch
-    echo "Building ..."
-    debuild -b -uc -us
-    echo
-    echo 'Installing' ../hexchat{,-python,-perl}_2*.deb
-    sudo dpkg -i ../hexchat{,-python,-perl}_2*.deb
-
-    popd_maybe
-}
-
-# Check on status of all held packages:
+# Debian apt: Check on status of all held packages:
 check_holds() {
     for pkg in $( aptitude search '~ahold' | awk '{print $2}' ); do
         policy=$(apt-cache policy $pkg)
@@ -1354,6 +1275,10 @@ alias pythonhelp="pythonXhelp python"
 alias python2help="pythonXhelp python2"
 alias python3help="pythonXhelp python3"
 
+alias unittest='python -m unittest discover'
+alias unittest3='python3 -m unittest discover'
+alias unittest2='python2 -m unittest discover'
+
 #############################################################
 # Android-related aliases
 
@@ -1367,15 +1292,6 @@ alias python3help="pythonXhelp python3"
 
 # There seems to be no way to remove multiple or wildcarded files via adb.
 # alias delallgpx='adb shell rm /mnt/extSdCard/Android/data/net.osmand.plus/tracks/rec/*'
-
-pullscreenshot() {
-  pushd_maybe ~/Docs/gps/new
-  adb pull /sdcard/Pictures/Screenshots/. .
-  for f in *.png; do
-    echo $f
-    adb shell rm /sdcard/Pictures/Screenshots/$f
-  done
-}
 
 pullgpx() {
   pushd_maybe ~/Docs/gps/new
@@ -1401,6 +1317,15 @@ pullphotos() {
   # If we start shooting a lot with CardboardCamera, can delete those too.
   echo "Pulled photos:"
   ls
+}
+
+pullscreenshot() {
+  pushd_maybe ~/Docs/gps/new
+  adb pull /sdcard/Pictures/Screenshots/. .
+  for f in *.png; do
+    echo $f
+    adb shell rm /sdcard/Pictures/Screenshots/$f
+  done
 }
 
 # But what if we don't have adb installed? Here's how to do it using gphoto2.
@@ -1434,13 +1359,10 @@ export ANDROID_HOME=$HOME/outsrc/android-sdk-linux
 export ANDROID_SDK=$HOME/outsrc/android-sdk-linux
 export ANDROID_NDK=$HOME/outsrc/android-ndk-r10d
 
-# Find location of Android imports:
+# Find location of Android imports, when writing code:
 andimport() {
     find $ANDROID_SDK -name $1.java
 }
-
-# https://code.google.com/p/osmand/wiki/GradleCommandLineBuildEnvironment
-alias osmandbuild='cd ~/outsrc/osmand/android; repo sync -d; cd OsmAnd; ../gradlew --refresh-dependencies clean assembleFullLegacyFatDebug'
 
 # End Android
 
@@ -1463,27 +1385,6 @@ whichspam() {
     #echo "$1" | egrep -i -- "$line" >/dev/null
     # echo "$1" PIPE egrep -i -- "$line"
     echo "$1" | egrep -i -- "$line"
-    if [[ $? == 0 ]]; then
-      echo $line
-    fi
-  done
-  #set +o xtrace
-}
-
-whichspam2() {
-  # to print each line before executing, for debugging purposes:
-  #set -o xtrace
-  whichfile=$2
-  if [[ x$whichfile == x ]]; then
-    whichfile=subjectRejects
-  fi
-  echo Searching in ~/Procmail/spast/$whichfile
-  cat ~/Procmail/spast/$whichfile | while read line ; do
-    #echo echo "$1" '| egrep -i --' "$line" '>/dev/null'
-    #echo "$1" | egrep -i -- "$line" >/dev/null
-    # echo "$1" PIPE egrep -i -- "$line"
-    # echo "$1" | egrep -i -- "$line"
-    echo "$line" | egrep -i -f -- "$1"
     if [[ $? == 0 ]]; then
       echo $line
     fi
@@ -1537,35 +1438,9 @@ cleanspam() {
     tail -7000 $HOME/Procmail/log >$HOME/Procmail/olog
     rm $HOME/Procmail/log
 }
-# End spam-related aliases
+############ End spam-related aliases
+
 ##################################
-
-# Linux has a lovely list of all compose key sequences.
-composekey() {
-  grep -i $1 /usr/share/X11/locale/en_US.UTF-8/Compose ~/.XCompose
-}
-
-alias remindme='remind -g ~/Docs/Lists/remind'
-
-# Display a text calendar some number of months (default 2)
-# using my remind database:
-mycal() {
-    months=$1
-    if [[ x$months == x ]]; then
-        months=1
-    fi
-    remind -c$months ~/Docs/Lists/remind
-}
-
-# Display a postscript calendar some number of months (default 2)
-# using my remind database:
-mycalp() {
-    months=$1
-    if [[ x$months == x ]]; then
-        months=2
-    fi
-    remind -p$months ~/Docs/Lists/remind  | rem2ps -e -l >/tmp/mycal.ps; gv /tmp/mycal.ps &
-}
 
 #
 # PyBlosxom helpers for my blog:
@@ -1746,43 +1621,43 @@ towebhost() {
 }
 
 ####################################################################
-# More assorted aliases
+# Some less-used general aliases:
+
+# Linux has a lovely list of all compose key sequences.
+composekey() {
+  grep -i $1 /usr/share/X11/locale/en_US.UTF-8/Compose ~/.XCompose
+}
+
+alias remindme='remind -g ~/Docs/Lists/remind'
+
+# Display a text calendar some number of months (default 2)
+# using my remind database:
+mycal() {
+    months=$1
+    if [[ x$months == x ]]; then
+        months=1
+    fi
+    remind -c$months ~/Docs/Lists/remind
+}
+
+# Display a postscript calendar some number of months (default 2)
+# using my remind database:
+mycalp() {
+    months=$1
+    if [[ x$months == x ]]; then
+        months=2
+    fi
+    remind -p$months ~/Docs/Lists/remind  | rem2ps -e -l >/tmp/mycal.ps; gv /tmp/mycal.ps &
+}
 
 alias akk="aplay $HOME/.xchat2/sounds/akk.wav"
 alias screenshot="scrot -b -s screenshot.jpg"
 alias thes="dict -h localhost -d moby-thesaurus"
 
-# Spelling check
+# Spellcheck
 sp() {
   spell $* | sort | uniq
 }
-
-# Some handy battery scripts from d:
-bat() {
-  #cat /proc/acpi/battery/BAT1/state
-  #cat /proc/acpi/battery/BAT1/info
-  acpitool -B | egrep "^ *[CPR][ehr]"
-}
-
-batt() {
-  #cat /proc/acpi/battery/BAT1/state
-  #cat /proc/acpi/battery/BAT1/info
-  acpitool -B
-}
-
-volts() {
-  acpi -i
-  calc `cat /sys/class/power_supply/BAT0/voltage_now` / 1000000
-  acpitool -B | grep Present
-}
-
-# Playing DVDs with mplayer. f => fullscreen, v -> no subtitles
-alias playdvd="mplayer dvd://1 -alang en"
-
-# Making a PDF from a bunch of slides
-alias talk2pdf='qhtmlprint $( fgrep .html slides.js  | grep -v // | sed -e "s/\",/\"/" -e "s/\"//g" ) '
-alias talk2pdf1024='qhtmlprint -1024 $( fgrep .html slides.js  | grep -v // | sed -e "s/\",/\"/" -e "s/\"//g" ) '
-alias talk2pdf1366='qhtmlprint -1366 $( fgrep .html slides.js  | grep -v // | sed -e "s/\",/\"/" -e "s/\"//g" ) '
 
 # Reduce the size of a PDF. Usage: pdfreduce infile.pdf outfile.pdf
 # http://ubuntuforums.org/showthread.php?t=1133357
@@ -1795,15 +1670,6 @@ pdfreduce() {
     gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/screen -dNOPAUSE -dQUIET -dBATCH -sOutputFile="$2" $1
 }
 
-# Which printers are available? lpstat -p -d also works.
-alias whichprinters='lpstat -a'
-
-# lp inconsistently decides to use zero margins. When it does, this helps.
-# (In theory, adding -o page-top=17 should add a top margin, but in
-# 2014 this seems to make a negative margin, dropping the first few
-# lines. All hail Linux printing!)
-alias lpp='lp -o page-left=38'
-
 # Mirror a website on a directory. Be sure to include an end slash
 # on the URL!
 mirror() {
@@ -1814,6 +1680,31 @@ mirror() {
         echo "$d needs to end with a slash"
     fi
 }
+
+##### printers ################
+
+# Nice overview of lp options: https://www.computerhope.com/unix/ulp.htm
+
+# Which printers are available? lpstat -p -d also works.
+alias whichprinters='lpstat -a; echo "print with lp -d dest -n num-copies"'
+
+# Print duplex on a printer that supports it.
+# If using this with -n num_copies, be sure to add -o collate=true too,
+# or else you'll get a sheet with page 1 on both sides, etc.
+duplexlp() {
+    lp -o sides=two-sided-long-edge -o collate=true $*
+}
+duplexbrother() {
+    lp -o sides=two-sided-long-edge -o collate=true -d Brother_HL-3170CDW $*
+}
+
+# lp inconsistently decides to use zero margins. When it does, this helps.
+# (In theory, adding -o page-top=17 should add a top margin, but in
+# 2014 this seems to make a negative margin, dropping the first few
+# lines. All hail Linux printing!)
+alias lpp='lp -o page-left=38'
+
+##### dates ################
 
 # What's the current time in UT / GMT?
 ut() {
@@ -1842,6 +1733,7 @@ alias aptitude='/usr/bin/aptitude --disable-columns'
 alias day="xrandr --output HDMI1 --brightness 1.0"
 alias night="xrandr --output HDMI1 --brightness .8"
 
+# Run ebook programs, except that neither of them work in wine any more:
 alias kindle="wine ~/.wine/drive_c/Program\ Files/Amazon/Kindle/Kindle.exe"
 # alias adobeDE="wine ~/.wine/drive_c/Program\ Files/Adobe/Adobe\ Digital\ Editions/digitaleditions.exe"
 alias adobeDE="cxrun ~/.cxoffice/ADE_4/drive_c/Program\ Files/Adobe/Adobe\ Digital\ Editions\ 4.5/DigitalEditions.exe"
@@ -1850,8 +1742,10 @@ alias adobeDE="cxrun ~/.cxoffice/ADE_4/drive_c/Program\ Files/Adobe/Adobe\ Digit
 # every time you quit, except as a commandline flag:
 alias R="/usr/bin/R --no-save"
 
-# Convert temperatures between F and C, because units' stupid syntax
+# Convert temperatures between F and C, because units' crazy syntax
 # is impossible to remember. (If ctemp isn't installed.)
+# Of course a python, perl or awk one-liner would be easier,
+# but this is a reminder of how to do it with units.
 c2f() {
     units "tempC($1)" tempF
 }
@@ -1859,58 +1753,11 @@ f2c() {
     units "tempF($1)" tempC
 }
 
-alias booksync='rsync -av --delete --size-only --exclude .FBReader ~/Docs/droidsd/Books/'
-
-# Always run sqlite inside rlwrap
+# Always run sqlite inside rlwrap to get better commandline editing:
 alias sqlite3="rlwrap -a -z pipeto -i /usr/bin/sqlite3"
 
-# Something is writing to recently-used.xbel and I'm not sure what.
-# This might help to monitor it.
-alias recent='ls -l ~/recently-used.xbel*(.N) ~/.local/share/recently-used.xbel*'
-
-# Torikun says this might work for talking to the raspberry pi.
-# It has something to do with openvpn and might require running a DHCP
-# server on the local machine.
-alias piroute='iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o eth0 -j MASQUERADE'
-
+# Which numbers correspond to which colors on this terminal?
 alias tcolors='printf "\e[%dm%d dark\e[0m  \e[%d;1m%d bold\e[0m\n" {30..37}{,,,}'
-
-# I can never remember the ever-changing CUPS commands to talk to
-# printers from the cmdline.
-alias printers='lpstat -s; echo; echo You can print with lp -d printername'
-
-# A couple of electronics cheatsheets:
-alias gpio='pho -P ~/src/pi-zero-w-book/images/raspi-gpio.jpg &'
-alias gpio-official='pho -P ~/Docs/hardware/rpi/Pi-GPIO-header.png &'
-alias gpio-xyz='pho -P ~/Docs/hardware/rpi/raspberry-pi-pinout.png &'
-alias gpio-old='pho -P ~/Docs/hardware/rpi/rpi-gpio.jpg &'
-alias resistors='pho -P ~/Docs/hardware/resistors.jpg &'
-alias capacitors='quickbrowse ~/Docs/hardware/capacitors.html'
-alias voltagedivider='pho -P ~/Docs/hardware/voltage-divider.png &'
-alias attiny='pho -P ~/src/arduino/attiny/attiny85-pinout.jpg &'
-alias atmega='pho -P ~/Docs/hardware/atmega328-arduino-pinout.jpg &'
-alias isp='pho -P ~/Docs/hardware/ISP.png &'
-usbtinyisp() {
-    echo "MISO	yellow			VCC 	red"
-    echo "SCK	white			MOSI 	green"
-    echo "RESET	orange, red/black	GND 	black"
-    pho -P ~/web/blog/images/hardware/attiny-usbtinyISP_bb.jpg &
-    pho -P ~/Docs/hardware/ISP.png &
-}
-
-# Now that we're running feeds on shallowsky.com,
-# local/xtra urls have to be saved there too.
-# Run with e.g. localurl 'http://blahblah'
-# The single quotes are only needed if the URL has an embedded newline,
-# like a long URL pasted from mutt or from email from an Apple user.
-remove_newlines() {
-    # #" expands escape sequences like \n
-    echo ${1/$'\n'/}
-}
-
-localurl() {
-    ( for url in $* ; remove_newlines $url ) | ssh shallowsky.com 'cat >> web/feedme/feeds/localurls'
-}
 
 # I can never remember nmap arguments
 alias portscan="nmap -v -sT localhost"
@@ -1963,30 +1810,6 @@ compctl -K _completemarks unmark
 # http://www.rayninfo.co.uk/tips/zshtips.html
 # http://www.linux-mag.com/id/1079/
 
-# alias dumppi='sudo tcpdump -pnvi eth0 -w ~/pi-tcpdump'
-#
-# On hesiodus:
-# tcpdump -pnvi eth0 -w ~/hesiodus.pcap
-# ping pi
-
-# Do this on the Pi:
-# tcpdump -pnvi wlan0 -w /tmp/.pcap not host 192.168.1.4
-
-# On moon:
-# tcpdump -nvi eth0 -w /back/trade/moon.pcap not host 192.168.1.3
-
-# Something keeps changing my stty settings.
-# To track it down, check them after every command:
-# precmd()
-# {
-#     stty -a | fgrep -- -ignbrk > /dev/null
-#     if [ $? -ne 0 ]; then
-#         echo
-#         echo "STTY SETTINGS HAVE CHANGED \!\!\!\!\!\!\!\!\!\!\!\!\!\!\!\!"
-#         echo
-#     fi
-# }
-
 # Trying git prompt info:
 # http://arjanvandergaag.nl/blog/customize-zsh-prompt-with-vcs-info.html
 gitprompt() {
@@ -2004,7 +1827,7 @@ gitprompt() {
 }
 
 ######################################################
-# Source local zsh options:
+# Source local, machine-specific zsh options:
 if [[ -f $HOME/.config/zsh/.zshrc.$hostname ]]; then
   . $HOME/.config/zsh/.zshrc.$hostname
 fi
