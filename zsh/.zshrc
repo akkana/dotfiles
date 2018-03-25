@@ -333,7 +333,9 @@ bigfiles() {
 }
 
 # Another big files finder:
-alias ducks='du -cks * |sort -rn |head -11'
+ducks() {
+    du -cksx $1/* | sort -rn | head -40
+}
 
 ##################
 # Recursive greps
@@ -438,7 +440,7 @@ checkallgit() {
     out=""
 
     foreach repo ($myrepos)
-        echo
+        echo "=============================="
         echo -n "=== $repo ... "
         gitbranchsync -cs $HOME/src/$repo
         exitcode=$?
@@ -459,14 +461,31 @@ checkallgit() {
 # Update all my git repositories:
 allgit() {
     pushd ~
+    # Syntax for zsh arrays, which I always forget:
+    badrepos=()
     foreach repo ($myrepos)
-        echo $repo :
+        echo "=============================="
+        echo "==== $repo :"
         cd ~/src/$repo
 
-        gitbranchsync -ft
-        git pull --all
+        if ! gitbranchsync -ft ; then
+            badrepos+=($repo)
+        fi
+        # Check status here
+        if ! git pull --all ; then
+            badrepos+=($repo)
+        fi
+        # Check status here
     end
     popd
+
+    if [[ x$badrepos != x ]]; then
+        echo
+        echo "=============================="
+        echo "Repos with errors:" $badrepos
+    else
+        echo "No errors"
+    fi
 }
 
 # If you're working on a branch, and all your changes are committed,
