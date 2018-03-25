@@ -204,8 +204,8 @@
   ;; inside this one custom-set-faces call.
   ;;
 ;(set-background-color "grey90")
-; Some decent colors: grey90, Alice Blue, light cyan, mint cream
-(set-background-color "light cyan")
+; Some decent colors: grey90, Alice Blue, light cyan, mint cream, Honeydew
+(set-background-color "Honeydew")
 ;(set-background-color "Alice Blue")
 ;(set-background-color "#eeeeff")
 (custom-set-faces
