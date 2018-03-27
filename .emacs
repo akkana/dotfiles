@@ -357,29 +357,26 @@
 ;; to something that eliminates any active region before switching out.
 ;; This is a much better alternative to the more drastic solution:
 ;; (transient-mark-mode 0)
-(defun deselect-then-switch-buffer ()
-  "Deselect any region in the current buffer, then prompt and switch"
-  (interactive)
+;;
+;; Unfortunately we need to do this for every way of switching buffers:
+;;     C-x b   (switch-to-buffer)
+;;     C-x C-f (find-file)
+
+(defun delesect-then (what-then)
+  "Deselect any region in the current buffer, then call something else"
   (deactivate-mark)
   ;; deactivate-mark leaves us at the region's end.
   ;; It might be nicer to end up at the region's beginning.
   ;; This doesn't work -- sets it to the end (why?) --
   (if (region-active-p) (push-mark (region-beginning)))
   ;;(if (region-active-p) (push-mark (region-end)))
-  (call-interactively 'switch-to-buffer)
+  (call-interactively what-then)
   )
-(global-set-key "\C-xb" 'deselect-then-switch-buffer)
 
-;; and also comments:
-;; sometimes the primary selection kill won't be top of the ring, if I've
-;; done something else meanwhile; sometimes I have to M-y
-;; and that if all else fails, (insert (x-selection 'PRIMARY))
-;; will insert the primary selection.
-
-;; But those settings don't do it: C-y is still inconsistent,
-;; sometimes works and sometimes doesn't.
-;(global-set-key "\C-y" (lambda () (interactive)
-;                         (insert (x-selection 'PRIMARY))))
+(global-set-key "\C-xb"
+                (lambda () (interactive) (delesect-then 'switch-to-buffer)))
+(global-set-key "\C-x\C-f"
+                (lambda () (interactive) (delesect-then 'find-file)))
 
 ;; don't paste syntax highlight color into buffers where it's meaningless.
 ;; In emacs 25 this seems to work, but it doesn't work in emacs 24.
@@ -1121,7 +1118,10 @@
 
 (defun my-web-mode-hook ()
   "Hooks for Web mode."
+  ;; This used to work:
   (setq web-mode-code-indent-offset 4)
+  ;; Maybe this will work now:
+  (setq web-mode-markup-indent-offset 4)
 )
 (add-hook 'web-mode-hook 'my-web-mode-hook)
 
@@ -1219,7 +1219,7 @@
         ("\\.epub$" . archive-mode)
         ("\\.kmz$" . archive-mode)
         ("\\.pde$" . c-mode)
-        ("\\.ino$" . c-mode)
+        ("\\.ino$" . c++-mode)
         ("\\.py$" . python-mode)
         ("\\.rb$" . ruby-mode)
         ("\\.R$" . R-mode)
