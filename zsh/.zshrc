@@ -57,7 +57,7 @@ arch=$(uname -m)
 export PATH=$HOME/bin:$HOME/bin/linux-$arch:/opt/cxoffice/bin:/usr/local/bin:/usr/local/gimp-git/bin:$PATH:.:/usr/sbin:/sbin:$HOME/outsrc/android-sdk-linux/platform-tools:$HOME/outsrc/android-sdk-linux/tools:$HOME/.local/bin
 
 if (( ! ${+PYTHONPATH} )); then
-    export PYTHONPATH=$HOME/bin/pythonpath:$HOME/bin
+    export PYTHONPATH=$HOME/bin/pythonlibs
 fi
 
 # Autocomplete in the python console:
@@ -340,7 +340,7 @@ ducks() {
 ##################
 # Recursive greps
 gr() {
-  find . \( -type f -and -not -name '*.o' -and -not -name '*.so' -and -not -name '*.a' -and -not -name '*.pyc' -and -not -name '*.jpg' -and -not -name '*.JPG' -and -not -name '*.png' -and -not -name '*.xcf*' -and -not -name '*.gmo' -and -not -name '.intltool*' -and -not -name '*.po' -and -not -name 'po' -and -not -name '*.tar*' -and -not -name '*.zip' -or -name '.metadata' -or -name 'build' -prune \) -print0 | xargs -0 grep $* /dev/null | fgrep -v .svn | fgrep -v .git
+  find . \( -type f -and -not -name '*.o' -and -not -name '*.so' -and -not -name '*.a' -and -not -name '*.pyc' -and -not -name '*.jpg' -and -not -name '*.JPG' -and -not -name '*.png' -and -not -name '*.xcf*' -and -not -name '*.gmo' -and -not -name '.intltool*' -and -not -name '*.po' -and -not -name 'po' -and -not -name '*.tar*' -and -not -name '*.zip' -or -name '.metadata' -or -name 'build' -or -name 'obj-*' -or -name '.git' -or -name '.svn' -or -name '.libs' -prune \) -print0 | xargs -0 grep -s $* /dev/null
 }
 zgr() {
   find . \( -type f -and -not -name '*.o' -and -not -name '*.so' -and -not -name '*.a' -and -not -name '*.pyc' -and -not -name '*.jpg' -and -not -name '*.JPG' -and -not -name '*.png' -and -not -name '*.xcf*' -and -not -name 'po' -and -not -name '*.tar*' -and -not -name '*.zip' -or -name '.metadata' -prune \) -print0 | xargs -0 zgrep $* /dev/null | fgrep -v .svn | fgrep -v .git
@@ -491,38 +491,6 @@ allgit() {
 # If you're working on a branch, and all your changes are committed,
 # use this to merge master changes into the current branch.
 alias git_merge_branch='git fetch; git rebase origin/master'
-
-# Run a git with all-default settings.
-# Usage: gimpclean VERSION SWM
-# e.g. gimpclean git no, gimpclean 2.8 yes
-gimpclean() {
-    gimpdir=`mktemp -d /tmp/gimpenv.XXXXX`
-
-    # GIMP 2.8 gets very confused about GIMP2_DIRECTORY,
-    # and won't create the directories it needs. So we
-    # have to create them first.
-    for f in brushes dynamics patterns gradients palettes tool-presets; do
-        mkdir $gimpdir/$f
-    done
-    # But, sadly, that's not enough, and 2.8 still won't bring up
-    # a window of a reasonable size in either swm or mwm mode.
-
-    if [[ x$1 != x ]]; then
-        version=-$1
-    else
-        version=
-    fi
-    if [[ x$2 == 'swm' ]]; then
-        echo Single Window Mode
-    else
-        echo Multi Window Mode
-        # This doesn't really work, alas.
-        echo "(single-window-mode no)" > $gimpdir/sessionrc
-    fi
-    echo version is $version
-    echo "GIMP2_DIRECTORY=$gimpdir gimp$version --new-instance"
-    GIMP2_DIRECTORY=$gimpdir gimp$version --new-instance
-}
 
 # Don't accidentally halt on server machines.
 hostname=$(hostname)
@@ -813,6 +781,12 @@ cryptunmount() {
 #########################################
 # Raspberry Pi and other embedded computers:
 
+# If we're logged in over a serial port, we might be using screen,
+# in which case we need to set the terminal size explicitly:
+if [[ $(tty) =~ /dev/ttyAMA0 ]]; then
+    termsize
+fi
+
 # Serial connections to embedded computers:
 #alias plug='minicom -D /dev/ttyUSB1 -b 115200'
 alias plug='screen /dev/ttyUSB1 115200'
@@ -842,6 +816,14 @@ localnet() {
     echo
     echo "Now running arp and looking up MACs:"
     echo_and_do arp -n |& grep -v incomplete |& mac_lookup
+}
+
+# Show everybody on the local net with a specific port open.
+# Unfortunately this doesn't show MAC addresses; would be nice to
+# combine it with a MAC lookup.
+localport() {
+    allnet=$(mynet | sed 's_\.[0-9]*/24_.1-254_')
+    nmap $allnet -p$1 --open -oG - | grep $1/open
 }
 
 # A some electronics cheatsheets:
@@ -1030,20 +1012,36 @@ bindkey '^X^D' describe-key-briefly
 ################################################
 # Build/development helpers
 
-# update-clone dir repo: if dir already exists, go there and git pull,
-# else make the directory and clone repo into it.
-# Either way, we should end up in the directory with an up-to-date repo.
-pull-clone() {
-    d=$1
-    repo=$2
-    if [ -d $SRCDIR/libmypaint ]; then
-        cd $d
-        git pull
+# Run a git with all-default settings.
+# Usage: gimpclean VERSION SWM
+# e.g. gimpclean git no, gimpclean 2.8 yes
+gimpclean() {
+    gimpdir=`mktemp -d /tmp/gimpenv.XXXXX`
+
+    # GIMP 2.8 gets very confused about GIMP2_DIRECTORY,
+    # and won't create the directories it needs. So we
+    # have to create them first.
+    for f in brushes dynamics patterns gradients palettes tool-presets; do
+        mkdir $gimpdir/$f
+    done
+    # But, sadly, that's not enough, and 2.8 still won't bring up
+    # a window of a reasonable size in either swm or mwm mode.
+
+    if [[ x$1 != x ]]; then
+        version=-$1
     else
-        mkdir -p $d
-        cd $d
-        git clone $repo
+        version=
     fi
+    if [[ x$2 == 'swm' ]]; then
+        echo Single Window Mode
+    else
+        echo Multi Window Mode
+        # This doesn't really work, alas.
+        echo "(single-window-mode no)" > $gimpdir/sessionrc
+    fi
+    echo version is $version
+    echo "GIMP2_DIRECTORY=$gimpdir gimp$version --new-instance"
+    GIMP2_DIRECTORY=$gimpdir gimp$version --new-instance
 }
 
 # I get tired of the myriad steps to update gimp now that it
@@ -1054,11 +1052,13 @@ gimpmaster() {
     export PKG_CONFIG_PATH=/usr/local/gimp-git/share/pkgconfig/
     export CC=/usr/bin/gcc-6
 
-    pushd_maybe ~/outsrc/libmypaint
-    echo "Updating libmypaint ..."
-    git pull
-    make -j4
-    make install
+    # Now that mypaint uses a special tag, we can't pull or change anything.
+    # pushd_maybe ~/outsrc/libmypaint
+    # echo "Updating libmypaint ..."
+    # git checkout v1.3.0
+    # git pull
+    # make -j4
+    # make install
 
     # Getting mypaint-brushes is complicated. Here's what I had to do:
     # git clone https://github.com/Jehan/mypaint-brushes.git
@@ -1066,11 +1066,13 @@ gimpmaster() {
     # git checkout --track -b v1.3.x origin/v1.3.x
     # ./autogen.sh --prefix=/usr/local/gimp-git
     # ./configure --prefix=/usr/local/gimp-git
-    echo "Updating mypaint-brushes ..."
-    cd ~/outsrc/mypaint-brushes/
-    git pull
-    make -j4
-    make install
+    # But once you do that you can never pull because:
+    # "You are not currently on a branch."
+    # echo "Updating mypaint-brushes ..."
+    # cd ~/outsrc/mypaint-brushes/
+    # git pull
+    # make -j4
+    # make install
 
     echo "Updating babl ..."
     cd ~/outsrc/babl
@@ -1095,34 +1097,111 @@ gimpmaster() {
     unset CC
 }
 
-# When GIMP needs to be rebuilt from scratch -- this also serves as
-# a cheatsheet for requirements. Not yet tested.
+# update-clone dir repo: if dir already exists, go there and git pull,
+# then do a git clean -dfx.
+# Otherwise, make the directory and clone the repo into it.
+# Either way, we should end up in the directory with an up-to-date repo.
+# The third, branch argument has never been tested.
+pull-clone-clean() {
+    repo=$1
+    d=$2
+    branch=$3
+    echo repo $repo, d $d, branch $branch
+    if [ -d $d ]; then
+        cd $d
+        git pull
+        git clean -dfx
+    else
+        if [[ x$branch == x ]]; then   # no branch
+            cd $(dirname $d)
+            pwd
+            git clone $repo
+        else
+            git clone -b $branch $repo
+            cd $(dirname $d)
+            git checkout $branch
+        fi
+        cd $d
+
+    fi
+}
+
+# When GIMP needs to be rebuilt from scratch --
+# this also serves as a cheatsheet for requirements.
+#
+# Testing tip: pkg-config --prefix-variable=$PREFIX --modversion libmypaint-1.0
+# (or whatever package you're having problems with).
 gimpmaster-fresh() {
+    # Make sure this exits on errors:
+    setopt localoptions errreturn
+
     PREFIX=/usr/local/gimp-git
     SRCDIR=$HOME/outsrc
-    pushd_maybe $SRCDIR
 
-    pull-clone https://github.com/mypaint/libmypaint.git $SRCDIR/libmypaint
-    make clean
-    ./autogen.sh --prefix=$PREFIX
-    ./configure
+    # Overwrite config.site:
+    mkdir -p $PREFIX/share/
+    cat >$PREFIX/share/config.site <<EOF
+export PATH="$PREFIX/bin:\$PATH"
+export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig:$PREFIX/share/pkgconfig:\$PKG_CONFIG_PATH"
+export LD_LIBRARY_PATH="$PREFIX/lib:\$LD_LIBRARY_PATH"
+export ACLOCAL_FLAGS="-I $PREFIX/share/aclocal \$ACLOCAL_FLAGS"
+EOF
 
-    pull-clone https://github.com/Jehan/mypaint-brushes.git $SRCDIR/lmypaint-brushes
-    make clean
+    # libmypaint is super precarious: need to pull a specific tag and
+    # end up in detached head state, and then don't ever pull again.
+    if [ ! -d $SRCDIR/libmypaint ]; then
+        git clone https://github.com/mypaint/libmypaint.git
+        cd $SRCDIR/libmypaint
+        git checkout v1.3.0
+    else
+        cd $SRCDIR/libmypaint
+        if [[ -f Makefile ]]; then
+          make clean
+        fi
+    fi
     ./autogen.sh --prefix=$PREFIX
-    ./configure
+    ./configure --prefix=$PREFIX
+    make
+    make install
 
-    pull-clone git://git.gnome.org/babl $SRCDIR/babl
-    make clean
+    echo "================ mypaint-brushes"
+    pull-clone-clean https://github.com/Jehan/mypaint-brushes.git $SRCDIR/mypaint-brushes
+    git checkout v1.3.0
+    echo "================ autogen mypaint-brushes --prefix=$PREFIX"
     ./autogen.sh --prefix=$PREFIX
+    echo "================ configure mypaint-brushes --prefix=$PREFIX"
+    ./configure --prefix=$PREFIX
+    echo "================ make mypaint-brushes"
+    make
+    echo "================ make install mypaint-brushes"
+    make install
 
-    pull-clone git://git.gnome.org/gegl $SRCDIR/gegl
-    make clean
+    echo "================ babl"
+    pull-clone-clean https://gitlab.gnome.org/GNOME/babl.git $SRCDIR/babl
+    echo "================ autogen babl --prefix=$PREFIX"
     ./autogen.sh --prefix=$PREFIX
+    echo "================ make babl"
+    make
+    echo "================ make install babl"
+    make install
 
-    pull-clone git://git.gnome.org/gimp $SRCDIR/gimp
-    make clean
+    echo "================ gegl"
+    pull-clone-clean https://gitlab.gnome.org/GNOME/gegl.git $SRCDIR/gegl
+    echo "================ autogen gegl --prefix=$PREFIX"
     ./autogen.sh --prefix=$PREFIX
+    echo "================ make gegl"
+    make
+    echo "================ make install gegl"
+    make install
+
+    echo "================ gimp"
+    pull-clone-clean https://gitlab.gnome.org/GNOME/gimp.git $SRCDIR/gimp
+    echo "================ autogen gimp --prefix=$PREFIX"
+    ./autogen.sh --prefix=$PREFIX
+    echo "================ make gimp"
+    make
+    echo "================ make install gimp"
+    make install
 
     popd_maybe
 }
@@ -1169,9 +1248,14 @@ newhexchat() {
     # http://hexchat.readthedocs.io/en/latest/building.html#unix
     meson build
     ninja -C build
-    sudo ninja -C build install
+    ninja -C build install
 
     popd_maybe
+}
+
+# Debian: search for packages but only show installed ones.
+isinstalled() {
+    aptitude search "$1" | egrep '^i'
 }
 
 # Debian apt: Check on status of all held packages:
@@ -1274,6 +1358,7 @@ pythonwhich() {
 # Python help functions. Get help on a Python class in a
 # format that can be piped through grep, redirected to a file, etc.
 # Usage: pythonhelp [module.]class [module.]class ...
+# Turns out there's already a program for that: pydoc a.b.c
 pythonXhelp() {
     python=$1
     shift
@@ -1504,6 +1589,7 @@ dobackup() {
     fullexcludes=( Cache ".cache/*" core Spam LOG log olog foo .Xout feeds \
         .local .pythonenv Tarballs \
         desert-center planetarium-movies \
+        ebirddata \
         VaioWin core outsrc .imap \
         .icons .thumbnails .cache/thumbnails .imap .macromedia .histfile \
         .gradle/ .dbus/ .emacs-saves \
@@ -1705,7 +1791,7 @@ mirror() {
 # Nice overview of lp options: https://www.computerhope.com/unix/ulp.htm
 
 # Which printers are available? lpstat -p -d also works.
-alias whichprinters='lpstat -a; echo "print with lp -d dest -n num-copies"'
+alias whichprinters='lpstat -a; echo "print with lp -d dest -n num-copies"; echo "For PDF consider adding -o fit-to-page or -o scaling=100, or using pdfpages or pdfjam"'
 
 # Print duplex on a printer that supports it.
 # If using this with -n num_copies, be sure to add -o collate=true too,
@@ -1755,7 +1841,9 @@ alias night="xrandr --output HDMI1 --brightness .8"
 # Run ebook programs, except that neither of them work in wine any more:
 alias kindle="wine ~/.wine/drive_c/Program\ Files/Amazon/Kindle/Kindle.exe"
 # alias adobeDE="wine ~/.wine/drive_c/Program\ Files/Adobe/Adobe\ Digital\ Editions/digitaleditions.exe"
-alias adobeDE="cxrun ~/.cxoffice/ADE_4/drive_c/Program\ Files/Adobe/Adobe\ Digital\ Editions\ 4.5/DigitalEditions.exe"
+# alias adobeDE="cxrun ~/.cxoffice/ADE_4/drive_c/Program\ Files/Adobe/Adobe\ Digital\ Editions\ 4.5/DigitalEditions.exe"
+alias adobeDE="wine .wine/drive_c/Program\ Files\ \(x86\)/Adobe/Adobe\ Digital\ Editions1.7.2/digitaleditions.exe"
+# To open something like a URLLink.acsm file: wine start URLLink.acsm
 
 # R has no way to tell it not to prompt annoyingly to save the environment
 # every time you quit, except as a commandline flag:
