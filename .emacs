@@ -763,48 +763,47 @@
 (add-hook 'text-mode-hook 'text-hook)
 
 ;;
-;; HTML-mode definitions:
+;; html-mode definitions:
 ;;
-;; Override some of the mandatory formatting set in html-tag-alist.
-;; You can't add to html-tag-alist until after sgml-mode is loaded,
-;; but if you do it in the html-hook, it's too late for that file:
-;; the changed associations will work in subsequent HTML files but
-;; not in the first one. So we have to load sgml-file first,
-;; whether or not we'll be editing HTML in this session.
-;; Would be nice to find a way to make it work from the mode hook.
-(require 'sgml-mode)
 
 ;; Don't insert a newline around <code> and </code> tags.
-;; This worked when I first tested it, but now isn't working.
-(add-to-list 'html-tag-alist '("code"))
+;; This worked when I first tested it, but now isn't working for any tag.
+;(add-to-list 'html-tag-alist '("code"))
 
-;; Header tags all prompt for an attribute, which I never use. Kill that:
-(add-to-list 'html-tag-alist '("h1"))
-(add-to-list 'html-tag-alist '("h2"))
-(add-to-list 'html-tag-alist '("h3"))
-(add-to-list 'html-tag-alist '("h3"))
-(add-to-list 'html-tag-alist '("h4"))
-(add-to-list 'html-tag-alist '("h5"))
-
-; Prevent -- dashed comments -- from screwing up auto-fill mode in sgml-mode.
-; This is an ongoing arms race, breaks with every new emacs version.
-(defun sgml-comment-indent-new-line (&optional soft)
-  (save-excursion (forward-char -1) (delete-horizontal-space))
-  (delete-horizontal-space)
-  (newline-and-indent))
-  ;(comment-indent-new-line soft))
+;; I give up. I've wasted dozens of hours finding ways around newlines
+;; inserted by (sgml-tag) in the sgml-mode based html-mode,
+;; only to have it break again in the next version.
+;; And anyway, whatever smarts (sgml-tag) offers beyond just inserting the
+;; tag is stuff I don't use. So let's just write something simple that
+;; works without prompting or inserting a bunch of extra crap.
+(defun insert-html-tag (tag) (interactive)
+  (let (
+        (rstart (if (region-active-p) (region-beginning) (point)))
+        (rend   (if (region-active-p) (region-end)       (point))))
+    ;; Insert the close tag first, because inserting the open tag
+    ;; will mess up the rend position.
+    (goto-char rend)
+    (insert "</")
+    (insert tag)
+    (insert ">")
+    ;; Now the open tag:
+    (goto-char rstart)
+    (insert "<")
+    (insert tag)
+    (insert ">")
+))
 
 ;; Key bindings and such can be done in the mode hook.
 (defun html-hook ()
   ;; Define keys for inserting tags in HTML mode:
-  (local-set-key "\C-cb" (lambda () (interactive) (sgml-tag "b")))
-  (local-set-key "\C-ci" (lambda () (interactive) (sgml-tag "i")))
-  (local-set-key "\C-cp" (lambda () (interactive) (sgml-tag "pre")))
-  (local-set-key "\C-cc" (lambda () (interactive) (sgml-tag "code")))
-  (local-set-key "\C-c1" (lambda () (interactive) (sgml-tag "h1")))
-  (local-set-key "\C-c2" (lambda () (interactive) (sgml-tag "h2")))
-  (local-set-key "\C-c3" (lambda () (interactive) (sgml-tag "h3")))
-  (local-set-key "\C-c4" (lambda () (interactive) (sgml-tag "h4")))
+  (local-set-key "\C-cb" (lambda () (interactive) (insert-html-tag "b")))
+  (local-set-key "\C-ci" (lambda () (interactive) (insert-html-tag "i")))
+  (local-set-key "\C-cp" (lambda () (interactive) (insert-html-tag "pre")))
+  (local-set-key "\C-cc" (lambda () (interactive) (insert-html-tag "code")))
+  (local-set-key "\C-c1" (lambda () (interactive) (insert-html-tag "h1")))
+  (local-set-key "\C-c2" (lambda () (interactive) (insert-html-tag "h2")))
+  (local-set-key "\C-c3" (lambda () (interactive) (insert-html-tag "h3")))
+  (local-set-key "\C-c4" (lambda () (interactive) (insert-html-tag "h4")))
 
   ;(local-set-key "\C-m" (lambda () (interactive) (insert "\n")))
 
@@ -815,6 +814,7 @@
   ;; https://www.emacswiki.org/emacs/BrowseUrl#toc5
 
   ;; And finally, a generic shorthand to use with other tags:
+  ;; Consider changing this to use insert-html-tag instead.
   (local-set-key "\C-ct"  (lambda () (interactive) (sgml-tag)))
 
   ;; Contents of <pre> tags get reindented, destroying their formatting.
@@ -834,6 +834,14 @@
   ;(sleep-for 3)
   )
 (add-hook 'sgml-mode-hook 'html-hook)
+
+; Prevent -- dashed comments -- from screwing up auto-fill mode in sgml-mode.
+; This is an ongoing arms race, breaks with every new emacs version.
+(defun sgml-comment-indent-new-line (&optional soft)
+  (save-excursion (forward-char -1) (delete-horizontal-space))
+  (delete-horizontal-space)
+  (newline-and-indent))
+  ;(comment-indent-new-line soft))
 
 ;; Run this on a buffer inside a <pre> to convert chars like < into entities.
 (defun unhtml (start end)
