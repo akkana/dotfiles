@@ -17,7 +17,7 @@
 ;; Disable all version control handling
 (setq vc-handled-backends nil)
 
-;; Don't prompt for y-e-s-\n
+;; Don't prompt all the time for y e s \n
 (fset 'yes-or-no-p 'y-or-n-p)
 
 ;; Change window size on smaller screens. Adapted from
@@ -147,15 +147,30 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;; end global-keys code ;;;;;;;;;;;;;;;;;;;;;;;
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Packages
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;(if (>= emacs-major-version 24)
+;    (progn
+      (require 'package)
+      (add-to-list 'package-archives
+                   '("melpa-stable" . "https://stable.melpa.org/packages/"))
+      (package-initialize)
+;      ))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;; Undo handling ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; I keep hitting ^Z accidentally, and at the same time I can
 ;; never remember what undo is normally bound to.
 ;; Unfortunately this will suck if I run emacs from the shell,
 ;; so I'd really like to run this only if we're in GUI mode.
-;(global-set-key "\C-z" 'undo)
+;; (if (display-graphic-p)
+;;   (global-set-key "\C-z" 'undo))
 
 ;; Redo mode allows real undo/redo: http://www.emacswiki.org/emacs/RedoMode
 ;(load "redo.el")
+;(global-set-key "\M-z" 'redo)
+;(global-set-key "\C-z" 'undo)
 ;(global-set-key "\M-z" 'redo)
 
 ;; Supposedly undo-tree is better.
@@ -168,7 +183,7 @@
 ;; there's no online documentation. *eyeroll*
 (if (>= emacs-major-version 24)
     (progn
-        (package-initialize)
+        ; (package-initialize)  ; Already done earlier
         (undo-tree-mode 1)
         (global-set-key "\C-z" 'undo-tree-undo)
         (global-set-key "\M-z" 'undo-tree-redo)
@@ -188,6 +203,16 @@
 (require 'uniquify)
 (setq uniquify-buffer-name-style 'forward)
 
+;(setq default-major-mode 'text-mode)
+(setq fill-column 75)
+
+;;; Set the mode format at the bottom
+;;; Used to be "%*%*%* " emacs-version " %b  %M %[(%m)%] line=%5l %3p %-"
+;(setq default-modeline-format
+;      (list "%*%*%* %b  %M %[(%m)%] line=%5l %3p %-"))
+(setq line-number-mode t)
+;(setq mode-line-format default-mode-line-format)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Custom colors
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -205,9 +230,8 @@
   ;;
 ;(set-background-color "grey90")
 ; Some decent colors: grey90, Alice Blue, light cyan, mint cream, Honeydew
-(set-background-color "Honeydew")
-;(set-background-color "Alice Blue")
-;(set-background-color "#eeeeff")
+;(set-background-color "mint cream")
+(set-background-color "#e9fffa")
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -292,7 +316,7 @@
 
 ;; Also show tabs. https://www.emacswiki.org/emacs/ShowWhiteSpace
 (defface extra-whitespace-face
-  '((t (:background "pale green")))
+  '((t (:background "honeydew2")))
   "Used for tabs and such.")
 (defvar bad-whitespace
   '(("\t" . 'extra-whitespace-face)))
@@ -342,14 +366,23 @@
 ;; ;; See also http://www.oreillynet.com/onlamp/blog/2005/01/quick_tip_for_linux_users_havi.html
 ;; ;(setq x-select-enable-clipboard nil)
 
-;; What wgreenhouse on #emacs uses:
-(setq x-select-enable-primary t)
-(setq x-select-enable-clipboard t)
-(setq save-interprogram-paste-before-kill t)
+(if (and (boundp 'emacs-major-version) (< emacs-major-version 25))
 
-;; bremner on #emacs warns me that in emacs25 these will change names:
-(setq select-enable-primary t)
-(setq select-enable-clipboard t)
+    ;; emacs24: What wgreenhouse on #emacs uses.
+    (progn
+      (setq x-select-enable-primary t)
+      (setq x-select-enable-clipboard t)
+      (setq save-interprogram-paste-before-kill t)
+    )
+
+    ;; emacs25:
+    ;; https://www.gnu.org/software/emacs/manual/html_node/emacs/Clipboard.html
+    (progn
+      (setq select-enable-clipboard nil)
+      (setq select-enable-primary t)
+      (setq mouse-drag-copy-region t)
+    )
+)
 
 ;; Around 24.5, emacs developed the annoying habit that every time I
 ;; switch into a buffer, it primary-selects whatever region is active.
@@ -439,15 +472,86 @@
 ;; End annoyances
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;(setq default-major-mode 'text-mode)
-(setq fill-column 75)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Auto-insert for various modes
+;;
+;; auto-insert is cool but the documentation is terrible.
+;; An auto-insert stanza goes like this:
+;; (add-to-list 'auto-insert-alist
+;;              '(("\\.c$" . "C Program")
+;;                "Parameter"
+;;                "strings"
+;; ))
+;; If "Parameter" is non-nil, it will be used as a prompt, and whatever
+;; you type in response to the prompt will be inserted wherever you
+;; have "str" in the auto-insert data.
+;; An underscore _ says to put the cursor there after inserting.
+;; > indents to the current indent level according to the mode.
+;; Some other variables and functions that might be useful to include:
+;; (file-name-nondirectory (file-name-sans-extension buffer-file-name))
+;; (substring (current-time-string) -4)
+;; (user-full-name)
+;;
+;; You can also define autoinsert using define-auto-insert
+;; but the syntax is a bit more opaque.
+;;
+;; https://www.emacswiki.org/emacs/AutoInsertMode
+;; https://www.gnu.org/software/emacs/manual/html_node/autotype/Skeleton-Language.html#Skeleton-Language
+;; https://www.emacswiki.org/emacs/SkeletonMode
 
-;;; Set the mode format at the bottom
-;;; Used to be "%*%*%* " emacs-version " %b  %M %[(%m)%] line=%5l %3p %-"
-;(setq default-modeline-format
-;      (list "%*%*%* %b  %M %[(%m)%] line=%5l %3p %-"))
-(setq line-number-mode t)
-;(setq mode-line-format default-mode-line-format)
+(auto-insert-mode)
+
+;; Auto-insert mode has tons of defaults and it's hard to get a list
+;; of even what they are. I don't want auto-insert unless I've defined it.
+(setq auto-insert-alist '())
+
+;; Don't prompt before every auto-insertion:
+(setq auto-insert-query nil)
+
+(add-to-list 'auto-insert-alist
+             '(python-mode
+               nil
+               "#!/usr/bin/env python3\n"
+               "\n"
+               _ "\n"
+               "\n"
+               "if __name__ == '__main__':\n"
+               > "\n\n"
+))
+
+(add-to-list 'auto-insert-alist
+             '(("\\.html$" . "HTML file")
+               "Title: "
+               "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">\n"
+               "<html>\n"
+               "<head>\n"
+               "<meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\" />\n"
+               "<title>" str "</title>\n"
+               "</head>\n\n"
+               "<body>\n\n"
+               "<h1>" str "</h1>\n\n"
+               "<p>\n"
+               _ "\n\n"
+               "</body>\n"
+               "</html>\n"
+))
+
+(add-to-list 'auto-insert-alist
+             '((".*lwvweb.*\\.html$" . "LWVNM HTML file")
+               "Title: "
+               "<?php\n"
+               "  $title = \"" str "\";\n"
+               "\n"
+               "  require ($_SERVER['DOCUMENT_ROOT'] . \"/php/header.php\");\n"
+               "?>\n"
+               "\n"
+               "<p>\n"
+               _ "\n"
+               "\n"
+               "<?php\n"
+               "require ($_SERVER['DOCUMENT_ROOT'] . \"/php/footer.php\");\n"
+               "?>\n"
+))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Useful utilities
@@ -512,6 +616,7 @@
 ;; this un-fills all the paragraphs (i.e. turns each paragraph
 ;; into one very long line) and removes any blank lines that
 ;; previously separated paragraphs.
+;;
 (defun wp-munge () "un-fill paragraphs and remove blank lines" (interactive)
   (if (not (use-region-p)) (mark-whole-buffer))
   (let ((save-fill-column fill-column)
@@ -554,36 +659,15 @@
     (set-fill-column save-fill-column)
 ))
 
-(defun foo () "" (interactive)
-  (if (not (use-region-p)) (mark-whole-buffer))
-  (let (
-        (rstart           (region-beginning))
-        (rend             (region-end)))
-
-    (replace-regexp "^\\s-*\\(-\\|\\*\\|[1-9a-zA-z]+\\.\\)\\s-+\\(.+\\)$"
-                    "\n\\1 \\2" nil rstart rend)
-))
-
-(defun testmunge () "" (interactive)
-  (if (not (use-region-p)) (mark-whole-buffer))
-  (let (
-        (rstart           (region-beginning))
-        (rend             (region-end)))
-    (atomic-change-group
-      (replace-regexp "^\\(.\\{1,55\\}\\)$" "\\1\n" nil rstart rend)
-      (replace-regexp "^\\(\\*\\|-\\|[1-9a-zA-z]+\\.\\) +\\(.\\{56,\\}\\)$"
-                      "\\1.\\2\n" nil rstart rend)
-      ;(replace-regexp "^\* " "\n* " nil rstart rend)
-      ;(replace-regexp "^- "  "\n- " nil rstart rend)
-
-      ; (replace-regexp "^\\(.\\{1,55\\}\\)\n\\(.\\{1,55\\}\\)$" "xx\\1yy\\2" nil rstart rend)
-      )))
-
 (defun wp-unmunge () "fill paragraphs and separate them with blank lines"
   (interactive)
   (if (not (use-region-p)) (mark-whole-buffer))
   (replace-regexp "\\(.$\\)" "\\1\n" nil (region-beginning) (region-end))
   (fill-individual-paragraphs (region-beginning) (region-end))
+
+  ;; This sometimes ends up with doubled blank lines, so:
+  (goto-char 1)
+  (replace-regexp "\n\n+" "\n\n")
   )
 
 (defun unfill () "un-fill paragraphs" (interactive)
@@ -593,88 +677,6 @@
     (fill-individual-paragraphs (point-min) (point-max))
     (set-fill-column save-fill-column)
     ))
-
-;;
-;; Derived C modes, setting different styles for different files.
-;;
-(define-derived-mode gnu-c-mode c-mode "GNU C mode"
-  (c-set-style "gnu"))
-(define-derived-mode linux-c-mode c-mode "GNU C mode"
-  (c-set-style "linux"))
-
-(defun indent-whole-buffer ()
-      "indent whole buffer and untabify it"
-      (interactive)
-      (delete-trailing-whitespace)
-      (indent-region (point-min) (point-max) nil)
-      (untabify (point-min) (point-max)))
-
-;; Disable obnoxious "Electric" re-indenting in c- and java-modes
-;; (and now, python too).
-;; It's useful on some characters, but awful when you can't add a comment
-;; or a colon or semicolon without re-indenting the line.
-(defun no-electric (keymap)
-  (progn
-    (define-key keymap ";" 'self-insert-command)
-    (define-key keymap ":" 'self-insert-command)
-    (define-key keymap "L" 'self-insert-command)
-    (define-key keymap "/" 'self-insert-command)
-    (define-key keymap "*" 'self-insert-command)
-    (define-key keymap "(" 'self-insert-command)
-    (define-key keymap ")" 'self-insert-command)
-;    (define-key keymap "{" 'self-insert-command)
-;    (define-key keymap "}" 'self-insert-command)
-    (define-key keymap "," 'self-insert-command)
-
-    ;; It would be nice to add
-    ;;(font-lock-add-keywords nil bad-whitespace)
-    ;; here, because anywhere I want no-electrics I also want that.
-    ;; But alas, putting it here doesn't work for some reason.
- ))
-
-;; But these stopped working, maybe because the names for the maps
-;; are wrong. thunk on #emacs points to:
-;; ,,df current-local-map and ,,df local-unset-key
-(add-hook 'c-mode-hook (lambda () (no-electric c-mode-map) (font-lock-add-keywords nil bad-whitespace)))
-(add-hook 'c++-mode-hook (lambda () (no-electric c-mode-map) (font-lock-add-keywords nil bad-whitespace)))
-(add-hook 'java-mode-hook (lambda () (no-electric java-mode-map) (font-lock-add-keywords nil bad-whitespace)))
-
-(defun newpython ()
-  "Insert a template for an empty Python script"
-  (interactive)
-  (insert "#!/usr/bin/env python\n"
-          "\n"
-          "\n"
-          "\n"
-          "if __name__ == '__main__':\n"
-          "\n"
-          )
-  (forward-line -4)
-  )
-;; with-eval-after-load is never called.
-;;(with-eval-after-load ".py"
-;;  (newpython))
-
-;; no-electric doesn't work for python mode -- even if : is bound
-;; to self-insert it still reindents the line.
-;(add-hook 'python-mode-hook (lambda () (electric-indent-mode -1)))
-;; But this method does work!
-;;http://stackoverflow.com/questions/21182550/how-to-turn-of-electric-indent-mode-for-specific-major-mode
-(add-hook 'python-mode-hook
-          (lambda ()
-            (electric-indent-local-mode -1)
-            (font-lock-add-keywords nil bad-whitespace)
-            ;(local-set-key "\C-cc" 'comment-region)
-            (if (= (buffer-size) 0)
-                (newpython))
-            ;(message "python hook")
-            ))
-
-(add-hook 'js-mode-hook (lambda ()
-  (define-key js-mode-map "," 'self-insert-command)
-  (define-key js-mode-map ";" 'self-insert-command)
-  (font-lock-add-keywords nil bad-whitespace)
- ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Special code for html and text files
@@ -784,47 +786,8 @@
 (add-to-list 'html-tag-alist '("h4"))
 (add-to-list 'html-tag-alist '("h5"))
 
-;; Create a basic HTML page template -- I get tired of typing this all the time.
-(defun newhtml ()
-  "Insert a template for an empty HTML page"
-  (interactive)
-  (insert "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">\n"
-          "<html>\n"
-          "<head>\n"
-          "<title></title>\n"
-          "</head>\n\n"
-          "<body>\n\n"
-          "<h1></h1>\n\n"
-          "<p>\n\n"
-          "</body>\n"
-          "</html>\n")
-  (forward-line -11)
-  (forward-char 7)
-  )
-;; with-eval-after-load is never called.
-;;(with-eval-after-load ".*\..html"
-;;  (newhtml))
-
-(defun newlwv ()
-  "Insert a template for an empty HTML page for the LWVNM website"
-  (interactive)
-  (insert "<?php\n"
-          "  $title = \"\";\n"
-          "\n"
-          "  require ($_SERVER['DOCUMENT_ROOT'] . \"/php/header.php\");\n"
-          "?>\n"
-          "\n"
-          "<p>\n"
-          "\n"
-          "<?php\n"
-          "require ($_SERVER['DOCUMENT_ROOT'] . \"/php/footer.php\");\n"
-          "?>\n"
-          )
-  ;; goto-char counts from the beginning of the document.
-  (goto-char 19)
-  )
-
 ; Prevent -- dashed comments -- from screwing up auto-fill mode in sgml-mode.
+; This is an ongoing arms race, breaks with every new emacs version.
 (defun sgml-comment-indent-new-line (&optional soft)
   (save-excursion (forward-char -1) (delete-horizontal-space))
   (delete-horizontal-space)
@@ -864,15 +827,6 @@
   ;; but alas it has zero effect that I can find.
   ;;(setq sgml-specials nil)
 
-  (if (and (= (buffer-size) 0)
-           (string-suffix-p ".html" (buffer-file-name)))
-      (if (string-match-p "/lwvweb/" (buffer-file-name))
-          (newlwv)
-          (if (not (or (string-match-p "/blog/" (buffer-file-name))
-                       (string-match-p "/blogfiles/" (buffer-file-name))
-                       (string-match-p "/Preso/" (buffer-file-name))))
-              (newhtml) ) ) )
-
   ;; Turn off flyspell; we'll turn it on only in html-wrap mode.
   ;(flyspell-mode 0)
 
@@ -903,9 +857,53 @@
   (local-set-key (kbd "TAB") 'self-insert-command)
   )
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Markdown
+;; https://github.com/jrblevin/markdown-mode
+;; https://leanpub.com/markdown-mode/read
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;(setq markdown-command "/usr/bin/markdown_py")
+
+(defun markdown-hook ()
+  (flyspell-mode 1)
+  (auto-fill-mode)
+  )
+(add-hook 'markdown-mode-hook 'markdown-hook)
+
+(custom-set-faces
+ '(markdown-header-face-1 ((t (:inherit markdown-header-face :height 2.0))))
+ '(markdown-header-face-2 ((t (:inherit markdown-header-face :height 1.7))))
+ '(markdown-header-face-3 ((t (:inherit markdown-header-face :height 1.4))))
+ '(markdown-header-face-4 ((t (:inherit markdown-header-face :height 1.1))))
+ '(markdown-inline-code-face ((t (:inherit font-lock-constant-face :background "gainsboro"))))
+ '(markdown-link-face ((t (:inherit link))))
+ '(markdown-pre-face ((t (:inherit font-lock-constant-face :background "gainsboro")))))
+
+;; Customize lists
+;; https://emacs.stackexchange.com/questions/723/how-can-i-use-the-se-flavor-of-markdown-in-emacs/761#761
+(defvar endless/bullet-appearance
+  (propertize (if (char-displayable-p ?•) "  •" "  *")
+              'face 'markdown-list-face)
+  "String to be displayed as the bullet of markdown list items.")
+
+(require 'rx)
+(defvar endless/markdown-link-regexp
+    "\\[\\(?1:[^]]+\\)]\\(?:(\\(?2:[^)]+\\))\\|\\[\\(?3:[^]]+\\)]\\)"
+  "Regexp matching a markdown link.")
+
+(font-lock-add-keywords
+ 'markdown-mode
+ '(("^ *\\(\\*\\|\\+\\|-\\|\\) "
+    1 `(face nil display ,endless/bullet-appearance) prepend)
+   (endless/markdown-link-regexp
+    1 '(face nil display "") prepend))
+ 'append)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Insert the current date into the buffer.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;; http://ergoemacs.org/emacs/elisp_datetime.html
 (defun insert-date (&optional time)
   "Insert current date yyyy-mm-dd."
@@ -1102,7 +1100,6 @@
   (iimage-mode t)
   (message "Refreshed images")
   )
-;;;;;;;;;;;;;;;;;;;;; end iimage-mode helpers ;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Coding helpers
@@ -1119,11 +1116,110 @@
 (defun my-web-mode-hook ()
   "Hooks for Web mode."
   ;; This used to work:
-  (setq web-mode-code-indent-offset 4)
-  ;; Maybe this will work now:
-  (setq web-mode-markup-indent-offset 4)
+  (setq web-mode-code-indent-offset 2)
+
+  ;; Disable indentation for HTML and CSS, while keeping it for PHP and JS.
+  ;; Unfortunately web-mode often ignores this.
+  (setq-local web-mode-markup-indent-offset 0)
+  (setq-local web-mode-css-indent-offset 0)
+  ;; The possible indent variables:
+  ;; coffee-tab-width              ; coffeescript
+  ;; javascript-indent-level       ; javascript-mode
+  ;; js-indent-level               ; js-mode
+  ;; web-mode-markup-indent-offset ; web-mode, html tag in html file
+  ;; web-mode-css-indent-offset    ; web-mode, css in html file
+  ;; web-mode-code-indent-offset   ; web-mode, js code in html file
+  ;; css-indent-offset             ; css-mode
+
 )
 (add-hook 'web-mode-hook 'my-web-mode-hook)
+
+;; Turn off auto-indentation in web mode: it does all kinds of crazy
+;; things and makes HTML difficult to edit:
+;; Unfortunately this may also turn off PHP indentation.
+;; But no worries about that, it doesn't work anyway.
+;; (setq web-mode-enable-auto-indentation nil)
+
+(defun indent-whole-buffer ()
+      "indent whole buffer and untabify it"
+      (interactive)
+      (delete-trailing-whitespace)
+      (indent-region (point-min) (point-max) nil)
+      (untabify (point-min) (point-max)))
+
+(setq octave-block-offset 4)
+
+; Ruby
+(autoload 'ruby-mode "ruby-mode" "Load ruby-mode")
+(defun ruby-stuff-hook ()
+  (local-set-key "\C-m" 'newline-and-text-indent)
+  (turn-on-font-lock)
+  )
+(add-hook 'ruby-mode-hook 'ruby-stuff-hook)
+
+(defun archive-hook ()
+  (flyspell-mode 0)
+  )
+(add-hook 'archive-mode-hook 'archive-hook)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Attempts to turn off "electric" code reindenting.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Disable obnoxious "Electric" re-indenting in c- and java-modes
+;; (and now, python too).
+;; It's useful on some characters, but awful when you can't add a comment
+;; or a colon or semicolon without re-indenting the line.
+(defun no-electric (keymap)
+  (progn
+    (define-key keymap ";" 'self-insert-command)
+    (define-key keymap ":" 'self-insert-command)
+    (define-key keymap "L" 'self-insert-command)
+    (define-key keymap "/" 'self-insert-command)
+    (define-key keymap "*" 'self-insert-command)
+    (define-key keymap "(" 'self-insert-command)
+    (define-key keymap ")" 'self-insert-command)
+;    (define-key keymap "{" 'self-insert-command)
+;    (define-key keymap "}" 'self-insert-command)
+    (define-key keymap "," 'self-insert-command)
+
+    ;; It would be nice to add
+    ;;(font-lock-add-keywords nil bad-whitespace)
+    ;; here, because anywhere I want no-electrics I also want that.
+    ;; But alas, putting it here doesn't work for some reason.
+ ))
+
+;; But these stopped working, maybe because the names for the maps
+;; are wrong. thunk on #emacs points to:
+;; ,,df current-local-map and ,,df local-unset-key
+(add-hook 'c-mode-hook (lambda ()
+                         (no-electric c-mode-map)
+                         (font-lock-add-keywords nil bad-whitespace)))
+(add-hook 'c++-mode-hook (lambda ()
+                           (no-electric c-mode-map)
+                           (font-lock-add-keywords nil bad-whitespace)))
+(add-hook 'java-mode-hook (lambda ()
+                            (no-electric java-mode-map)
+                            (font-lock-add-keywords nil bad-whitespace)))
+
+;; no-electric doesn't work for python mode -- even if : is bound
+;; to self-insert it still reindents the line.
+;(add-hook 'python-mode-hook (lambda () (electric-indent-mode -1)))
+;; But this method does work!
+;;http://stackoverflow.com/questions/21182550/how-to-turn-of-electric-indent-mode-for-specific-major-mode
+(add-hook 'python-mode-hook
+          (lambda ()
+            (electric-indent-local-mode -1)
+            (font-lock-add-keywords nil bad-whitespace)
+            ;(local-set-key "\C-cc" 'comment-region)
+            ;(message "python hook")
+            ))
+
+(add-hook 'js-mode-hook (lambda ()
+  (define-key js-mode-map "," 'self-insert-command)
+  (define-key js-mode-map ";" 'self-insert-command)
+  (font-lock-add-keywords nil bad-whitespace)
+ ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; C and related modes
@@ -1151,49 +1247,17 @@
 ;; iimage-mode used to work with a filename of iimage-mode, now it needs iimage.
 (autoload 'iimage-mode "iimage" "Iimage Mode" t)
 
-;; Style stuff for the old c-mode, now outmoded:
-;(c-add-style "akkana"
-;             '((c-basic-offset . 4)
-;               (c-comment-only-line-offset . 0)
-;               (c-offsets-alist . ((statement-block-intro . +)
-;                                   (knr-argdecl-intro . +)
-;                                   (substatement-open . 0)
-;                                   (label . 0)
-;                                   (statement-cont . +)
-;                                   (case-label . 2)
-;                                   ))))
-;(c-set-style "akkana")
-
-; Here's the new way, for cc-mode:
+;; Default C style
 (setq c-default-style '((java-mode . "java") (other . "stroustrup")))
 
-;;
-;; Ah, glorious linux C-mode!  (from val@mnt.edu)
-;;
-(defun linux-c-mode ()
-    "C mode with adjusted defaults for use with the Linux kernel."
-   (interactive)
-;   (setq tabify t)
-   (c-mode)
-   (c-set-style "K&R")
-   (setq c-basic-offset 8)
-   (setq indent-tabs-mode t)
-)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Derived C modes, setting different styles for different files.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(setq octave-block-offset 4)
-
-; Ruby
-(autoload 'ruby-mode "ruby-mode" "Load ruby-mode")
-(defun ruby-stuff-hook ()
-  (local-set-key "\C-m" 'newline-and-text-indent)
-  (turn-on-font-lock)
-  )
-(add-hook 'ruby-mode-hook 'ruby-stuff-hook)
-
-(defun archive-hook ()
-  (flyspell-mode 0)
-  )
-(add-hook 'archive-mode-hook 'archive-hook)
+(define-derived-mode gnu-c-mode c-mode "GNU C mode"
+  (c-set-style "gnu"))
+(define-derived-mode linux-c-mode c-mode "Linux C mode"
+  (c-set-style "linux"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; auto-mode-alist: Modes to use on specific files.
@@ -1206,18 +1270,16 @@
 ;; (I can't find a way to remove only the "browse" rule).
 (rassq-delete-all 'ebrowse-tree-mode auto-mode-alist)
 
-;; Fallback defaults: these will only be used if no other mode is found.
-;(setq auto-mode-alist (append auto-mode-alist
-;                              '(("Docs/" . text-wrap-mode)) ))
-(add-to-list 'auto-mode-alist '("Docs/" . text-wrap-mode) t)
-
 ;; File types -- too bad emacs doesn't handle most of these automatically.
 ;; These will override any existing mode:
 (mapc (apply-partially 'add-to-list 'auto-mode-alist)
       '(
+        ("Docs/" . text-wrap-mode)
         ("Tags" . text-mode)
         ("\\.epub$" . archive-mode)
         ("\\.kmz$" . archive-mode)
+        ("\\.jar$" . archive-mode)
+        ("\\.ja$" . archive-mode)
         ("\\.pde$" . c-mode)
         ("\\.ino$" . c++-mode)
         ("\\.py$" . python-mode)
@@ -1251,23 +1313,23 @@
         ;; Don't wrap on LWV HTML files -- they tend to have long lines.
         ("lwvweb/" . html-mode)
 
-;; Make sure changelogs don't use text-wrap-mode -- they're too long,
-;; and text-mode invokes spellcheck which takes forever.
+        ;; Make sure changelogs don't use text-wrap-mode -- they're too long,
+        ;; and text-mode invokes spellcheck which takes forever.
         ("ChangeLog" . fundamental-mode)
 
-;; A few special settings by location or name,
-;; for files that may not have type-specific extensions:
+        ;; A few special settings by location or name,
+        ;; for files that may not have type-specific extensions:
         ("Docs/Lists" . text-mode)
         ("Docs/Lists/books" . text-wrap-mode)
         ("blogstuff/" . html-wrap-mode)
         ("Docs/gimp/book/notes" . text-wrap-mode)
         ("README" . text-wrap-mode)
-;; Book used to be longlines mode, but that was too flaky.
+        ;; Book used to be longlines mode, but that was too flaky.
         ("Docs/gimp/book/" . text-wrap-mode)
 
         ("linux-.*/" . linux-c-mode)
 
-;; iimage mode is so cool!
+        ;; iimage mode is so cool!
         ("Docs/classes/" . text-img-mode)
         ("Docs/Notes/househunt/houses" . text-img-mode)
         ("Docs/Notes/househunt/sold" . text-img-mode)
@@ -1279,20 +1341,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (setq completion-ignored-extensions
-      '(".xpt" ".a" ".so" ".o" ".d" ".elc" ".class" "~" ".ckp" ".bak"
+      '(".xpt" ".a" ".so" ".o" ".d" ".elc" ".class" "~" ".ckp" ".bak" ".pyc"
         ".imp" ".lpt" ".bin" ".otl" ".err" ".lib" ".x9700" ".aux" ".elf" ))
 
 ;; This is supposed to prevent the excessive making of local backup files.
 ;; http://jamesthornton.com/emacs/chapter/emacs_16.html#SEC150
 (setq vc-cvs-stay-local nil)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Turn debugging back off.  Put any questionable code after these lines!
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(setq debug-on-error nil)
-(setq stack-trace-on-error nil)
-(put 'eval-expression 'disabled nil)
 
 ;;;
 ;;; KEYPAD BINDINGS
@@ -1372,50 +1426,20 @@
 (setq recentf-max-menu-items 25)
 (global-set-key "\C-x\C-r" 'recentf-open-files)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Turn debugging back off.  Put any questionable code after these lines!
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(setq debug-on-error nil)
+(setq stack-trace-on-error nil)
+(put 'eval-expression 'disabled nil)
+
 ;; A minibuffer completion package from
 ;; http://www.emacswiki.org/emacs/RecentFiles
 ;; but it's not very smart, doesn't pay any attention to the current directory.
 (load "recent-minibuffer")
 (setq enable-recursive-minibuffers t)
 (global-set-key "\C-cr" 'recentf-minibuffer-dialog)
-
-;;
-;; tramp-mode is lovely for remote editing, but it sure does take a
-;; lot of hand-holding. Thanks, Val.
-;;
-(setq tramp-debug-buffer t)
-
-;(setq tramp-default-method "scp")
-(setq tramp-rcp-program "scp")
-
-;; Orig nonworking pattern
-;;(setq tramp-shell-prompt-pattern
-;;  "^[^#$%>\n]*[#$%>] *\\(\e\\[[0-9;]*[a-zA-Z] *\\)*" )
-;;
-;; Works, kinda
-;;
-(setq tramp-shell-prompt-pattern
-        "^\e\[[0-9]*[a-z]([a-z\.\')-\e\[[0-9]*[a-z] " )
-;;
-;; For some reason, sshd on rainbow puts in this extra "Response:"
-;line
-;;
-;;(setq tramp-password-prompt-regexp
-;;        "^.*\\([pP]assword\\|Response\\|passphrase.*\\):\^@? *" )
-
-(custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(inhibit-startup-screen t)
- '(safe-local-variable-values
-   (quote
-    ((not-flyspell-mode)
-     (encoding . utf-8)
-     (auto-fill-mode)
-     (wrap-mode)))))
-(put 'upcase-region 'disabled nil)
 
 ;;
 ;; Some useful tips on testing/evaluating elisp:
@@ -1438,20 +1462,27 @@
   (auto-complete-mode 1))
 (add-hook 'ielm-mode-hook 'ielm-auto-complete)
 
-;; https://www.emacswiki.org/emacs/EdiffMode
-;; Usage: emacs -diff file1 file2
-(defun command-line-diff (switch)
-    (let ((file1 (pop command-line-args-left))
-          (file2 (pop command-line-args-left)))
-      (ediff file1 file2)))
-
-(add-to-list 'command-switch-alist '("diff" . command-line-diff))
-
-(setq ediff-split-window-function 'split-window-horizontally)
-
 ;;
 ;; A few other useful elisp tutorials:
 ;; http://ergoemacs.org/emacs/elisp_basics.html
 ;; http://cjohansen.no/an-introduction-to-elisp
 ;; http://ergoemacs.org/emacs/elisp.html
 ;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Settings automatically added by Emacs:
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(inhibit-startup-screen t)
+ '(package-selected-packages (quote (markdown-mode elpy undo-tree)))
+ '(safe-local-variable-values
+   (quote
+    ((not-flyspell-mode)
+     (encoding . utf-8)
+     (auto-fill-mode)
+     (wrap-mode)))))
+(put 'upcase-region 'disabled nil)
