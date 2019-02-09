@@ -71,6 +71,27 @@
 (global-set-key "\C-cc" 'comment-region)
 (global-set-key "\C-cC" 'uncomment-region)
 
+;; Need a way to insert the contents of the X clipboard,
+;; for cases like Udacity that block X primary.
+;; For now, this works, but it warns that it's deprecated:
+(global-set-key (kbd "C-S-y") 'x-clipboard-yank)
+;; If it goes away, might be able to substitute something like
+;; (lambda () (interactive)
+;;     (setq x-select-enable-clipboard t)
+;;     (setq x-select-enable-primary nil)
+;;     (clipboard-yank)
+;;     (setq x-select-enable-clipboard nil)
+;;     (setq x-select-enable-primary t)
+;; )
+;; or, https://superuser.com/a/420070 :
+;; (lambda () (interactive "*P")
+;;   (let ((x-select-enable-clipboard t)
+;;         (x-select-enable-primary nil))
+;;     (yank arg)))
+
+;; This might be worth exploring:
+(delete-selection-mode t)
+
 ;; Lately exchange-point-and-mark selects everything in between the two points,
 ;; clobbering anything in the primary selection.
 ;; But you can turn that off by passing t to activate "Transient Mark mode".
@@ -508,6 +529,7 @@
 ;; Don't prompt before every auto-insertion:
 (setq auto-insert-query nil)
 
+;; Templates for files of specific types:
 (add-to-list 'auto-insert-alist
              '(python-mode
                nil
@@ -519,21 +541,59 @@
                > "\n\n"
 ))
 
+;;
+;; auto-insert for HTML: check for a blank.html in the directory
+;; and insert it if it exists. Otherwise insert a template.
+;;
+(defun insert-html-template ()
+  "Insert the contents of blank.html if it exists"
+  (interactive)
+  (let ((file-name (concat
+                    (file-name-directory (buffer-file-name (current-buffer)))
+                    "blank.html")))
+    (if (file-exists-p file-name)
+        (progn
+          (message (concat "Inserting: " file-name))
+          (insert-file-contents file-name))
+
+        ; else insert standard HTML boilerplate
+        (let ((str (read-string "Title: ")))
+          (message "Inserting standard HTML")
+          (insert
+           "Title: "
+           "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">\n"
+           "<html>\n"
+           "<head>\n"
+           "<meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\" />\n"
+           "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
+
+           "<title>" str "</title>\n"
+           "</head>\n\n"
+           "<body>\n\n"
+           "<h1>" str "</h1>\n\n"
+           "<p>\n"
+            "\n\n"      ;; The skeleton had a _ before the string, for point
+           "</body>\n"
+           "</html>\n")
+          (goto-char (point-max))
+          (forward-line -4)
+))))
+
 (add-to-list 'auto-insert-alist
              '(("\\.html$" . "HTML file")
-               "Title: "
-               "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">\n"
-               "<html>\n"
-               "<head>\n"
-               "<meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\" />\n"
-               "<title>" str "</title>\n"
-               "</head>\n\n"
-               "<body>\n\n"
-               "<h1>" str "</h1>\n\n"
-               "<p>\n"
-               _ "\n\n"
-               "</body>\n"
-               "</html>\n"
+               . insert-html-template
+))
+
+;; Override the standard HTML content for some files.
+(add-to-list 'auto-insert-alist
+             '((".*app/templates.*\\.html$" . "HTML file")
+               nil
+               "{% extends \"base.html\" %}\n"
+               "\n"
+               "{% block content %}\n"
+               "\n"
+               "\n"
+               "{% endblock %}\n"
 ))
 
 (add-to-list 'auto-insert-alist
@@ -547,6 +607,44 @@
                "\n"
                "<p>\n"
                _ "\n"
+               "\n"
+               "<?php\n"
+               "require ($_SERVER['DOCUMENT_ROOT'] . \"/php/footer.php\");\n"
+               "?>\n"
+))
+
+(add-to-list 'auto-insert-alist
+             '((".*lwvweb.*VGuide2018.*\\.html$" . "LWVNM HTML Voter Guide")
+               "Office: "
+               "<?php\n"
+               "  $title = \"New Mexico Voter Guide 2018: " str "\";\n"
+               "\n"
+               "  require ($_SERVER['DOCUMENT_ROOT'] . \"/php/header.php\");\n"
+               "?>\n"
+               "\n"
+               "<fieldset class=\"role\">\n"
+               "<legend><b><i>Office description</i></b></legend>"
+               "<p>" _
+               "</fieldset>"
+               "\n"
+               "<div class=\"candidate_list\">\n"
+               "<h3>" str " Candidates:</h3>\n"
+               "<ul>\n"
+               "<li><a href=\"#NAME\">FULLNAME (PARTY)</a>\n"
+               "<li><a href=\"#NAME\">FULLNAME (PARTY)</a>\n"
+               "</ul>\n"
+               "</div>\n"
+               "\n"
+               "<div class=\"col_1_of_2\">\n"
+               "<a name=\"NAME\">\n"
+               "<?php require \"FILENAME.html\"; ?>\n"
+               "</div>\n"
+               "\n"
+               "<div class=\"col_2_of_2\">\n"
+               "<a name=\"NAME\">\n"
+               "<?php require \"FILENAME.html\"; ?>\n"
+               "</div>\n"
+               "\n"
                "\n"
                "<?php\n"
                "require ($_SERVER['DOCUMENT_ROOT'] . \"/php/footer.php\");\n"
@@ -776,7 +874,7 @@
 ;; And anyway, whatever smarts (sgml-tag) offers beyond just inserting the
 ;; tag is stuff I don't use. So let's just write something simple that
 ;; works without prompting or inserting a bunch of extra crap.
-(defun insert-html-tag (tag) (interactive)
+(defun add-html-tag (tag) (interactive)
   (let (
         (rstart (if (region-active-p) (region-beginning) (point)))
         (rend   (if (region-active-p) (region-end)       (point))))
@@ -792,18 +890,36 @@
     (insert tag)
     (insert ">")
 ))
+;; Plus one that *does* add newlines:
+(defun add-html-block (tag) (interactive)
+  (let (
+        (rstart (if (region-active-p) (region-beginning) (point)))
+        (rend   (if (region-active-p) (region-end)       (point))))
+    ;; Insert the close tag first, because inserting the open tag
+    ;; will mess up the rend position.
+    (goto-char rend)
+    (insert "\n</")
+    (insert tag)
+    (insert ">\n")
+    ;; Now the open tag:
+    (goto-char rstart)
+    (insert "<")
+    (insert tag)
+    (insert ">\n")
+))
 
 ;; Key bindings and such can be done in the mode hook.
 (defun html-hook ()
   ;; Define keys for inserting tags in HTML mode:
-  (local-set-key "\C-cb" (lambda () (interactive) (insert-html-tag "b")))
-  (local-set-key "\C-ci" (lambda () (interactive) (insert-html-tag "i")))
-  (local-set-key "\C-cp" (lambda () (interactive) (insert-html-tag "pre")))
-  (local-set-key "\C-cc" (lambda () (interactive) (insert-html-tag "code")))
-  (local-set-key "\C-c1" (lambda () (interactive) (insert-html-tag "h1")))
-  (local-set-key "\C-c2" (lambda () (interactive) (insert-html-tag "h2")))
-  (local-set-key "\C-c3" (lambda () (interactive) (insert-html-tag "h3")))
-  (local-set-key "\C-c4" (lambda () (interactive) (insert-html-tag "h4")))
+  (local-set-key "\C-cb" (lambda () (interactive) (add-html-tag "b")))
+  (local-set-key "\C-ci" (lambda () (interactive) (add-html-tag "i")))
+  (local-set-key "\C-cc" (lambda () (interactive) (add-html-tag "code")))
+  (local-set-key "\C-c1" (lambda () (interactive) (add-html-tag "h1")))
+  (local-set-key "\C-c2" (lambda () (interactive) (add-html-tag "h2")))
+  (local-set-key "\C-c3" (lambda () (interactive) (add-html-tag "h3")))
+  (local-set-key "\C-c4" (lambda () (interactive) (add-html-tag "h4")))
+
+  (local-set-key "\C-cp" (lambda () (interactive) (add-html-block "pre")))
 
   ;(local-set-key "\C-m" (lambda () (interactive) (insert "\n")))
 
@@ -814,7 +930,7 @@
   ;; https://www.emacswiki.org/emacs/BrowseUrl#toc5
 
   ;; And finally, a generic shorthand to use with other tags:
-  ;; Consider changing this to use insert-html-tag instead.
+  ;; Consider changing this to use add-html-tag instead.
   (local-set-key "\C-ct"  (lambda () (interactive) (sgml-tag)))
 
   ;; Contents of <pre> tags get reindented, destroying their formatting.
@@ -836,7 +952,8 @@
 (add-hook 'sgml-mode-hook 'html-hook)
 
 ; Prevent -- dashed comments -- from screwing up auto-fill mode in sgml-mode.
-; This is an ongoing arms race, breaks with every new emacs version.
+; This is an ongoing arms race, breaks with every new emacs version,
+; and is currently broken again.
 (defun sgml-comment-indent-new-line (&optional soft)
   (save-excursion (forward-char -1) (delete-horizontal-space))
   (delete-horizontal-space)
@@ -1058,9 +1175,6 @@
   (interactive)
   (get-and-insert-image "scrot" "img/" "-s"))
 
-;; Call up scrot to insert a new screenshot
-;; It would be nice to have autocompletion on this, or some sort of
-;; warning preventing replacing existing files.
 (defun screenshot-old ()
  "Prompt for a filename, then call up scrot to create an interactive screenshot"
   (interactive)
@@ -1339,8 +1453,12 @@
 
         ;; iimage mode is so cool!
         ("Docs/classes/" . text-img-mode)
+        ("Docs/classes/.*\.py" . python-mode)
+
         ("Docs/Notes/househunt/houses" . text-img-mode)
         ("Docs/Notes/househunt/sold" . text-img-mode)
+
+        ("Docs/classes/welding/" . text-wrap-mode)
 
         ))
 
