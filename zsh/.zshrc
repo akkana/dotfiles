@@ -3,6 +3,9 @@
 # Akkana's .zshrc
 #########################
 
+# TEMPORARY:
+alias comet='pho ~/comet/wirtanen.jpeg ~/comet/Wirtanen_Full_view.png ~/comet/Wirtanen_wide_Nov01_Dec11_w.png ~/comet/Wirtanen_wide_Dec09_Dec18_w.png &'
+
 # User specific aliases and functions
 
 # Get noninteractive shells out of here
@@ -19,6 +22,9 @@ if [[ -f /etc/zshrc ]]; then
 fi
 
 #setopt ignoreeof
+
+# Temporary: disable fetchmail
+alias fetchmail='echo NO!!!'
 
 setopt RM_STAR_SILENT
 
@@ -62,7 +68,9 @@ fi
 
 # Autocomplete in the python console:
 # https://python.readthedocs.io/en/v2.7.2/tutorial/interactive.html
-export PYTHONSTARTUP=~/.pystartup
+if [[ -f ~/.pystartup ]]; then
+    export PYTHONSTARTUP=~/.pystartup
+fi
 
 ulimit -c unlimited
 HISTSIZE=200
@@ -124,25 +132,45 @@ else
 fi
 export standout_end="\e[m"
 
-# Only set this prompt if I'm logged in as myself:
-if [[ $USER == akkana ]]; then
-  # PS1=$'%{\e[1m%}<'$(hostname)$primes$'>-%{\e[0m%} '
-  #PS1='%K{white}%F{blue}<'$(hostname)$primes$'>- %f%k'
+# How many levels deep are we from being a login shell?
+# Keep track of that in $primes, to reflect it in the prompt.
+if [[ -o login ]]; then
+  # A login shell: reset primes.
+  export primes=''
+else
+  # Not a login shell
+  export primes=${primes}\'
+fi
+
+set_prompt() {
   hostname=$(hostname)
 
-  # If we're on a raspberry pi or similar ARM platform, use a different color:
-  # if [[ -f /proc/device-tree/model ]]; then
-  if [[ $(uname -a) =~ armv ]]; then
-    PS1='%F{red}<'$hostname$primes$'>- %f%k'
-  else
-    PS1='%F{blue}<'$hostname$primes$'>- %f%k'
-  fi
+  # Only set this prompt if I'm logged in as myself:
+  if [[ $USER == akkana ]]; then
+    # PS1=$'%{\e[1m%}<'$(hostname)$primes$'>-%{\e[0m%} '
+    #PS1='%K{white}%F{blue}<'$(hostname)$primes$'>- %f%k'
 
-elif [[ $USER == root ]]; then
-  #PS1=$'%{\e[1m%}#['$(hostname)$primes$']#%{\e[0m%} '
-  PS1='%K{white}%F{red}['$hostname$primes$'#]- %f%k'
-fi
-export primes=${primes}\'
+    # If we're on a raspberry pi or similar ARM platform, use a different color:
+    # if [[ -f /proc/device-tree/model ]]; then
+    if [[ $(uname -a) =~ armv ]]; then
+      PS1='%F{red}<'$hostname$primes$'>- %f%k'
+    else
+      PS1='%F{blue}<'$hostname$primes$'>- %f%k'
+    fi
+
+  # But root should have a helpful colorized prompt too:
+  elif [[ $USER == root ]]; then
+    #PS1=$'%{\e[1m%}#['$(hostname)$primes$']#%{\e[0m%} '
+    PS1='%K{white}%F{red}['$hostname$primes$'#]- %f%k'
+
+  # and so should everyone else.
+  else
+    PS1='%F{green}<'$USER@$hostname$primes$'>- %f%k'
+  fi
+}
+
+set_prompt
+
 
 # Print useful info on the right.
 # %F{color} sets the color; %f%k restores default fg/bg colors, respectively.
@@ -230,9 +258,6 @@ alias primary2clip='xsel -p | xsel -i -b'
 # and vice versa:
 alias clip2primary='xsel -b | xsel -i -p'
 
-# Tail the procmail log file, for when I'm expecting mail:
-alias proctail="tail -f Procmail/log | egrep -v '^procmail'"
-
 # What's the complement of a number, e.g. the fmask in fstab to get
 # a given file mode for vfat files? Sample usage: invert 755
 invertmask() {
@@ -294,7 +319,7 @@ lsdirs1() {
   (cd $1; /bin/ls -d `/bin/ls -1F | grep / | sed 's_/$__'`)
 }
 
-lsdirs() { 
+lsdirs() {
   echo `/bin/ls -1F $@ | grep / | sed 's_/$__'`| tr -s ' ' '\n' | paste - - - | column -x -t -c3
 }
 
@@ -340,11 +365,13 @@ ducks() {
 ##################
 # Recursive greps
 gr() {
-  find . \( -type f -and -not -name '*.o' -and -not -name '*.so' -and -not -name '*.a' -and -not -name '*.pyc' -and -not -name '*.jpg' -and -not -name '*.JPG' -and -not -name '*.png' -and -not -name '*.xcf*' -and -not -name '*.gmo' -and -not -name '.intltool*' -and -not -name '*.po' -and -not -name 'po' -and -not -name '*.tar*' -and -not -name '*.zip' -or -name '.metadata' -or -name 'build' -or -name 'obj-*' -or -name '.git' -or -name '.svn' -or -name '.libs' -prune \) -print0 | xargs -0 grep -s $* /dev/null
+  find . -name '*.o' -prune -or -name '*.so' -prune -or -name '*.a' -prune -or -name '*.pyc' -prune -or -name '*.jpg' -prune -or -name '*.JPG' -prune -or -name '*.png' -prune -or -name '*.xcf*' -prune -or -name '*.gmo' -prune -or -name '.intltool*' -prune -or -name '*.po' -prune -or -name 'po' -prune -or -name '*.tar*' -prune -or -name '*.zip' -or -name '.metadata' -or -name 'build' -or -name 'obj-*' -or -name '.git' -or -name '.svn' -or -name '.libs' -prune -or -name __pycache__ -prune -or -type f -print0 | xargs -0 grep $* /dev/null
 }
+
 zgr() {
-  find . \( -type f -and -not -name '*.o' -and -not -name '*.so' -and -not -name '*.a' -and -not -name '*.pyc' -and -not -name '*.jpg' -and -not -name '*.JPG' -and -not -name '*.png' -and -not -name '*.xcf*' -and -not -name 'po' -and -not -name '*.tar*' -and -not -name '*.zip' -or -name '.metadata' -prune \) -print0 | xargs -0 zgrep $* /dev/null | fgrep -v .svn | fgrep -v .git
+  find . -name '*.o' -prune -or -name '*.so' -prune -or -name '*.a' -prune -or -name '*.pyc' -prune -or -name '*.jpg' -prune -or -name '*.JPG' -prune -or -name '*.png' -prune -or -name '*.xcf*' -prune -or -name '*.gmo' -prune -or -name '.intltool*' -prune -or -name '*.po' -prune -or -name 'po' -prune -or -name '*.tar*' -prune -or -name '*.zip' -or -name '.metadata' -or -name 'build' -or -name 'obj-*' -or -name '.git' -or -name '.svn' -or -name '.libs' -prune -or -name __pycache__ -prune -or -type f -print0 | xargs -0 zgrep $* /dev/null | fgrep -v .svn | fgrep -v .git
 }
+
 cgr() {
   find . \( -name '*.[CchH]' -or -name '*.cpp' -or -name '*.cc' \) -print0 | xargs -0 grep $* /dev/null
 }
@@ -424,6 +451,10 @@ grepall() {
 
     zsh -c $cmd
 }
+
+# Not really a grep: a crazy filter to use on apache error logs
+# to read Flask output without needing a super-wide terminal.
+alias flaskfilter="sed 's/^.\{12\}\([0-9]\{2\}:[0-9]\{2\}\):[0-9]\{2\}\.[0-9]\{6\} 20[0-9][0-9]\] \[.*\] \[.*\] \[remote \(.*\)]/\1 (\2)/'"
 
 # End grep aliases
 
@@ -632,6 +663,19 @@ cleanssh() {
   echo Use ssh-keygen -R $1
 }
 
+# How many books have I read in recent years?
+booksread() {
+    setopt extendedglob
+    for f in ~/Docs/Lists/books/books[0-9](#c4); do
+        year=$(echo $f | sed 's/.*books//')
+        let allbooks=$(egrep '^[^ ]' $f | grep -v 'Book List:' | wc -l)
+        let rereads=$(egrep '^[-.@\*]' $f  | grep -v 'Book List:'| wc -l)
+        # How to do numeric computations in zsh:
+        printf "%4s:   All: %3d   New: %3d   Re-reads: %3d\n" \
+               $year $allbooks $(($allbooks - $rereads)) $rereads
+    done
+}
+
 ################################################
 # Presentations:
 
@@ -652,7 +696,8 @@ screenblankon() {
 alias projector='xrandr --output VGA-1 --mode 1024x768; noscreenblank'
 # and on the HDMI port:
 # alias projectorh='xrandr --output HDMI1 --mode 1024x768'
-alias projectorh='xrandr --output HDMI-1 --mode 1024x768; noscreenblank'
+# alias projectorh='xrandr --output HDMI-1 --mode 1024x768; noscreenblank'
+alias projectorh='xrandr --output LVDS-1 --auto --primary --output HDMI-1 --mode 1024x768'
 
 # and set video back to normal:
 # alias monitor='xrandr --output HDMI1 --mode 1680x1050 --output VGA1 --off --output LVDS1 --off'
@@ -710,6 +755,32 @@ alias noteterm="nohup xterm -geometry 33x37+1025+0 -fn '-*-terminus-bold-*-*-*-2
 # For notes during planetarium shows:
 # red/black for night vision, narrow to show two at once on a laptop.
 alias planeterm="nohup rxvt -geometry 62x45 -fn terminus-iso8859-2-bold-18 -bg black -fg red &"
+
+# Make a new empty presentation:
+newpreso() {
+    if [[ x$1 != x ]]; then
+        newdir=$1
+    else
+        newdir="newpreso"
+    fi
+
+    if [[ x$2 != x ]]; then
+        fromdir=$2
+    else
+        fromdir=~/src/htmlpreso
+    fi
+    echo "Copying from $fromdir"
+
+    if [ ! -d $newdir ]; then
+        echo Creating $newdir
+        mkdir $newdir
+    fi
+
+    cp $fromdir/blank.html $fromdir/img.html $fromdir/navigate.js $fromdir/notes.js $fromdir/slides.css $fromdir/slides.js $fromdir/credits.js $newdir
+    mkdir $fromdir/pix
+
+    echo "New presentation files in $newdir"
+}
 
 # Making a PDF from a bunch of slides
 alias talk2pdf='qhtmlprint $( fgrep .html slides.js  | grep -v // | sed -e "s/\",/\"/" -e "s/\"//g" ) '
@@ -796,18 +867,33 @@ alias guru='screen /dev/ttyUSB0 115200'
 alias rpi='titlebar "Raspberry Pi"; echo "black=Gnd white=TX green=RX"; echo "Disconnect with Ctrl-backquote d"; screen /dev/ttyUSB0 115200; titlebar "local"'
 alias pion='titlebar "Raspberry Pi Pion"; ssh -X pi@pion; titlebar "local"'
 
+# Get my current network interface
+myif() {
+    ip addr show | awk '/inet.*brd/{print $NF}'
+}
+
 # Get my current network number, e.g. 192.168.1.0/24
 mynet() {
-    addr=$(ip addr show wlan0 2>/dev/null || ip addr show eth0)
-    echo $addr | grep -w inet | awk '{print $2}' | sed 's_\.[0-9]*/\([0-9]*\)_.0/\1_'
+    ip addr show | awk '/inet.*brd/{print $4}'
+
+    # This no longer works now that wlan0 and eth0 are no more
+    # addr=$(ip addr show wlan0 2>/dev/null || ip addr show eth0)
+    # echo $addr | grep -w inet | awk '{print $2}' | sed 's_\.[0-9]*/\([0-9]*\)_.0/\1_'
+}
+
+myaddr() {
+    ip addr | grep $(myif) | grep inet | awk '{print $2}' | sed 's_[0-9]*/24_0/24_'
 }
 
 # Find a Raspberry Pi attached to the local network:
 localpi() {
-    echo_and_do fping -a -r1 -g $(mynet) |& grep -v Unreachable
+    # fping apparently has changed syntax and this no longer works:
+    # echo_and_do fping -a -r1 -g $(mynet) |& grep -v Unreachable
+    # but this seems to:
+    echo_and_do fping -A -d -a -q -g -a -i 1 -r 0 $(myaddr)
     echo
     echo "Now running arp and looking up MACs:"
-    echo_and_do  arp -n | fgrep " b8:27:eb"
+    echo_and_do arp -n | fgrep " b8:27:eb"
 }
 
 # Show everybody connected to the local net:
@@ -824,6 +910,61 @@ localnet() {
 localport() {
     allnet=$(mynet | sed 's_\.[0-9]*/24_.1-254_')
     nmap $allnet -p$1 --open -oG - | grep $1/open
+}
+
+xxx() {
+    ip -o link | awk '{print $2, $17}' | while read -r iface mac; do
+        echo iface $iface
+        echo mac $mac
+        LON=$(echo $mac | sed -e 's/:.*//' -e 's/.//')
+        echo LON $LON
+        echo 2 bit set: $((($LON & 0x2) != 0))
+        if ((($LON & 0x2) != 0)); then
+            echo set
+        else
+            echo clear
+        fi
+    done
+}
+
+# Set up a Linux box to talk to a Pi0 using USB gadget on 192.168.0.7:
+pigadget() {
+    iface=''
+    # How to iterate over a line and set words, without needing an array:
+    ip -o link | grep en | grep u | awk '{print $2, $17}' | \
+        while read -r iff mac; do
+            # LON is a numeric variable containing the digit we care about.
+            # The "let" is required so zsh will know it's numeric,
+            # otherwise the bitwise test will fail.
+            let LON=0x$(echo $mac | sed -e 's/:.*//' -e 's/.//')
+
+            # Is the 2 bit set? Meaning it's a locally administered MAC
+            if ((($LON & 0x2) != 0)); then
+                iface=$(echo $iff | sed 's/:.*//')
+                echo Locally administered bit is set
+                break
+            else
+                echo Locally administered bit is clear
+            fi
+        done
+
+    if [[ x$iface == x ]]; then
+        echo "No enp interface:"
+        ip -o link
+        echo Bailing.
+        return
+    fi
+
+    echo "enp interface:" $iface
+    echo_and_do sudo ip a add 192.168.7.1/24 dev $iface
+    echo_and_do sudo ip link set dev $iface up
+
+    # Enable routing so the gadget can get to the outside world:
+    echo_and_do sudo sh -c 'echo 1 > /proc/sys/net/ipv4/ip_forward'
+    echo_and_do sudo iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+
+    # Install dnsmasq if you want the gadget to have DNS
+    # without needing to use 8.8.8.8.
 }
 
 # A some electronics cheatsheets:
@@ -870,7 +1011,15 @@ ZLE_REMOVE_SUFFIX_CHARS=$' \t\n;&'
 # Older zsh, like on squeeze, don't have compdef.
 
 # zsh annoyingly only prints the last 10 lines of history by default.
-alias history='history 200'
+history() {
+    if [[ x$1 == x ]]; then
+        builtin history -80
+    elif [[ $1 =~ '-.*' ]]; then
+        builtin history $*
+    else
+        builtin history -$*
+    fi
+}
 
 ###################################################
 ######## zsh completion stuff #####################
@@ -1227,8 +1376,11 @@ distclean() {
     ./autogen.sh $args
 }
 
-# Build a new copy of my forked hexchat
-
+# Build a new copy of my forked hexchat.
+# This frequently fails with meson/ninja errors because those tools
+# are always updating and changing formats.
+# If that happens, the suggested commands never work;
+# instead remove or rename the build directory.
 newhexchat() {
     # Make sure this exits on errors from here on.
     setopt localoptions errreturn
@@ -1253,9 +1405,14 @@ newhexchat() {
     popd_maybe
 }
 
-# Debian: search for packages but only show installed ones.
-isinstalled() {
-    aptitude search "$1" | egrep '^i'
+# Reminder for building firefox.
+# Most of the time this will probably require manual intervention.
+newfox() {
+    pushd-maybe ~/outsrc/gecko-dev/
+    git pull
+    ./mach build
+    ./mach package
+    echo "Tarball should be in" `pwd`/obj*/dist
 }
 
 # Debian apt: Check on status of all held packages:
@@ -1281,12 +1438,21 @@ check_holds() {
 # need re-installing, https://github.com/pypa/pip/issues/4222
 # So instead, use a virtualenv all the time to do the job .local
 # was supposed to do.
+# (.local isn't a good solution anyway if you need both python2 and
+# python3, since the packages will overwrite each other.)
 #
 # Set each one up once with:
 # virtualenv --system-site-packages $HOME/.python2env-$archbits (python2)
 #   (requires virtualenv and python-virtualenv)
 # python3 -m venv --system-site-packages .python3env-$archbits (python3)
 #   (requires python3-venv)
+#
+# If you need a specific version of Python, try e.g.:
+# sudo apt-get install python3.6 python3.6-venv
+# python3.6 -m venv ~/pyenv/py3.6-tf
+# Some sources say you can use venv --python=/usr/bin/python3.6,
+# but it fails in some cases.
+
 
 nopythonenv() {
     if type deactivate >/dev/null ; then
@@ -1295,6 +1461,7 @@ nopythonenv() {
     if type deactivate >/dev/null ; then
         deactivate
     fi
+    set_prompt
 }
 
 switchpythonenv() {
@@ -1317,9 +1484,11 @@ switchpythonenv() {
         VIRTUAL_ENV_DISABLE_PROMPT=1 source $HOME/.python3env-${archbits}/bin/activate
     else
         echo Switching Python envs to python${vers}, ${archbits} bit
-        echo "VIRTUAL_ENV_DISABLE_PROMPT=1 source $HOME/.python${vers}env-${archbits}/bin/activate"
         VIRTUAL_ENV_DISABLE_PROMPT=1 source $HOME/.python${vers}env-${archbits}/bin/activate
     fi
+
+    set_prompt
+    PS1="%F{magenta}Py${vers} ${PS1}"
 }
 
 alias python2env='switchpythonenv 2'
@@ -1379,7 +1548,7 @@ alias pythonhelp="pythonXhelp python"
 alias python2help="pythonXhelp python2"
 alias python3help="pythonXhelp python3"
 
-alias unittest='python -m unittest discover'
+alias unittest='python3 -m unittest discover'
 alias unittest3='python3 -m unittest discover'
 alias unittest2='python2 -m unittest discover'
 
@@ -1471,14 +1640,17 @@ andimport() {
 # End Android
 
 ##################################
-# Spam-related aliases
+# Spam and email-related aliases
+
+# Tail the procmail log file, for when I'm expecting mail:
+alias proctail="tail -1000f Procmail/log | egrep -v '^procmail'"
 
 # Spast checks spam with e.g. echo $subj | grep -i -f $patfile
 # How do we find out from $subj which line in $patfile matched the grep?
-# Sample Usage: whichspam 'subject-line' subject
+# Sample Usage: whichspam 'subject-line' subjectRejects
 whichspam() {
   # to print each line before executing, for debugging purposes:
-  #set -o xtrace
+  set -o xtrace
   whichfile=$2
   if [[ x$whichfile == x ]]; then
     whichfile=subjectRejects
@@ -1493,7 +1665,23 @@ whichspam() {
       echo $line
     fi
   done
-  #set +o xtrace
+  set +o xtrace
+}
+
+# Sometimes editing one of the files accidentally produces a blank line,
+# which causes tons of legitimate mail to be misfiltered.
+# Check for that:
+check-spam-blanks() {
+    if [ ! -d ~/Procmail/spast ]; then
+        return
+    fi
+    pushd ~/Procmail/spast >/dev/null
+    output=$(egrep -s '^$' *)
+    if [[ x$output != x ]]; then
+        echo '************ Yikes! Blank lines in ~/Procmail/spast:'
+        echo $output
+    fi
+    popd >/dev/null
 }
 
 #
@@ -1568,8 +1756,7 @@ blogup() {
 }
 
 # Sync new blog files back to the server:
-#alias blogsync='rsync -av ~/web/blog ~/web/blogfiles leewit:shallow/'
-alias blogsync='rsync -av ~/web/blog ~/web/blogfiles shallowsky.com:web/'
+alias blogsync='rsync -av --delete ~/web/blog ~/web/blogfiles shallowsky.com:web/'
 
 # End PyBlosxom helpers.
 
@@ -1669,6 +1856,8 @@ minibackup() {
     dobackup "$1" mini
 }
 
+############# end backups
+
 ####################################################################
 # Rsync local files up to a web server
 # Usage: towebhost dir
@@ -1678,6 +1867,29 @@ minibackup() {
 # weblocalpaths=( $home/mywebdir   /public/myotherwebdir )
 
 towebhost() {
+    fromwebhost=0
+    flags=''
+    # For testing, this is a convenient place to force -n
+    # flags='-n'
+
+    # Evaluate arguments: -n and/or -f
+    for i in "$@"
+    do
+        case $i in
+            -n)
+                flags='-n'
+                shift
+                ;;
+            -f)
+                fromwebhost=1
+                shift
+                ;;
+            --default)
+                break
+                ;;
+        esac
+    done
+
     if [[ $# == 0 ]]; then
         print "Usage: towebhost file_or_dir"
         return
@@ -1715,14 +1927,45 @@ towebhost() {
         localpath=${localpath%%/##}/
     fi
 
+    excludes="--exclude .git --exclude cache --exclude __pycache__ --exclude '*.pyc'"
+
     remotepath=${localpath#$localbase}
 
-    echo "Copying $localpath to $webhost $remotepath"
-    echo
-    cmd="rsync -av --delete --exclude .git $localpath $webhost$remotepath"
-    # We'll went --delete here too, but let's hold off until it's known working.
+    if [[ $fromwebhost == 1 ]]; then
+        echo "Copying from $webhost$remotepath to local $localpath"
+        echo
+        cmd="rsync -av $flags --delete $excludes $webhost$remotepath $localpath"
+
+    else
+        echo "Copying $localpath to $webhost$remotepath"
+        echo
+        cmd="rsync -av $flags --delete $excludes $localpath $webhost$remotepath"
+    fi
+
     echo $cmd
     eval $cmd
+}
+
+fromwebhost() { towebhost -f $@ }
+
+# Sync source directories to the same place on another machine,
+# relative to $HOME. Exclude git information, .pyc etc.
+# Usage: srcsync . otherhostname
+srcsync() {
+    # Get the full path of the argument:
+    localpath=$1:A
+    remotehost=$2
+    if [[ $localpath == '' || $remotehost == '' ]]; then
+        echo "Usage: srcsync localpath remotehostname"
+        return
+    fi
+
+    # Strip off $HOME
+    remotepath=${localpath#$HOME/}
+
+    echo_and_do rsync -av --delete --exclude .git \
+                --exclude .pyc --exclude __pycache__ \
+                $localpath/ $remotehost:$remotepath/
 }
 
 ####################################################################
@@ -1802,6 +2045,9 @@ duplexlp() {
 duplexbrother() {
     lp -o sides=two-sided-long-edge -o collate=true -d Brother_HL-3170CDW $*
 }
+duplexdell() {
+    lp -o sides=two-sided-long-edge -o collate=true -d Dell_Printer_E310dw $*
+}
 
 # lp inconsistently decides to use zero margins. When it does, this helps.
 # (In theory, adding -o page-top=17 should add a top margin, but in
@@ -1819,7 +2065,7 @@ ut() {
 # Convert a fixed date (e.g. for a meeting) from UT/GMT.
 # date -d 'Tue November 12 18:00 UTC' or date -d '18:00 UTC next Friday'
 fromut() {
-    date -d $*
+    date -d "$*"
 }
 
 # Subtract dates
