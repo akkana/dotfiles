@@ -3,9 +3,6 @@
 # Akkana's .zshrc
 #########################
 
-# TEMPORARY:
-alias comet='pho ~/comet/wirtanen.jpeg ~/comet/Wirtanen_Full_view.png ~/comet/Wirtanen_wide_Nov01_Dec11_w.png ~/comet/Wirtanen_wide_Dec09_Dec18_w.png &'
-
 # User specific aliases and functions
 
 # Get noninteractive shells out of here
@@ -365,11 +362,11 @@ ducks() {
 ##################
 # Recursive greps
 gr() {
-  find . -name '*.o' -prune -or -name '*.so' -prune -or -name '*.a' -prune -or -name '*.pyc' -prune -or -name '*.jpg' -prune -or -name '*.JPG' -prune -or -name '*.png' -prune -or -name '*.xcf*' -prune -or -name '*.gmo' -prune -or -name '.intltool*' -prune -or -name '*.po' -prune -or -name 'po' -prune -or -name '*.tar*' -prune -or -name '*.zip' -or -name '.metadata' -or -name 'build' -or -name 'obj-*' -or -name '.git' -or -name '.svn' -or -name '.libs' -prune -or -name __pycache__ -prune -or -type f -print0 | xargs -0 grep $* /dev/null
+  find . -name '*.o' -prune -or -name '*.so' -prune -or -name '*.a' -prune -or -name '*.pyc' -prune -or -name '*.jpg' -prune -or -name '*.JPG' -prune -or -name '*.png' -prune -or -name '*.xcf*' -prune -or -name '*.gmo' -prune -or -name '.intltool*' -prune -or -name '*.po' -prune -or -name 'po' -prune -or -name '*.tar*' -prune -or -name '*.zip' -or -name '.metadata' -or -name 'build' -or -name 'obj-*' -or -name '.git' -prune -or -name '.svn' -prune -or -name '.libs' -prune -or -name __pycache__ -prune -or -type f -print0 | xargs -0 grep $* /dev/null
 }
 
 zgr() {
-  find . -name '*.o' -prune -or -name '*.so' -prune -or -name '*.a' -prune -or -name '*.pyc' -prune -or -name '*.jpg' -prune -or -name '*.JPG' -prune -or -name '*.png' -prune -or -name '*.xcf*' -prune -or -name '*.gmo' -prune -or -name '.intltool*' -prune -or -name '*.po' -prune -or -name 'po' -prune -or -name '*.tar*' -prune -or -name '*.zip' -or -name '.metadata' -or -name 'build' -or -name 'obj-*' -or -name '.git' -or -name '.svn' -or -name '.libs' -prune -or -name __pycache__ -prune -or -type f -print0 | xargs -0 zgrep $* /dev/null | fgrep -v .svn | fgrep -v .git
+  find . -name '*.o' -prune -or -name '*.so' -prune -or -name '*.a' -prune -or -name '*.pyc' -prune -or -name '*.jpg' -prune -or -name '*.JPG' -prune -or -name '*.png' -prune -or -name '*.xcf*' -prune -or -name '*.gmo' -prune -or -name '.intltool*' -prune -or -name '*.po' -prune -or -name 'po' -prune -or -name '*.tar*' -prune -or -name '*.zip' -or -name '.metadata' -or -name 'build' -or -name 'obj-*' -or -name '.git' -prune -or -name '.svn' -prune -or -name '.libs' -prune -or -name __pycache__ -prune -or -type f -print0 | xargs -0 zgrep $* /dev/null | fgrep -v .svn | fgrep -v .git
 }
 
 cgr() {
@@ -527,12 +524,12 @@ alias git_merge_branch='git fetch; git rebase origin/master'
 hostname=$(hostname)
 if [[ $hostname == 'moon' || $hostname == 'dna' ]]; then
   alias off="echo This is $hostname, you fool!"
-  alias halt="echo This is $hostname, you fool!"
   alias reboot="echo This is $hostname, you fool!"
+  alias zzz="echo This is $hostname, you fool!"
 else
-  alias off="sudo shutdown -h now"
-  alias halt="sudo shutdown -h now"
-  alias reboot="sudo shutdown -r now"
+  alias off="systemctl poweroff"
+  alias reboot="systemctl reboot"
+  alias zzz="systemctl suspend"
 fi
 
 ######################################
@@ -697,7 +694,7 @@ alias projector='xrandr --output VGA-1 --mode 1024x768; noscreenblank'
 # and on the HDMI port:
 # alias projectorh='xrandr --output HDMI1 --mode 1024x768'
 # alias projectorh='xrandr --output HDMI-1 --mode 1024x768; noscreenblank'
-alias projectorh='xrandr --output LVDS-1 --auto --primary --output HDMI-1 --mode 1024x768'
+alias projectorh='xrandr --output LVDS-1 --auto --primary --output HDMI-1 --mode 1024x768; noscreenblank'
 
 # and set video back to normal:
 # alias monitor='xrandr --output HDMI1 --mode 1680x1050 --output VGA1 --off --output LVDS1 --off'
@@ -898,7 +895,7 @@ localpi() {
 
 # Show everybody connected to the local net:
 localnet() {
-    echo_and_do fping -a -r1 -g $(mynet) |& grep -v Unreachable
+    echo_and_do fping -A -d -a -q -g -a -i 1 -r 0 $(myaddr)
     echo
     echo "Now running arp and looking up MACs:"
     echo_and_do arp -n |& grep -v incomplete |& mac_lookup
@@ -910,21 +907,6 @@ localnet() {
 localport() {
     allnet=$(mynet | sed 's_\.[0-9]*/24_.1-254_')
     nmap $allnet -p$1 --open -oG - | grep $1/open
-}
-
-xxx() {
-    ip -o link | awk '{print $2, $17}' | while read -r iface mac; do
-        echo iface $iface
-        echo mac $mac
-        LON=$(echo $mac | sed -e 's/:.*//' -e 's/.//')
-        echo LON $LON
-        echo 2 bit set: $((($LON & 0x2) != 0))
-        if ((($LON & 0x2) != 0)); then
-            echo set
-        else
-            echo clear
-        fi
-    done
 }
 
 # Set up a Linux box to talk to a Pi0 using USB gadget on 192.168.0.7:
