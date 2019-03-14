@@ -89,7 +89,7 @@
 ;;         (x-select-enable-primary nil))
 ;;     (yank arg)))
 
-;; This might be worth exploring:
+;; When something is selected and you type, replace it.
 (delete-selection-mode t)
 
 ;; Lately exchange-point-and-mark selects everything in between the two points,
@@ -613,44 +613,6 @@
                "?>\n"
 ))
 
-(add-to-list 'auto-insert-alist
-             '((".*lwvweb.*VGuide2018.*\\.html$" . "LWVNM HTML Voter Guide")
-               "Office: "
-               "<?php\n"
-               "  $title = \"New Mexico Voter Guide 2018: " str "\";\n"
-               "\n"
-               "  require ($_SERVER['DOCUMENT_ROOT'] . \"/php/header.php\");\n"
-               "?>\n"
-               "\n"
-               "<fieldset class=\"role\">\n"
-               "<legend><b><i>Office description</i></b></legend>"
-               "<p>" _
-               "</fieldset>"
-               "\n"
-               "<div class=\"candidate_list\">\n"
-               "<h3>" str " Candidates:</h3>\n"
-               "<ul>\n"
-               "<li><a href=\"#NAME\">FULLNAME (PARTY)</a>\n"
-               "<li><a href=\"#NAME\">FULLNAME (PARTY)</a>\n"
-               "</ul>\n"
-               "</div>\n"
-               "\n"
-               "<div class=\"col_1_of_2\">\n"
-               "<a name=\"NAME\">\n"
-               "<?php require \"FILENAME.html\"; ?>\n"
-               "</div>\n"
-               "\n"
-               "<div class=\"col_2_of_2\">\n"
-               "<a name=\"NAME\">\n"
-               "<?php require \"FILENAME.html\"; ?>\n"
-               "</div>\n"
-               "\n"
-               "\n"
-               "<?php\n"
-               "require ($_SERVER['DOCUMENT_ROOT'] . \"/php/footer.php\");\n"
-               "?>\n"
-))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Useful utilities
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -665,12 +627,23 @@
 	(t (self-insert-command (or arg 1)))))
 
 (defun fixm ()
-  "Change line breaks to Unix style. This no longer works because emacs is all tolerant now of DOS line endings."
+  "Change line breaks to Unix style. This no longer works because emacs tries to figure out line encodings on its own now, often gets it wrong but that overrides attempts to change things."
   (interactive)
   (set-buffer-file-coding-system 'utf-8-unix t)
   (replace-string "\r" "")
   ;(message "fixm")
 )
+
+;; https://www.emacswiki.org/emacs/EndOfLineTips
+(defun unix-file ()
+  "Change the current buffer to Unix line-ends."
+  (interactive)
+  (set-buffer-file-coding-system 'unix t))
+
+(defun dos-file ()
+  "Change the current buffer to DOS line-ends."
+  (interactive)
+  (set-buffer-file-coding-system 'dos t))
 
 ;; A fix for DOuble CApitals from a slow left pinky.
 ;; Emacs is wonderful. :-)
