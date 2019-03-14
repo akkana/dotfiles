@@ -527,9 +527,9 @@ if [[ $hostname == 'moon' || $hostname == 'dna' ]]; then
   alias reboot="echo This is $hostname, you fool!"
   alias zzz="echo This is $hostname, you fool!"
 else
-  alias off="systemctl poweroff"
-  alias reboot="systemctl reboot"
-  alias zzz="systemctl suspend"
+  alias off="sudo poweroff"
+  alias reboot="sudo reboot"
+  alias zzz="sudo pm-suspend --auto-quirks"
 fi
 
 ######################################
@@ -1394,7 +1394,7 @@ newfox() {
     git pull
     ./mach build
     ./mach package
-    echo "Tarball should be in" `pwd`/obj*/dist
+    echo "Tarball should be in" `pwd`/obj*/dist/firefox/
 }
 
 # Debian apt: Check on status of all held packages:
