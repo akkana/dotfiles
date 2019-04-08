@@ -102,7 +102,7 @@ setopt interactivecomments
 # See http://zsh.sourceforge.net/Guide/zshguide04.html
 # under 4.7.4: Special parameters: normal text
 # Or http://stackoverflow.com/questions/6673280/avoid-recursion-in-zsh-command-line
-function autoxchat()
+autoxchat()
 {
     LBUFFER+="~/.xchat2/xchatlogs/"
     RBUFFER=" \\#$RBUFFER"
@@ -195,13 +195,17 @@ export MAILER=mutt
 export EDITOR=vim
 export VISUAL=vim
 
+# Note: using "$@" instead of $* or $@ in case of sharing code with
+# bash users, though in zsh, they're all equivalent and all
+# group arguments correctly.
+
 # systemctl pipes through less with some completely broken set of
 # arguments that cuts off all output too wide to fit in the terminal.
 # Disable that:
 # export SYSTEMD_PAGER=
 # but it still cuts off at 80 columns, so this works better:
 systemctl() {
-  /bin/systemctl -l --no-pager $*
+  /bin/systemctl -l --no-pager "$@"
 }
 
 export EDITOR=vim
@@ -221,8 +225,8 @@ export PHO_ARGS=-p
 # echo_and_do something.
 #
 echo_and_do() {
-  echo $*
-  $*
+  echo "$@"
+  "$@"
 }
 
 ##################
@@ -246,8 +250,8 @@ alias zzz='sudo pm-suspend --auto-quirks'
 # the documented sequence of \e]2. But \e]0 works, as long as you
 # don't set XTerm*allowSendEvents.
 titlebar() {
-  # echo ']]2;$*'
-  echo -e "\033]0; $* \007"
+  # echo ']]2;"$@"'
+  echo -e "\033]0; "$@" \007"
 }
 
 # Copy the primary selection into the clipboard:
@@ -264,7 +268,7 @@ invertmask() {
 }
 
 phof () {
-    imglist=(`fotogr $*`)
+    imglist=(`fotogr "$@"`)
     if [[ -z $imglist ]]; then
         echo no match
         return
@@ -276,7 +280,7 @@ phof () {
 # Alias related to file finding and listing:
 
 show_symlinks() {
-    for f in $*; do
+    for f in "$@"; do
         # Remove terminal slash.
         f=${f%/}
         # Mikachu: if you have extendedglob set you can use %{f%%/#}
@@ -301,13 +305,13 @@ show_symlinks() {
         fi
     done
 }
-ls() { /bin/ls -FH $* ; }
+ls() { /bin/ls -FH "$@" ; }
 ll() {
-    /bin/ls -laFH $*
-    show_symlinks $*
+    /bin/ls -laFH "$@"
+    show_symlinks "$@"
 }
-llt() { /bin/ls -laSHFLt $* ; }
-llth() { /bin/ls -lFSHLt $* | head -20 ; }
+llt() { /bin/ls -laSHFLt "$@" ; }
+llth() { /bin/ls -lFSHLt "$@" | head -20 ; }
 
 # There are lots of ways to list only directories. Here are some:
 
@@ -362,58 +366,58 @@ ducks() {
 ##################
 # Recursive greps
 gr() {
-  find . -name '*.o' -prune -or -name '*.so' -prune -or -name '*.a' -prune -or -name '*.pyc' -prune -or -name '*.jpg' -prune -or -name '*.JPG' -prune -or -name '*.png' -prune -or -name '*.xcf*' -prune -or -name '*.gmo' -prune -or -name '.intltool*' -prune -or -name '*.po' -prune -or -name 'po' -prune -or -name '*.tar*' -prune -or -name '*.zip' -or -name '.metadata' -or -name 'build' -or -name 'obj-*' -or -name '.git' -prune -or -name '.svn' -prune -or -name '.libs' -prune -or -name __pycache__ -prune -or -type f -print0 | xargs -0 grep $* /dev/null
+  find . -name '*.o' -prune -or -name '*.so' -prune -or -name '*.a' -prune -or -name '*.pyc' -prune -or -name '*.jpg' -prune -or -name '*.JPG' -prune -or -name '*.png' -prune -or -name '*.xcf*' -prune -or -name '*.gmo' -prune -or -name '.intltool*' -prune -or -name '*.po' -prune -or -name 'po' -prune -or -name '*.tar*' -prune -or -name '*.zip' -or -name '.metadata' -or -name 'build' -or -name 'obj-*' -or -name '.git' -prune -or -name '.svn' -prune -or -name '.libs' -prune -or -name __pycache__ -prune -or -type f -print0 | xargs -0 grep "$@" /dev/null
 }
 
 zgr() {
-  find . -name '*.o' -prune -or -name '*.so' -prune -or -name '*.a' -prune -or -name '*.pyc' -prune -or -name '*.jpg' -prune -or -name '*.JPG' -prune -or -name '*.png' -prune -or -name '*.xcf*' -prune -or -name '*.gmo' -prune -or -name '.intltool*' -prune -or -name '*.po' -prune -or -name 'po' -prune -or -name '*.tar*' -prune -or -name '*.zip' -or -name '.metadata' -or -name 'build' -or -name 'obj-*' -or -name '.git' -prune -or -name '.svn' -prune -or -name '.libs' -prune -or -name __pycache__ -prune -or -type f -print0 | xargs -0 zgrep $* /dev/null | fgrep -v .svn | fgrep -v .git
+  find . -name '*.o' -prune -or -name '*.so' -prune -or -name '*.a' -prune -or -name '*.pyc' -prune -or -name '*.jpg' -prune -or -name '*.JPG' -prune -or -name '*.png' -prune -or -name '*.xcf*' -prune -or -name '*.gmo' -prune -or -name '.intltool*' -prune -or -name '*.po' -prune -or -name 'po' -prune -or -name '*.tar*' -prune -or -name '*.zip' -or -name '.metadata' -or -name 'build' -or -name 'obj-*' -or -name '.git' -prune -or -name '.svn' -prune -or -name '.libs' -prune -or -name __pycache__ -prune -or -type f -print0 | xargs -0 zgrep "$@" /dev/null | fgrep -v .svn | fgrep -v .git
 }
 
 cgr() {
-  find . \( -name '*.[CchH]' -or -name '*.cpp' -or -name '*.cc' \) -print0 | xargs -0 grep $* /dev/null
+  find . \( -name '*.[CchH]' -or -name '*.cpp' -or -name '*.cc' \) -print0 | xargs -0 grep "$@" /dev/null
 }
 hgr() {
-  find . \( -name '*.h' -or -name '*.idl' \) -print0 | xargs -0 grep $* /dev/null
+  find . \( -name '*.h' -or -name '*.idl' \) -print0 | xargs -0 grep "$@" /dev/null
 }
 rgr() {
-  find . \( -name '*.rb' -or -name '*.rhtml' \) -print0 | xargs -0 grep $* /dev/null | fgrep -v .svn
+  find . \( -name '*.rb' -or -name '*.rhtml' \) -print0 | xargs -0 grep "$@" /dev/null | fgrep -v .svn
 }
 htgr() {
-  find . -name '*.*htm*' -and -not -name 'webhits*' -prune -print0 | xargs -0 grep $* /dev/null
+  find . -name '*.*htm*' -and -not -name 'webhits*' -prune -print0 | xargs -0 grep "$@" /dev/null
 }
 pygr() {
-  find . -name '*.py' -print0 | xargs -0 grep $* /dev/null
+  find . -name '*.py' -print0 | xargs -0 grep "$@" /dev/null
 }
 jgr() {
-  find . -name '*.js' -print0 | xargs -0 grep $* /dev/null
+  find . -name '*.js' -print0 | xargs -0 grep "$@" /dev/null
 }
 xgr() {
-  find . \( -name '*.cChH' -or -name '*.cpp' -or -name '*.xul' -or -name '*.html' -or -name '*.js' -or -name '*.css' \) -print0 | xargs -0 grep $* /dev/null
+  find . \( -name '*.cChH' -or -name '*.cpp' -or -name '*.xul' -or -name '*.html' -or -name '*.js' -or -name '*.css' \) -print0 | xargs -0 grep "$@" /dev/null
 }
 cssgr() {
-  find . -name '*.css' -print0 | xargs -0 grep $* /dev/null
+  find . -name '*.css' -print0 | xargs -0 grep "$@" /dev/null
 }
 mgr() {
-  find . -name '*akefile*' -print0 | xargs -0 grep $* /dev/null
+  find . -name '*akefile*' -print0 | xargs -0 grep "$@" /dev/null
 }
 agr() {
-  find . -type f -print0 | xargs -0 grep $* /dev/null
+  find . -type f -print0 | xargs -0 grep "$@" /dev/null
 }
 javagr() {
-  find . -name '*.java' -print0 | xargs -0 grep $* /dev/null
+  find . -name '*.java' -print0 | xargs -0 grep "$@" /dev/null
 }
 # zgr() {
-#  find . \( -type f -and -not -name '*.o' -and -not -name '*.so' -and -not -name '*.a' \) -print0 | xargs -0 zgrep $* /dev/null
+#  find . \( -type f -and -not -name '*.o' -and -not -name '*.so' -and -not -name '*.a' \) -print0 | xargs -0 zgrep "$@" /dev/null
 #}
 # Next doesn't work. How do we use -prune?
 idagr() {
-  find . \( -name OBJ -prune -or -name external -prune -or -name '*scons*' -prune -or -name google_appengine -prune -o -type f -and -not -name '*.o' -and -not -name '*.so' -and -not -name '*.a' -and -not -name '*.pyc' \) -print0 | xargs -0 grep $* /dev/null | fgrep -v .svn | fgrep -v .git
+  find . \( -name OBJ -prune -or -name external -prune -or -name '*scons*' -prune -or -name google_appengine -prune -o -type f -and -not -name '*.o' -and -not -name '*.so' -and -not -name '*.a' -and -not -name '*.pyc' \) -print0 | xargs -0 grep "$@" /dev/null | fgrep -v .svn | fgrep -v .git
 }
 
 # For some reason, with Tags/Keywords this fails with -print0/-0
 # but works without it.
 taggr() {
-  find . -name 'Tags' -or -name 'Keywords' | xargs grep $* /dev/null
+  find . -name 'Tags' -or -name 'Keywords' | xargs grep "$@" /dev/null
 }
 
 alias pygrep="langgrep python"
@@ -421,7 +425,7 @@ alias pygrep="langgrep python"
 # My PHP projects are scattered among various website images, not ~/bin.
 # find is too slow for all of $HOME, so use locate instead.
 phpgrep() {
-    grep $* `locate .php | grep $HOME | grep '\.php$' | egrep -v '(android|index|showpix|ies4linux)'` | sed "s_${HOME}_\~_"
+    grep "$@" `locate .php | grep $HOME | grep '\.php$' | egrep -v '(android|index|showpix|ies4linux)'` | sed "s_${HOME}_\~_"
 }
 
 # Grep stdin for lines that have any of these terms.
@@ -435,8 +439,8 @@ grepany() {
 # usage: cmd | grepall term1 term2 term3 -v term4 term5
 grepall() {
     vterm=${*[(i)-v]}
-    pos=($*[1,$vterm-1])
-    neg=($*[$vterm+1,-1])
+    pos=("$@"[1,$vterm-1])
+    neg=("$@"[$vterm+1,-1])
 
     cmd="cat"
     for term in $pos; do
@@ -573,7 +577,7 @@ getreal() {
 
 # Get resolution of a movie file:
 moviesize() {
-    for f in $*; do
+    for f in "$@"; do
         echo "$f:"
         ffprobe -v quiet -print_format json -show_format -show_streams "$1" | egrep '(width|height)'
     done
@@ -590,9 +594,9 @@ alias playdvd="mplayer dvd://1 -alang en"
 # Prettyprint a JSON file:
 ppjson() {
     # This works but reorders the json:
-    # python -m json.tool $*
+    # python -m json.tool "$@"
     # This doesn't and is just as fast:
-    jq . $*
+    jq . "$@"
 }
 
 ################################################
@@ -805,7 +809,7 @@ delcr2() {
 # Here are ways to clean them up:
 mount() {
     if [[ $# -ne 0 ]]; then
-        /bin/mount $*
+        /bin/mount "$@"
         return
     fi
 
@@ -819,7 +823,7 @@ mount() {
 
 df() {
     if [[ $# -ne 0 ]]; then
-        /bin/df $*
+        /bin/df "$@"
         return
     fi
 
@@ -878,9 +882,17 @@ mynet() {
     # echo $addr | grep -w inet | awk '{print $2}' | sed 's_\.[0-9]*/\([0-9]*\)_.0/\1_'
 }
 
+# Get my current local IP
 myaddr() {
     ip addr | grep $(myif) | grep inet | awk '{print $2}' | sed 's_[0-9]*/24_0/24_'
 }
+
+# Various ways of getting the current external IP.
+# alias myipexternal='curl https://ipinfo.io/ip'
+# alias myipexternal="curl -s https://checkip.dyndns.org | sed -e 's/.*Current IP Address: //' -e 's/<.*$//'"
+# (Also helpful for figuring out how to use wget to write to stdout:)
+# alias myipexternal='wget -qO- https://ipinfo.io/ip'
+alias myipexternal='dig +short myip.opendns.com @resolver1.opendns.com'
 
 # Find a Raspberry Pi attached to the local network:
 localpi() {
@@ -997,9 +1009,9 @@ history() {
     if [[ x$1 == x ]]; then
         builtin history -80
     elif [[ $1 =~ '-.*' ]]; then
-        builtin history $*
+        builtin history "$@"
     else
-        builtin history -$*
+        builtin history -"$@"
     fi
 }
 
@@ -1397,6 +1409,75 @@ newfox() {
     echo "Tarball should be in" `pwd`/obj*/dist/firefox/
 }
 
+
+#############################################################
+# Debian apt helpers.
+
+# There doesn't seem to be any way to exclude all those i386 packages
+# when searching, so search results are twice as long as they need to be.
+# Also, there's no easy way to search for only installed packages.
+# There are ways, but they're quite hard to type:
+# packages whose name contains bash: aptitude search '~i bash'
+# also, aptitude search '?narrow(?installed, …)'
+# packages whose description contains bash: aptitude search '~i ~d bash'
+# packages that are not installed: aptitude search '!~i bash'
+#
+# aptitude's notion of "description" is the long description, not the
+# short one that shows up in aptitude search. So if you search on ~d
+# (-D in this function) you'll get matches that don't include the search
+# term anywhere. -d in this function implies -D but then greps the output
+# to ensure the search term is there.
+#
+# aptitude search reference:
+# https://www.debian.org/doc/manuals/aptitude/ch02s04s05.en.html
+aptsearch() {
+    as_usage() { echo "Usage: aptsearch [-idD] pattern" }
+
+    local OPTIND o only_installed description
+    while getopts ":idD" o; do
+        case "${o}" in
+            i)
+                only_installed=1
+                ;;
+            d)
+                shortdesc=1
+                description=1
+                ;;
+            D)
+                description=1
+                ;;
+            *)
+                aptsearch_usage
+                return
+                ;;
+        esac
+    done
+    shift $((OPTIND-1))
+
+    if [[ $only_installed ]]; then
+        argstr='~i '
+    else
+        argstr=''
+    fi
+
+    if [[ $description ]]; then
+        argstr="${argstr}~d "
+    fi
+
+    argstr="${argstr} $*"
+
+    if [[ $shortdesc ]]; then
+        # restrict output to lines actually containing the search term
+        echo "aptitude search \"${argstr}\" | grep $1"
+        echo
+        aptitude search "${argstr}" | grep "$1"
+    else
+        echo "aptitude search \"${argstr}\""
+        echo
+        aptitude search "${argstr}"
+    fi
+}
+
 # Debian apt: Check on status of all held packages:
 check_holds() {
     for pkg in $( aptitude search '~ahold' | awk '{print $2}' ); do
@@ -1500,7 +1581,7 @@ venv-nosite() {
 
 # Where would a python module be imported from?
 pythonwhich() {
-    foreach lib ($*)
+    foreach lib ("$@")
       python -c "import imp; file, pathname, description = imp.find_module(\"$lib\"); print pathname"
     end
 }
@@ -1513,7 +1594,7 @@ pythonwhich() {
 pythonXhelp() {
     python=$1
     shift
-    for f in $*; do
+    for f in "$@"; do
         if [[ $f =~ '.*\..*' ]]; then
             module=$f:r
             obj=$f:e
@@ -1669,6 +1750,9 @@ check-spam-blanks() {
 #
 # Search for spam subjects or from lines in Spam/saved,
 # for purposes of telling which patterns should be added to procmail filters.
+#
+# Note: this is one of the few cases in zsh where there's a significant
+# difference between "$@" and "$*", and "$*" is needed here.
 #
 spams() {
     #grep Subject ~/Spam/saved ~/Spam/trained/saved | egrep -i "$*"
@@ -1986,7 +2070,7 @@ alias thes="dict -h localhost -d moby-thesaurus"
 
 # Spellcheck
 sp() {
-  spell $* | sort | uniq
+  spell "$@" | sort | uniq
 }
 
 # Reduce the size of a PDF. Usage: pdfreduce infile.pdf outfile.pdf
@@ -2022,13 +2106,13 @@ alias whichprinters='lpstat -a; echo "print with lp -d dest -n num-copies"; echo
 # If using this with -n num_copies, be sure to add -o collate=true too,
 # or else you'll get a sheet with page 1 on both sides, etc.
 duplexlp() {
-    lp -o sides=two-sided-long-edge -o collate=true $*
+    lp -o sides=two-sided-long-edge -o collate=true "$@"
 }
 duplexbrother() {
-    lp -o sides=two-sided-long-edge -o collate=true -d Brother_HL-3170CDW $*
+    lp -o sides=two-sided-long-edge -o collate=true -d Brother_HL-3170CDW "$@"
 }
 duplexdell() {
-    lp -o sides=two-sided-long-edge -o collate=true -d Dell_Printer_E310dw $*
+    lp -o sides=two-sided-long-edge -o collate=true -d Dell_Printer_E310dw "$@"
 }
 
 # lp inconsistently decides to use zero margins. When it does, this helps.
@@ -2041,13 +2125,13 @@ alias lpp='lp -o page-left=38'
 
 # What's the current time in UT / GMT?
 ut() {
-    date -u $*
+    date -u "$@"
 }
 
 # Convert a fixed date (e.g. for a meeting) from UT/GMT.
 # date -d 'Tue November 12 18:00 UTC' or date -d '18:00 UTC next Friday'
 fromut() {
-    date -d "$*"
+    date -d "$@"
 }
 
 # Subtract dates
