@@ -153,6 +153,23 @@
 
 (global-keys-minor-mode 1)
 
+;; Spektrum transmitter model files use ^M as a line separator,
+;; but not consistently -- files typically have one ^J in them and
+;; no line break at the end -- but this fixes that.
+;; Possibly file-coding-system-alist is better to use than auto-coding-alist.
+(add-to-list 'file-coding-system-alist '("\\.SPM\\'" . utf-8-mac))
+
+(define-derived-mode spektrum-mode fundamental-mode "Spektrum SPM mode"
+  "Editing model definition SPM files for Spektrum transmitters"
+  (message "spektrum mode")
+  ;(set-variable 'require-final-newline nil)
+  (setq-local require-final-newline nil)
+  )
+;; (add-hook 'spektrum-mode-hook 'my-spektrum-hook)
+;; (defun my-spektrum-hook ()
+;;   (message "spektrum mode")
+;;   (setq-local require-final-newline nil))
+
 ;; A keymap that's supposed to be consulted before the first
 ;; minor-mode-map-alist.
 (defconst global-minor-mode-alist (list (cons 'global-keys-minor-mode
@@ -280,7 +297,6 @@
 ;; but it's just too annoying how emacs asks, then doesn't actually
 ;; add the newline so I have to go and do it myself.
 ;; Ideally I should do this only for text and Fundamental modes.
-;; But -- sigh -- this doesn't work anyway.
 (setq require-final-newline t)
 
 ;; My KVM switch uses scroll lock, and emacs complains about it.
@@ -560,7 +576,6 @@
         (let ((str (read-string "Title: ")))
           (message "Inserting standard HTML")
           (insert
-           "Title: "
            "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">\n"
            "<html>\n"
            "<head>\n"
@@ -1392,6 +1407,9 @@
         ("\\.kml$" . xml-mode)
         ("\\.img$" . text-img-mode)
         ("\\.zsh\\'" . sh-mode)
+
+        ;; Spektrum transmitter model definition files
+        ("\\.SPM$" . spektrum-mode)
 
         ;; Use web-mode by default for PEEC files:
         ("web/peec" . web-mode)
