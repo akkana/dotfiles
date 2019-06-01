@@ -153,23 +153,6 @@
 
 (global-keys-minor-mode 1)
 
-;; Spektrum transmitter model files use ^M as a line separator,
-;; but not consistently -- files typically have one ^J in them and
-;; no line break at the end -- but this fixes that.
-;; Possibly file-coding-system-alist is better to use than auto-coding-alist.
-(add-to-list 'file-coding-system-alist '("\\.SPM\\'" . utf-8-mac))
-
-(define-derived-mode spektrum-mode fundamental-mode "Spektrum SPM mode"
-  "Editing model definition SPM files for Spektrum transmitters"
-  (message "spektrum mode")
-  ;(set-variable 'require-final-newline nil)
-  (setq-local require-final-newline nil)
-  )
-;; (add-hook 'spektrum-mode-hook 'my-spektrum-hook)
-;; (defun my-spektrum-hook ()
-;;   (message "spektrum mode")
-;;   (setq-local require-final-newline nil))
-
 ;; A keymap that's supposed to be consulted before the first
 ;; minor-mode-map-alist.
 (defconst global-minor-mode-alist (list (cons 'global-keys-minor-mode
@@ -362,6 +345,8 @@
 ;; line instead of the next buffer line (on lines long enough to wrap).
 ;; Revert to old behavior:
 (setq line-move-visual nil)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;; X Selection / Clipboard behavior
 
 ;; This may be helpful: http://www.emacswiki.org/emacs/Comments_on_CopyAndPaste
@@ -432,7 +417,7 @@
 ;;     C-x b   (switch-to-buffer)
 ;;     C-x C-f (find-file)
 
-(defun delesect-then (what-then)
+(defun deselect-then (what-then)
   "Deselect any region in the current buffer, then call something else"
   (deactivate-mark)
   ;; deactivate-mark leaves us at the region's end.
@@ -444,9 +429,68 @@
   )
 
 (global-set-key "\C-xb"
-                (lambda () (interactive) (delesect-then 'switch-to-buffer)))
+                (lambda () (interactive) (deselect-then 'switch-to-buffer)))
 (global-set-key "\C-x\C-f"
-                (lambda () (interactive) (delesect-then 'find-file)))
+                (lambda () (interactive) (deselect-then 'find-file)))
+;;;;;; end selection/clipboard hackery ;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; A couple of functions to try to guess coding systems based on newlines.
+;; Emacs' code for this is broken: it fails on any file that doesn't
+;; end with a newline, which includes many formats like GPX files
+;; and Spektrum SPM files.
+
+(defun count-pat (pat &optional start end)
+  "Return the number of times the given pattern occurs in the region or buffer"
+  (interactive  "sPattern: ")
+  (save-excursion
+    (let ((patcount 0)
+          (rstart (if start start (if (region-active-p) (region-beginning) 0)))
+          (rend   (if end end (if (region-active-p) (region-end) (point-max))))
+          )
+
+      (goto-char rstart)
+      (while (and (< (point) rend)
+                  (re-search-forward pat rend t))
+        (setq patcount (1+ patcount)))
+      ;(message "%d occurrences of %s" patcount pat)
+      patcount
+      )))
+
+;; XXX size argument is currently ignored, and shouldn't be!
+(defun guess-line-endings (size)
+  "Guess whether a file has Unix, Mac or Windows line endings. If the file ends with a newline/cr, Emacs can handle this on its own; but on files with no final newline, Emacs gets confused."
+  (interactive)
+  ;(message "Trying to guess line endings on %S" (buffer-name))
+  ;(sleep-for 1)
+  ;(message "")
+  (save-excursion
+    (goto-char (point-max))
+    (let ((lastchar (char-before)))
+      (if (or (char-equal lastchar ?\n) (char-equal lastchar ?\r))
+          (progn
+            ;(message "the file ends with a newline")
+            ;(sleep-for 1)
+            nil)
+          (let* ((win (count-pat "\r\n"))
+                 (unix (- (count-pat "\n") win))
+                 (mac  (- (count-pat "\r") win))
+                 (few 5)
+                 )
+            ;(message "unix %d mac %d win %d" unix mac win)
+            ;(sleep-for 4)
+            (cond
+             ((and (> unix few) (< mac few)  (< win few)) 'utf-8-unix)
+             ((and (> mac few)  (< unix few) (< win few)) 'utf-8-mac)
+             ((and (> win few)  (< unix few) (< mac few)) 'utf-8-dos)
+             (t nil))
+)))))
+
+;; Run on every file to as a pre-check for newlines/coding system:
+;; https://www.gnu.org/software/emacs/manual/html_node/elisp/Default-Coding-Systems.html
+(set-variable 'auto-coding-functions (list 'guess-line-endings))
+
+;;;;;;;;;;;;; end coding system/newline guessing ;;;;;;;;;;;;;;;;;;;;;;
 
 ;; don't paste syntax highlight color into buffers where it's meaningless.
 ;; In emacs 25 this seems to work, but it doesn't work in emacs 24.
@@ -1409,7 +1453,7 @@
         ("\\.zsh\\'" . sh-mode)
 
         ;; Spektrum transmitter model definition files
-        ("\\.SPM$" . spektrum-mode)
+        ;;("\\.SPM$" . spektrum-mode)
 
         ;; Use web-mode by default for PEEC files:
         ("web/peec" . web-mode)
@@ -1603,3 +1647,4 @@
      (auto-fill-mode)
      (wrap-mode)))))
 (put 'upcase-region 'disabled nil)
+
