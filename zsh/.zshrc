@@ -240,7 +240,9 @@ alias s=suspend
 alias beep="echo "
 alias ap="man -k"
 
-alias netscheme='sudo /home/akkana/src/netutils/netscheme'
+# Run netscheme with sudo -E; it must be root but it also needs access
+# to quickbrowse.
+alias netscheme='sudo -E /home/akkana/src/netutils/netscheme'
 
 # Distros keeps changing the suspend command; make an alias that won't change:
 #alias zzz='sudo /etc/acpi/sleep.sh'
@@ -599,6 +601,11 @@ ppjson() {
     jq . "$@"
 }
 
+# Prettyprint XML:
+ppxml() {
+     xmllint --format "$@"
+}
+
 ################################################
 # Various GPS conversions
 
@@ -619,6 +626,13 @@ kmz2gpx() {
 gpx2kml() {
     # :t takes the basename, :r removes the extension
     gpsbabel -i gpx -f $1 -o kml -F $1:t:r.kml
+}
+
+# gpsbabel by default turns a nice simple track file into a great big
+# KML with a waypoint added for each trackpoint. points=0 stops that.
+gpx2kmltrack() {
+    # :t takes the basename, :r removes the extension
+    gpsbabel -i gpx -f $1 -o kml,points=0 -F $1:t:r.kml
 }
 
 # Weirdly, gpsbabel can't handle geojson.
@@ -961,8 +975,8 @@ pigadget() {
     # without needing to use 8.8.8.8.
 }
 
-# A some electronics cheatsheets:
-alias gpio='pho -P ~/src/pi-zero-w-book/images/raspi-gpio.jpg &'
+# A few electronics cheatsheets:
+alias pigpio='pho -P ~/src/pi-zero-w-book/images/raspi-gpio.jpg &'
 alias gpio-official='pho -P ~/Docs/hardware/rpi/Pi-GPIO-header.png &'
 alias gpio-xyz='pho -P ~/Docs/hardware/rpi/raspberry-pi-pinout.png &'
 alias gpio-old='pho -P ~/Docs/hardware/rpi/rpi-gpio.jpg &'
@@ -990,6 +1004,9 @@ SAVEHIST=1000
 setopt appendhistory notify
 unsetopt autocd
 # End of lines configured by zsh-newuser-install
+
+# Someone suggested this to avoid losing history on poweroff, etc.
+setopt inc_append_history
 
 # This is apparently Ubuntu-specific weirdness:
 #skip_global_compinit=1
@@ -1402,13 +1419,31 @@ newhexchat() {
 # Reminder for building firefox.
 # Most of the time this will probably require manual intervention.
 newfox() {
-    pushd-maybe ~/outsrc/gecko-dev/
-    git pull
-    ./mach build
-    ./mach package
+    # Make sure this exits on errors!
+    setopt localoptions errreturn
+
+    pushd_maybe ~/outsrc/gecko-dev/
+
+    echo_and_do git pull
+    # Sadly, should do a clobber each time, since I build firefox infrequently.
+    # The build almost always has something that breaks due to missing deps.
+    echo_and_do ./mach clobber
+    echo_and_do ./mach build
+    echo_and_do ./mach package
     echo "Tarball should be in" `pwd`/obj*/dist/firefox/
 }
 
+# Building Firefox tends to overload the CPU, sometimes causing thermal
+# shutdown. Since Linux, amazingly, seems to have no way to automatically
+# throttle back processes based on CPU temp, here's a way to keep an
+# eye on it manually:
+tempwatch() {
+    while true; do
+        echo ''
+        sensors | grep Core
+        sleep 10
+    done
+}
 
 #############################################################
 # Debian apt helpers.
@@ -1638,6 +1673,7 @@ pullgpx() {
   done
   ls
   echo Maybe adb push file.gpx $androidSD/GPX/
+  echo Maybe adb push file.gpx $androidSD/Android/data/net.osmand.plus/files/tracks/
 }
 
 pullphotos() {
@@ -1780,7 +1816,8 @@ cleanspam() {
     # so it doesn't get synced to my laptop or backed up in minibackups.)
     # Older batches have From, Subject, To headers saved in ~/Spam/oldheaders.
     # Periodically, we need to clean out the current spam folders
-    # but save the old headers for spam filter development purposes.
+    # but save the old headers (not message bodies) for spam filter
+    # development purposes.
     for folder in $HOME/Spam/*; do
         if [[ -f $folder && -s $folder ]]; then
             echo $folder
@@ -1794,7 +1831,7 @@ cleanspam() {
         fi
     done
     tail -7000 $HOME/Procmail/log >$HOME/Procmail/olog
-    rm $HOME/Procmail/log
+    rm -f $HOME/Procmail/log
 }
 ############ End spam-related aliases
 
@@ -1961,55 +1998,60 @@ towebhost() {
         return
     fi
 
-    # Get the full path of the argument:
-    localpath=$1:A
-
-    # Sanity check our three webhosts variables:
-    if [[ $#weblocalpaths != $#webhosts ]]
-    then
-        echo "Error: webhosts and weblocalpaths don't match"
-        return
-    fi
-    webhost='none'
-    for i in {1..$#webhosts}; do
-        if [[ $localpath == $weblocalpaths[$i]* ]]; then
-            webhost=$webhosts[$i]
-            localbase=$weblocalpaths[$i]
-            break
-        fi
-    done
-
-    if [[ $webhost == 'none' ]]; then
-        echo "$localpath doesn't match any known local path in $weblocalpaths"
-        return
-    fi
-
-    # Make sure directories have a terminal slash,
-    # whether or not the user provided one.
-    if [ -d $localpath ]; then
-        # Remove terminal slash.
-        # ## requires extendedglob, so make sure it's set locally.
-        setopt localoptions extendedglob
-        localpath=${localpath%%/##}/
-    fi
 
     excludes="--exclude .git --exclude cache --exclude __pycache__ --exclude '*.pyc'"
 
-    remotepath=${localpath#$localbase}
+    for dst in "$@"; do
+        echo $dst
 
-    if [[ $fromwebhost == 1 ]]; then
-        echo "Copying from $webhost$remotepath to local $localpath"
-        echo
-        cmd="rsync -av $flags --delete $excludes $webhost$remotepath $localpath"
+        # Get the full path of the argument:
+        localpath=$dst:A
 
-    else
-        echo "Copying $localpath to $webhost$remotepath"
-        echo
-        cmd="rsync -av $flags --delete $excludes $localpath $webhost$remotepath"
-    fi
+        # Sanity check our three webhosts variables:
+        if [[ $#weblocalpaths != $#webhosts ]]
+        then
+            echo "Error: webhosts and weblocalpaths don't match"
+            return
+        fi
+        webhost='none'
+        for i in {1..$#webhosts}; do
+            if [[ $localpath == $weblocalpaths[$i]* ]]; then
+                webhost=$webhosts[$i]
+                localbase=$weblocalpaths[$i]
+                break
+            fi
+        done
 
-    echo $cmd
-    eval $cmd
+        if [[ $webhost == 'none' ]]; then
+            echo "$localpath doesn't match any known local path in $weblocalpaths"
+            return
+        fi
+
+        # Make sure directories have a terminal slash,
+        # whether or not the user provided one.
+        if [ -d $localpath ]; then
+            # Remove terminal slash.
+            ## requires extendedglob, so make sure it's set locally.
+            setopt localoptions extendedglob
+            localpath=${localpath%%/##}/
+        fi
+
+        remotepath=${localpath#$localbase}
+
+        if [[ $fromwebhost == 1 ]]; then
+            echo "Copying from $webhost$remotepath to local $localpath"
+            echo
+            cmd="rsync -av $flags --delete $excludes $webhost$remotepath $localpath"
+
+        else
+            echo "Copying $localpath to $webhost$remotepath"
+            echo
+            cmd="rsync -av $flags --delete $excludes $localpath $webhost$remotepath"
+        fi
+
+        echo $cmd
+        eval $cmd
+    done
 }
 
 fromwebhost() { towebhost -f $@ }
@@ -2030,7 +2072,7 @@ srcsync() {
     remotepath=${localpath#$HOME/}
 
     echo_and_do rsync -av --delete --exclude .git \
-                --exclude .pyc --exclude __pycache__ \
+                --exclude '*.pyc' --exclude __pycache__ \
                 $localpath/ $remotehost:$remotepath/
 }
 
@@ -2141,6 +2183,12 @@ datediff() {
     echo $(( (d1 - d2) / 86400 )) days
     echo $(( (d1 - d2) / 86400 / 7. )) weeks
     echo $(( (d1 - d2) / 86400 / 7 )) weeks $(( (d1 - d2) / 86400 % 7 )) days
+}
+
+dayofweek() {
+    echo -n "Date as YYYY-MM-DD: "
+    read d
+    date --date=$d +%a
 }
 
 # Tell aptitude not to limit descriptions to the terminal width
