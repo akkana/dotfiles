@@ -601,6 +601,8 @@
                > "\n\n"
 ))
 
+(autoload 'sgml-mode "my-sgml-mode" "Load ruby-mode")
+
 ;;
 ;; auto-insert for HTML: check for a blank.html in the directory
 ;; and insert it if it exists. Otherwise insert a template.
@@ -971,6 +973,14 @@
   ;; which is fine with me. 'ignore is elisp's nop function.
   (setq indent-line-function 'ignore)
 
+  ;; Prevent the obnoxious line breaking in the middle of --
+  ;; when sgml-mode thinks it's a comment.
+  ;; The misbehavior currently comes from this line in sgml-mode:
+  ;; (setq-local comment-line-break-function 'sgml-comment-indent-new-line)
+  ;; so redefining sgml-comment-indent-new-line also works.
+  ;; See also bug http://debbugs.gnu.org/cgi/bugreport.cgi?bug=36227
+  (kill-local-variable 'comment-line-break-function)
+
   ;; Would be nice if this would fix the horked dash handling in sgml-mode,
   ;; but alas it has zero effect that I can find.
   ;;(setq sgml-specials nil)
@@ -983,14 +993,16 @@
   )
 (add-hook 'sgml-mode-hook 'html-hook)
 
-; Prevent -- dashed comments -- from screwing up auto-fill mode in sgml-mode.
-; This is an ongoing arms race, breaks with every new emacs version,
-; and is currently broken again.
-(defun sgml-comment-indent-new-line (&optional soft)
-  (save-excursion (forward-char -1) (delete-horizontal-space))
-  (delete-horizontal-space)
-  (newline-and-indent))
-  ;(comment-indent-new-line soft))
+;; Previous attempts to prevent -- dashed sections -- from screwing up
+;; auto-fill mode in sgml-mode.
+;; (defun sgml-comment-indent-new-line (&optional soft)
+;;   (save-excursion (forward-char -1) (delete-horizontal-space))
+;;   (delete-horizontal-space)
+;;   (newline-and-indent))
+;;   ;(comment-indent-new-line soft))
+;; (defvar sgml-specials '(?\"))
+;; (defun sgml-comment-indent-new-line (&optional soft)
+;;   (comment-indent-new-line soft))
 
 ;; Run this on a buffer inside a <pre> to convert chars like < into entities.
 (defun unhtml (start end)
@@ -1472,7 +1484,8 @@
 
         ;; Make sure changelogs don't use text-wrap-mode -- they're too long,
         ;; and text-mode invokes spellcheck which takes forever.
-        ("ChangeLog" . fundamental-mode)
+        ("ChangeLog" . change-log-mode)
+        ("CHANGELOG" . change-log-mode)
 
         ;; A few special settings by location or name,
         ;; for files that may not have type-specific extensions:
