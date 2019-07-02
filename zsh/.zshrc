@@ -1022,9 +1022,19 @@ ZLE_REMOVE_SUFFIX_CHARS=$' \t\n;&'
 # Older zsh, like on squeeze, don't have compdef.
 
 # zsh annoyingly only prints the last 10 lines of history by default.
+# The builtin history command actually calls fc -l which by default
+# prints the last 16 commands, but the full form is fc -l first last,
+# so fc -l 0 prints everything, fc -l -20 prints the last 20 commands.
 history() {
+    # Weirdo way to test if stdout is a pipe:
+    # If it's a pipe, then print all history, not just the last 80.
+    exec 9>&1
+    case `readlink /dev/fd/9` in
+        pipe:\[*\]) fc -l 0 ;;
+    esac
+
     if [[ x$1 == x ]]; then
-        builtin history -80
+        fc -l -80
     elif [[ $1 =~ '-.*' ]]; then
         builtin history "$@"
     else
