@@ -57,7 +57,7 @@ typeset -U PATH
 
 # Set path
 arch=$(uname -m)
-export PATH=$HOME/bin:$HOME/bin/linux-$arch:/opt/cxoffice/bin:/usr/local/bin:/usr/local/gimp-git/bin:$PATH:.:/usr/sbin:/sbin:$HOME/outsrc/android-sdk-linux/platform-tools:$HOME/outsrc/android-sdk-linux/tools:$HOME/.local/bin
+export PATH=$HOME/bin:$HOME/bin/linux-$arch:/usr/local/bin:$PATH:.:/usr/sbin:/sbin:$HOME/Archive/outsrc/android-sdk-linux/platform-tools:$HOME/Archive/outsrc/android-sdk-linux/tools:$HOME/.local/bin
 
 if (( ! ${+PYTHONPATH} )); then
     export PYTHONPATH=$HOME/bin/pythonlibs
@@ -167,7 +167,6 @@ set_prompt() {
 }
 
 set_prompt
-
 
 # Print useful info on the right.
 # %F{color} sets the color; %f%k restores default fg/bg colors, respectively.
@@ -664,6 +663,16 @@ utm2gpx() {
 gpx2utm() {
     gpsbabel -i gpx -f $1 -o text -F -
 }
+
+# Maybe a better way of converting to UTM, using PROJ utilities:
+# echo '123d03'\''02.97"W 38d21'\''56.98"N' | proj +proj=utm +zone=10
+# echo '-123d03'\''02.97" 38d21'\''56.98"' | proj +proj=utm +zone=10
+
+# Convert between DMS and DD:
+# DD to DMS
+# echo '-122d30'\'' 38d45'\' | cs2cs +proj=latlong +to +proj=latlong
+# DMS to DD
+# echo '-122d30'\'' 38d45'\' | cs2cs +proj=latlong +to +proj=latlong -f '%.4f'
 
 # End GPS conversions
 
@@ -1182,7 +1191,135 @@ bindkey '^X^D' describe-key-briefly
 ################################################
 # Build/development helpers
 
-# Run a git with all-default settings.
+GIMP_PREFIX=/usr/local/gimp-git
+
+# meson/ninja are now used for babl
+meson-build() {
+    # From Jehan, for Meson/Ninja builds:
+    MESONSRC=$(pwd)
+    BUILD_DIR=$MESONSRC/obj-$(arch)
+    mkdir -p $BUILD_DIR
+    cd $BUILD_DIR
+    meson -Dprefix=$GIMP_PREFIX --libdir=lib $MESONSRC && ninja && ninja install
+}
+
+# update-clone dir repo: if dir already exists, go there and git pull,
+# then do a git clean -dfx.
+# Otherwise, make the directory and clone the repo into it.
+# Either way, we should end up in the directory with an up-to-date repo.
+# At the end we should be in $d.
+# Usage: pull-clone-clean git_url clean|no [branch]
+pull-clone() {
+    repo=$1
+    clean=$2
+    branch=$3
+    # Find the directory by stripping the extension from the URL basename
+    d=$(basename $repo:r)
+    cd $HOME/outsrc
+    echo repo $repo, d $d, clean $clean, branch $branch
+    if [ -d $d ]; then
+        cd $d
+        git pull
+        if [ "$clean" = clean ]; then
+            git clean -dfx
+        fi
+    else
+        git clone $repo
+        cd $d
+        if [[ x$branch != x ]]; then   # no branch
+            git checkout -t origin/$branch
+        fi
+    fi
+}
+
+# Build GIMP: if clean is specified as a first argument,
+# also update the config.site and
+# run git clean -dfx in any srcdir that wasn't freshly checked out.
+#
+# This also serves as a cheatsheet for how to build GIMP.
+#
+gimpmaster() {
+    # Make sure this exits on errors:
+    setopt localoptions errreturn
+
+    if [[ x$1 == xclean ]]; then
+        clean=true
+    fi
+
+    SRCDIR=$HOME/outsrc
+
+    # Download all the source
+    cd $SRCDIR
+    pull-clone https://gitlab.gnome.org/GNOME/babl.git $clean
+    cd $SRCDIR
+    pull-clone https://gitlab.gnome.org/GNOME/gegl.git $clean
+    cd $SRCDIR
+    pull-clone https://gitlab.gnome.org/GNOME/gimp.git $clean
+
+    # These two only needed for master builds, not 2.10
+    cd $SRCDIR
+    pull-clone https://github.com/mypaint/mypaint-brushes.git $clean
+    cd $SRCDIR
+    # pull-clone https://github.com/Jehan/mypaint-brushes.git $clean
+    pull-clone https://github.com/mypaint/libmypaint.git libmypaint-v1 $clean
+
+    # Overwrite config.site:
+    if [ "$clean" = clean ]; then
+        mkdir -p $GIMP_PREFIX/share/
+        cat >$GIMP_PREFIX/share/config.site <<EOF
+GIMP_PREFIX=$GIMP_PREFIX
+export PATH="\$GIMP_PREFIX/bin:\$PATH"
+export PKG_CONFIG_PATH="\$GIMP_PREFIX/lib/pkgconfig:\$GIMP_PREFIX/share/pkgconfig:\$PKG_CONFIG_PATH"
+export LD_LIBRARY_PATH="\$GIMP_PREFIX/lib:\$LD_LIBRARY_PATH"
+export ACLOCAL_FLAGS="-I \$GIMP_PREFIX/share/aclocal \$ACLOCAL_FLAGS"
+EOF
+    fi
+
+    echo "================ libmypaint"
+    cd $SRCDIR/libmypaint
+    ./autogen.sh && ./configure --prefix=$GIMP_PREFIX && make -j4 && make install
+
+    echo "================ mypaint-brushes"
+    cd $SRCDIR/mypaint-brushes
+    ./autogen.sh && ./configure --prefix=$GIMP_PREFIX && make -j4 && make install
+
+    echo "================ babl"
+    cd $SRCDIR/babl
+    meson-build
+
+    echo "================ gegl"
+    cd $SRCDIR/gegl
+    ./autogen.sh --prefix=$GIMP_PREFIX && make -j4 && make install
+
+    echo "================ gimp"
+    cd $SRCDIR/gegl
+    ./autogen.sh --prefix=$GIMP_PREFIX && make -j4 && make install
+
+    popd_maybe
+}
+
+# It often happens that some change in the build system makes autogen/configure
+# fail, which also prevents you from doing a make clean.
+# But sometimes, running autogen.sh with no arguments will fix this,
+# let you run a distclean, and then everything will work again.
+alias distclean1="./autogen.sh && ./configure && make clean"
+
+distclean() {
+    setopt localoptions errreturn
+
+    args=$(egrep '^  \$ ./configure' config.log | sed 's_^  \$ ./configure __')
+    echo "Saving args:" $args
+    ./autogen.sh
+    ./configure
+    make clean
+
+    echo "=========================================="
+    echo "Running ./autogen.sh $args"
+    sleep 3
+    ./autogen.sh $args
+}
+
+# Run a git with all-default settings. RUN IT, NOT BUILD IT.
 # Usage: gimpclean VERSION SWM
 # e.g. gimpclean git no, gimpclean 2.8 yes
 gimpclean() {
@@ -1212,189 +1349,6 @@ gimpclean() {
     echo version is $version
     echo "GIMP2_DIRECTORY=$gimpdir gimp$version --new-instance"
     GIMP2_DIRECTORY=$gimpdir gimp$version --new-instance
-}
-
-# I get tired of the myriad steps to update gimp now that it
-# requires so many repositories.
-gimpmaster() {
-    # Make sure this exits on errors!
-    setopt localoptions errreturn
-    export PKG_CONFIG_PATH=/usr/local/gimp-git/share/pkgconfig/
-    export CC=/usr/bin/gcc-6
-
-    # Now that mypaint uses a special tag, we can't pull or change anything.
-    # pushd_maybe ~/outsrc/libmypaint
-    # echo "Updating libmypaint ..."
-    # git checkout v1.3.0
-    # git pull
-    # make -j4
-    # make install
-
-    # Getting mypaint-brushes is complicated. Here's what I had to do:
-    # git clone https://github.com/Jehan/mypaint-brushes.git
-    # cd mypaint-brushes/
-    # git checkout --track -b v1.3.x origin/v1.3.x
-    # ./autogen.sh --prefix=/usr/local/gimp-git
-    # ./configure --prefix=/usr/local/gimp-git
-    # But once you do that you can never pull because:
-    # "You are not currently on a branch."
-    # echo "Updating mypaint-brushes ..."
-    # cd ~/outsrc/mypaint-brushes/
-    # git pull
-    # make -j4
-    # make install
-
-    echo "Updating babl ..."
-    cd ~/outsrc/babl
-    git pull
-    make -j4
-    make install
-
-    echo "Updating gegl ..."
-    cd ~/outsrc/gegl
-    git pull
-    make -j4
-    make install
-
-    echo "Updating GIMP ..."
-    cd ~/outsrc/gimp
-    git pull
-    make -j4
-    make install
-    popd_maybe
-
-    unset PKG_CONFIG_PATH
-    unset CC
-}
-
-# update-clone dir repo: if dir already exists, go there and git pull,
-# then do a git clean -dfx.
-# Otherwise, make the directory and clone the repo into it.
-# Either way, we should end up in the directory with an up-to-date repo.
-# The third, branch argument has never been tested.
-pull-clone-clean() {
-    repo=$1
-    d=$2
-    branch=$3
-    echo repo $repo, d $d, branch $branch
-    if [ -d $d ]; then
-        cd $d
-        git pull
-        git clean -dfx
-    else
-        if [[ x$branch == x ]]; then   # no branch
-            cd $(dirname $d)
-            pwd
-            git clone $repo
-        else
-            git clone -b $branch $repo
-            cd $(dirname $d)
-            git checkout $branch
-        fi
-        cd $d
-
-    fi
-}
-
-# When GIMP needs to be rebuilt from scratch --
-# this also serves as a cheatsheet for requirements.
-#
-# Testing tip: pkg-config --prefix-variable=$PREFIX --modversion libmypaint-1.0
-# (or whatever package you're having problems with).
-gimpmaster-fresh() {
-    # Make sure this exits on errors:
-    setopt localoptions errreturn
-
-    PREFIX=/usr/local/gimp-git
-    SRCDIR=$HOME/outsrc
-
-    # Overwrite config.site:
-    mkdir -p $PREFIX/share/
-    cat >$PREFIX/share/config.site <<EOF
-export PATH="$PREFIX/bin:\$PATH"
-export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig:$PREFIX/share/pkgconfig:\$PKG_CONFIG_PATH"
-export LD_LIBRARY_PATH="$PREFIX/lib:\$LD_LIBRARY_PATH"
-export ACLOCAL_FLAGS="-I $PREFIX/share/aclocal \$ACLOCAL_FLAGS"
-EOF
-
-    # libmypaint is super precarious: need to pull a specific tag and
-    # end up in detached head state, and then don't ever pull again.
-    if [ ! -d $SRCDIR/libmypaint ]; then
-        git clone https://github.com/mypaint/libmypaint.git
-        cd $SRCDIR/libmypaint
-        git checkout v1.3.0
-    else
-        cd $SRCDIR/libmypaint
-        if [[ -f Makefile ]]; then
-          make clean
-        fi
-    fi
-    ./autogen.sh --prefix=$PREFIX
-    ./configure --prefix=$PREFIX
-    make
-    make install
-
-    echo "================ mypaint-brushes"
-    pull-clone-clean https://github.com/Jehan/mypaint-brushes.git $SRCDIR/mypaint-brushes
-    git checkout v1.3.0
-    echo "================ autogen mypaint-brushes --prefix=$PREFIX"
-    ./autogen.sh --prefix=$PREFIX
-    echo "================ configure mypaint-brushes --prefix=$PREFIX"
-    ./configure --prefix=$PREFIX
-    echo "================ make mypaint-brushes"
-    make
-    echo "================ make install mypaint-brushes"
-    make install
-
-    echo "================ babl"
-    pull-clone-clean https://gitlab.gnome.org/GNOME/babl.git $SRCDIR/babl
-    echo "================ autogen babl --prefix=$PREFIX"
-    ./autogen.sh --prefix=$PREFIX
-    echo "================ make babl"
-    make
-    echo "================ make install babl"
-    make install
-
-    echo "================ gegl"
-    pull-clone-clean https://gitlab.gnome.org/GNOME/gegl.git $SRCDIR/gegl
-    echo "================ autogen gegl --prefix=$PREFIX"
-    ./autogen.sh --prefix=$PREFIX
-    echo "================ make gegl"
-    make
-    echo "================ make install gegl"
-    make install
-
-    echo "================ gimp"
-    pull-clone-clean https://gitlab.gnome.org/GNOME/gimp.git $SRCDIR/gimp
-    echo "================ autogen gimp --prefix=$PREFIX"
-    ./autogen.sh --prefix=$PREFIX
-    echo "================ make gimp"
-    make
-    echo "================ make install gimp"
-    make install
-
-    popd_maybe
-}
-
-# It often happens that some change in the build system makes autogen/configure
-# fail, which also prevents you from doing a make clean.
-# But sometimes, running autogen.sh with no arguments will fix this,
-# let you run a distclean, and then everything will work again.
-alias distclean1="./autogen.sh && ./configure && make clean"
-
-distclean() {
-    setopt localoptions errreturn
-
-    args=$(egrep '^  \$ ./configure' config.log | sed 's_^  \$ ./configure __')
-    echo "Saving args:" $args
-    ./autogen.sh
-    ./configure
-    make clean
-
-    echo "=========================================="
-    echo "Running ./autogen.sh $args"
-    sleep 3
-    ./autogen.sh $args
 }
 
 # Build a new copy of my forked hexchat.
@@ -2009,7 +1963,7 @@ towebhost() {
     fi
 
 
-    excludes="--exclude .git --exclude cache --exclude __pycache__ --exclude '*.pyc'"
+    excludes="--exclude .git --exclude cache --exclude __pycache__ --exclude '*.pyc' --exclude 'webhits*'"
 
     for dst in "$@"; do
         echo $dst
