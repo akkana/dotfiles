@@ -57,6 +57,7 @@
     <policy>Smart</policy>
     <center>yes</center>
     <monitor>Any</monitor>
+    <primaryMonitor>0</primaryMonitor>
   </placement>
 
   <desktops>
@@ -82,7 +83,8 @@
 
   <!-- Settings for specific windows -->
   <applications>
-    <application name="moonroot">
+    <application name="mmmmoonroot">
+      <!-- In theory decor=no shouldn't be necessary because MWM_HINTS_DECORATIONS. In practice, openbox still needs it. -->
       <!-- <decor>no</decor> -->
       <!-- <desktop>all</desktop> -->
       <position>
@@ -99,6 +101,11 @@
         <y>0</y>
       </position>
       -->
+    </application>
+    <application class="MuPDF">
+      <size>
+        <height>1050</height>
+      </size>
     </application>
   </applications>
   <!-- End settings for specific windows -->
@@ -150,6 +157,7 @@
     </keybind>
      Replaced by xrandr-based script: -->
 
+    <!-- On the desktop, where there's no hardware backlight control -->
     <keybind key="W-F5">
       <action name="Execute">
         <execute>/home/akkana/bin/xbright -.1</execute>
@@ -161,24 +169,52 @@
       </action>
     </keybind>
 
-    <!-- Emergency "Use all connected displays" key on F7.
-         This is supposed to happen automatically when resuming from sleep
-         using ACPI scripts, but that stopped working some releases back
-         because the ACPI scripts don't get executed reliably at the right time.
-         Unfortunately this still doesn't work reliably and I'm not sure why.
-         Sometimes it just doesn't seem to register the key binding at all.
-         xrandr minus-minus-auto is another possible thing to run
-         (minus-minus because the XML parser for this file is too
-         stupid to handle two dashes inside an XML comment).
-      -->
+    <!-- Added for CX1 -->
+    <keybind key="XF86MonBrightnessDown">
+      <action name="Execute">
+        <execute>sudo /home/akkana/bin/intel_backlight -2</execute>
+      </action>
+    </keybind>
+    <keybind key="XF86MonBrightnessUp">
+      <action name="Execute">
+        <execute>sudo /home/akkana/bin/intel_backlight +2</execute>
+      </action>
+    </keybind>
+
+    <keybind key="XF86Favorites">
+      <action name="Execute">
+        <execute>systemctl suspend</execute>
+      </action>
+    </keybind>
+
+  <!-- Keybinding for audio volume when Pulse is running -->
+  <keybind key="XF86AudioRaiseVolume">
+    <action name="Execute">
+      <!-- <command>amixer -q -D pulse sset Master 3%+ unmute</command>
+           but pulse can't actually change volume, so: -->
+      <command>amixer sset PCM 4%+ unmute</command>
+    </action>
+  </keybind>
+  <keybind key="XF86AudioLowerVolume">
+    <action name="Execute">
+      <!-- <command>amixer -q -D pulse sset Master 3%- unmute</command> -->
+      <command>amixer sset PCM 4%- unmute</command>
+    </action>
+  </keybind>
+  <keybind key="XF86AudioMute">
+    <action name="Execute">
+      <command>amixer -q -D pulse sset Master toggle</command>
+    </action>
+  </keybind>
+
     <keybind key="W-F7">
       <action name="Execute">
-        <execute>/home/akkana/bin/check-monitors</execute>
+        <execute>/home/akkana/bin/moncycle</execute>
       </action>
     </keybind>
     <keybind key="XF86Display">
       <action name="Execute">
-        <execute>/home/akkana/bin/check-monitors</execute>
+        <execute>/home/akkana/bin/moncycle</execute>
       </action>
     </keybind>
 
@@ -195,6 +231,7 @@
     </keybind>
 
     <!-- volume bindings for laptop keyboard: -->
+    <!--
     <keybind key="XF86AudioLowerVolume">
       <action name="Execute">
         <execute>/home/akkana/bin/quieter</execute>
@@ -210,6 +247,15 @@
         <execute>amixer set Master toggle</execute>
       </action>
     </keybind>
+    -->
+
+    <!--
+    <keybind key="C-w">
+      <action name="Execute">
+        <execute>/home/akkana/bin/keys4apps "\Cw"</execute>
+      </action>
+    </keybind>
+    -->
 
     <!-- disabled because I keep hitting this intending on alt-F12
     <keybind key="W-F12">
@@ -226,12 +272,6 @@
     <keybind key="A-F12">
       <action name="Execute">
         <execute>/home/akkana/bin/crikey/saypwd</execute>
-      </action>
-    </keybind>
-
-    <keybind key="W-t">
-      <action name="Execute">
-        <execute>/home/akkana/bin/countsel</execute>
       </action>
     </keybind>
 
