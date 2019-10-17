@@ -20,28 +20,41 @@
 ;; Don't prompt all the time for y e s \n
 (fset 'yes-or-no-p 'y-or-n-p)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;; Change window size on smaller screens. Adapted from
 ;; http://stackoverflow.com/questions/92971/how-do-i-set-the-size-of-emacs-window
 (defun set-frame-size-according-to-resolution ()
   (interactive)
-  (if (display-graphic-p)    ; window-system
+  (if (display-graphic-p)    ; older: (if window-system
   (progn
     ;; Emacs can't accept some fonts via Xdefaults. Here's how to set them here,
     ;; and we'd want to do it differently based on screen size:
     ;(message (x-display-pixel-height))
-    ;; (if (<= (x-display-pixel-height) 768)
-    ;;     ; Good on a small monitor
-    ;;     ; This works but isn't bold
+
+    ;; Small laptops
+    (if (<= (x-display-pixel-height) 768)
+        (set-default-font "-misc-fixed-bold-r-normal-*-14-*-*-*-*-*-*-*")
+
+      ;; X1C display
+        (if (= (x-display-pixel-height) 1080)
+            (set-default-font "Monoid HalfTight-9")
+
+            ;; full monitor
+            (set-default-font "Monoid HalfTight-8")
+        ))
+
+    ;; To change temporarily for ext mon: (set-frame-font "Monoid HalfTight-9")
+    ;; Or use C-x C-+ and  C-x C--.
+    ;; (face-attribute 'default :font) gets the current font name
+    ;; but I haven't figured out how to get just the size.
     ;;     ;(set-default-font "Inconsolata-12:bold")
     ;;     ; This isn't found at all, though it works for xterm in Xdefaults:
     ;;     (set-default-font "-*-clean-bold-r-*-*-13-*-*-*-c-*-*-*")
     ;;     ; Prettier on a larger monitor:
     ;;     (set-default-font "-misc-fixed-bold-r-normal-*-14-*-*-*-*-*-*-*")
-         (set-default-font "-misc-fixed-bold-r-normal-*-14-*-*-*-*-*-*-*")
+    ;;     (set-default-font "-misc-fixed-bold-r-normal-*-14-*-*-*-*-*-*-*")
     ;;     )
-
-    ;; Always use a width of 80
-    (add-to-list 'default-frame-alist (cons 'width 80))
 
     ;; for the height, subtract a couple hundred pixels
     ;; from the screen height (for panels, menubars and
@@ -51,12 +64,32 @@
                  ; was    (- (x-display-pixel-height) 100)
                  ; That produces an int, but with * we must convert
                  ; from float to int with floor.
-         (cons 'height (+ 4 (floor (/ (* (x-display-pixel-height) 0.85)
-                                      (frame-char-height)))))))))
+                 ; + 0 here used to be +4, but the window comes out
+                 ; too big on CX1 screen -- this frame-char-height
+                 ; stuff doesn't seem to be working quite right.
+         (cons 'height (+ 0 (floor (/ (* (x-display-pixel-height) 0.85)
+                                      (frame-char-height))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ;; Always use a width of 80.
+    ;; You can't tell what the width is from xwininfo -- emacs reports 79
+    ;; when it's really 80. So use the line above.
+    (add-to-list 'default-frame-alist (cons 'width 80))
+    )))
 ;; To set initial window position too:
 ;; (set-frame-position (selected-frame) 10 30)
 
 (set-frame-size-according-to-resolution)
+
+;; Make it easy to zoom in and out, like when moving windows between
+;; a laptop screen and large monitor.
+;; Taking the adgice in zoom-frm to rebind the keys
+;; associated with text-scale-adjust.
+(load "zoom-frm")
+
+(global-set-key (kbd "C-x C-=") 'zoom-in)
+(global-set-key (kbd "C-x C--") 'zoom-out)
+(global-set-key (kbd "C-x C-0") 'zoom-frm-unzoom)
 
 ;;
 ;; Basic key bindings
@@ -260,6 +293,13 @@
  ;; If there is more than one, they won't work right.
  '(flyspell-duplicate ((((class color)) (:foreground "red" :underline t :weight bold))))
  '(font-lock-comment-face ((((class color) (min-colors 88) (background light)) (:foreground "blue"))))
+ '(markdown-header-face-1 ((t (:inherit markdown-header-face :height 2.0))))
+ '(markdown-header-face-2 ((t (:inherit markdown-header-face :height 1.7))))
+ '(markdown-header-face-3 ((t (:inherit markdown-header-face :height 1.4))))
+ '(markdown-header-face-4 ((t (:inherit markdown-header-face :height 1.1))))
+ '(markdown-inline-code-face ((t (:inherit font-lock-constant-face :background "gainsboro"))))
+ '(markdown-link-face ((t (:inherit link))))
+ '(markdown-pre-face ((t (:inherit font-lock-constant-face :background "gainsboro"))))
  '(whitespace-trailing ((t (:background "cyan" :foreground "yellow" :weight bold)))))
 
 (set-face-foreground 'mode-line "yellow")
@@ -601,7 +641,7 @@
                > "\n\n"
 ))
 
-(autoload 'sgml-mode "my-sgml-mode" "Load ruby-mode")
+(autoload 'sgml-mode "my-sgml-mode" "Load custom sgml-mode")
 
 ;;
 ;; auto-insert for HTML: check for a blank.html in the directory
@@ -958,8 +998,14 @@
   ;(local-set-key "\C-m" (lambda () (interactive) (insert "\n")))
 
   ;; browse-url-of-buffer is on C-c C-v. Set it to quickbrowse:
-  (setq browse-url-browser-function 'browse-url-generic
-        browse-url-generic-program "quickbrowse")
+  ;; (setq browse-url-browser-function 'browse-url-generic
+  ;;       browse-url-generic-program "quickbrowse")
+  ;; If that ever starts getting called when saving,
+  ;; it's probably because html-autoview-mode got mistakenly toggled on;
+  ;; toggle it back off with C-c C-s.
+  ;; For debugging such things: F1 m shows which minor modes are active,
+  ;; and also shows key bindings related to those modes.
+
   ;; More info, like how to write functions to do tabs or reload:
   ;; https://www.emacswiki.org/emacs/BrowseUrl#toc5
 
@@ -1004,7 +1050,7 @@
 ;; (defun sgml-comment-indent-new-line (&optional soft)
 ;;   (comment-indent-new-line soft))
 
-;; Run this on a buffer inside a <pre> to convert chars like < into entities.
+;; Run this on a region inside a <pre> to convert chars like < into entities.
 (defun unhtml (start end)
   (interactive "r")
   (save-excursion
@@ -1040,14 +1086,7 @@
   )
 (add-hook 'markdown-mode-hook 'markdown-hook)
 
-(custom-set-faces
- '(markdown-header-face-1 ((t (:inherit markdown-header-face :height 2.0))))
- '(markdown-header-face-2 ((t (:inherit markdown-header-face :height 1.7))))
- '(markdown-header-face-3 ((t (:inherit markdown-header-face :height 1.4))))
- '(markdown-header-face-4 ((t (:inherit markdown-header-face :height 1.1))))
- '(markdown-inline-code-face ((t (:inherit font-lock-constant-face :background "gainsboro"))))
- '(markdown-link-face ((t (:inherit link))))
- '(markdown-pre-face ((t (:inherit font-lock-constant-face :background "gainsboro")))))
+
 
 ;; Customize lists
 ;; https://emacs.stackexchange.com/questions/723/how-can-i-use-the-se-flavor-of-markdown-in-emacs/761#761
@@ -1658,6 +1697,9 @@
     ((not-flyspell-mode)
      (encoding . utf-8)
      (auto-fill-mode)
-     (wrap-mode)))))
+     (wrap-mode))))
+ '(web-mode-code-indent-offset 4)
+ '(web-mode-markup-indent-offset 0))
 (put 'upcase-region 'disabled nil)
 
+(put 'downcase-region 'disabled nil)
