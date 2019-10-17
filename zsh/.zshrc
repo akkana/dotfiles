@@ -83,51 +83,7 @@ setopt interactivecomments
 # To use it:
 # unsetopt extendedglob
 
-# But really, the only reason I want to use # on the commandline
-# is for the stupid xchatlogs. And even aside from the \#, they're
-# a pain to complete. Why not make a key binding to pre-type most of it?
-# This puts it on F8:
-# bindkey -s '\e[20~' '~/.xchat2/xchatlogs/ \\\#^B^B^B'
-
-# This would be better,
-# bindkey -s '.xx' '~/.xchat2/xchatlogs/ \\\#^B^B^B'
-# but you can't type it interactively because
-# you end up with recursion and it inserts
-# ~/~/.xchat2/xchatlogs/hat2/xchatlogs/ \# \#
-
-# Here's an even better way that doesn't require using a function key:
-# it puts it on .xc (when typed quickly).
-# The LBUFFER/RBUFFER stuff are to avoid recursion:
-# they modify the strings before and after the cursor.
-# See http://zsh.sourceforge.net/Guide/zshguide04.html
-# under 4.7.4: Special parameters: normal text
-# Or http://stackoverflow.com/questions/6673280/avoid-recursion-in-zsh-command-line
-autoxchat()
-{
-    LBUFFER+="~/.xchat2/xchatlogs/"
-    RBUFFER=" \\#$RBUFFER"
-}
-zle -N autoxchat
-bindkey "=xc" autoxchat
-
 # Prompt setting
-
-# Linux consoles don't colorize bold, so make it magenta to stand out
-# against the black background:
-# rxvt lets me set bold to be a different color that contrasts better
-# than any of the ANSI colors. So use that if possible:
-if [[ $TERM == 'rxvt' ]]; then
-  export standout="\e[1;m"
-
-# On a linux console, use magenta because it contrasts with the black bg:
-elif [[ $TERM == 'linux' ]]; then
-  export standout="\e[1;35m"
-
-# All others, use blue:
-else
-  export standout="\e[0;34m"
-fi
-export standout_end="\e[m"
 
 # How many levels deep are we from being a login shell?
 # Keep track of that in $primes, to reflect it in the prompt.
@@ -150,19 +106,19 @@ set_prompt() {
     # If we're on a raspberry pi or similar ARM platform, use a different color:
     # if [[ -f /proc/device-tree/model ]]; then
     if [[ $(uname -a) =~ armv ]]; then
-      PS1='%F{red}<'$hostname$primes$'>- %f%k'
+      PS1='%F{red}%B<'$hostname$primes$'>- %b%f%k'
     else
-      PS1='%F{blue}<'$hostname$primes$'>- %f%k'
+      PS1='%F{blue}%B<'$hostname$primes$'>- %b%f%k'
     fi
 
   # But root should have a helpful colorized prompt too:
   elif [[ $USER == root ]]; then
     #PS1=$'%{\e[1m%}#['$(hostname)$primes$']#%{\e[0m%} '
-    PS1='%K{white}%F{red}['$hostname$primes$'#]- %f%k'
+    PS1='%K{white}%F{red}%B['$hostname$primes$'#]- %b%f%k'
 
   # and so should everyone else.
   else
-    PS1='%F{green}<'$USER@$hostname$primes$'>- %f%k'
+    PS1='%F{green}%B<'$USER@$hostname$primes$'>- %b%f%k'
   fi
 }
 
@@ -243,10 +199,6 @@ alias ap="man -k"
 # to quickbrowse.
 alias netscheme='sudo -E /home/akkana/src/netutils/netscheme'
 
-# Distros keeps changing the suspend command; make an alias that won't change:
-#alias zzz='sudo /etc/acpi/sleep.sh'
-alias zzz='sudo pm-suspend --auto-quirks'
-
 # Newer versions of xterm no longer support titlebar setting with
 # the documented sequence of \e]2. But \e]0 works, as long as you
 # don't set XTerm*allowSendEvents.
@@ -276,6 +228,9 @@ phof () {
     fi
     pho $imglist
 }
+
+# Simple pastebin via netcat. Pipe input into this.
+alias pastebin='nc termbin.com 9999'
 
 ##################
 # Alias related to file finding and listing:
@@ -534,26 +489,16 @@ if [[ $hostname == 'moon' || $hostname == 'dna' ]]; then
 else
   alias off="sudo poweroff"
   alias reboot="sudo reboot"
-  alias zzz="sudo pm-suspend --auto-quirks"
+
+# Distros keeps changing the suspend command; make an alias that won't change:
+  # alias zzz='sudo /etc/acpi/sleep.sh'
+  # alias zzz="sudo pm-suspend --auto-quirks"
+  alias zzz="systemctl suspend"
 fi
 
 ######################################
 # audio/video aliases
 
-# mencoder options are black magic.
-# This works for converting Minolta quicktime .mov to mpeg:
-mov2mpg1() {
-  # mencoder has changed its arg structure and this no longer works
-  # mencoder $1 -oac pcm -ovc lavc -lavcopts vcodec=mpeg1video -o $2
-  echo Sorry, not sure of the new mencoder args
-}
-
-# -lavc is ffmpeg, and the default codec is divx:
-mov2divx() {
-  # mencoder has changed its arg structure and this no longer works
-  # mencoder $1 -oac pcm -ovc lavc -o $2
-  echo Sorry, not sure of the new mencoder args
-}
 # From drc on #gimp:
 mov2mpeg4() {
   # mencoder has changed its arg structure and this no longer works
@@ -562,19 +507,7 @@ mov2mpeg4() {
 }
 
 # Extract audio from flash:
-# mov2mp3old() {
-#   avconv -i $1 $2
-# }
-#
-# But that doesn't work any more (2015) and takes forever, so try this instead:
 alias tomp3='soundconverter -b -m "audio/mpeg" -s ".mp3"'
-
-# Record a realaudio stream
-getreal() {
-  mplayer -playlist $1 -ao pcm:file=$2 -vc dummy -vo null
-}
-# Then transcode it with:
-# lame --tg Other --ta artist -tl album file.wav file.mp3
 
 # Get resolution of a movie file:
 moviesize() {
@@ -589,8 +522,7 @@ alias playdvd="mplayer dvd://1 -alang en"
 
 ######## end video aliases
 
-########
-# Some format conversion commands:
+######## Prettyprinting
 
 # Prettyprint a JSON file:
 ppjson() {
@@ -701,12 +633,12 @@ booksread() {
 }
 
 ################################################
-# Presentations:
+# Presentations and monitor switching:
 
 # Enable/disable screen blanking.
 # Note: xset -q will show settings.
 
-noscreenblank() {
+screenblankoff() {
     xset -dpms
     xset s off
 }
@@ -718,19 +650,38 @@ screenblankon() {
 
 # Connect to a projector on the VGA port:
 alias projector='xrandr --output VGA-1 --mode 1024x768; noscreenblank'
-# and on the HDMI port:
+
+# and on the HDMI port duplicating the laptop screen:
 # alias projectorh='xrandr --output HDMI1 --mode 1024x768'
-# alias projectorh='xrandr --output HDMI-1 --mode 1024x768; noscreenblank'
-alias projectorh='xrandr --output LVDS-1 --auto --primary --output HDMI-1 --mode 1024x768; noscreenblank'
+alias projectorh='xrandr --output eDP-1 --auto --output HDMI-1 --mode 1024x768; screenblankoff'
+
+# Output to the HDMI port to the right of the laptop display:
+# alias projector2='xrandr --auto --output HDMI-1 --mode 1024x768 --right-of eDP-1'
+alias projector2='xrandr --output eDP-1 --auto --primary --output HDMI-1 --mode 1024x768 --right-of eDP-1; screenblankoff'
 
 # and set video back to normal:
 # alias monitor='xrandr --output HDMI1 --mode 1680x1050 --output VGA1 --off --output LVDS1 --off'
 alias noprojector='xrandr --auto; screenblankon'
 # See also my checkmonitor script.
 
+# Configure an external monitor to the right of the current one,
+# at the monitor's native resolution
+alias 2mon='xrandr --auto --output HDMI-1 --auto --right-of eDP-1'
+# alias 2mon='xrandr --auto --output HDMI-1 --auto --above eDP-1'
+
+alias monlaptop='xrandr --output eDP-1 --auto --output HDMI-1 --off'
+alias monhdmi='xrandr --output HDMI-1 --auto --output eDP-1 --off'
+alias mondock='xrandr --output DP-1 --auto --output eDP-1 --off'
+
+# Toggle mute. This doesn't work when called from an openbox key event,
+# but does work from the commandline.
+# You may need to run pavucontrol first and disable all but the real output
+# since that seems to be the only way to set the default sink.
+alias mute="pactl set-sink-mute @DEFAULT_SINK@ toggle"
+
 # Send all audio output to HDMI.
 # Usage: hdmisound [on|off], default is on.
-# Note: this is unreliable: it switches off after a short time
+# Note: this is unreliable on iridum: it switches off after a short time
 # and then when it auto-switches back on, you'll miss the first
 # few seconds of a sound. Maybe they'll eventually fix that bug.
 hdmisound() {
@@ -780,32 +731,6 @@ alias noteterm="nohup xterm -geometry 33x37+1025+0 -fn '-*-terminus-bold-*-*-*-2
 # red/black for night vision, narrow to show two at once on a laptop.
 alias planeterm="nohup rxvt -geometry 62x45 -fn terminus-iso8859-2-bold-18 -bg black -fg red &"
 
-# Make a new empty presentation:
-newpreso() {
-    if [[ x$1 != x ]]; then
-        newdir=$1
-    else
-        newdir="newpreso"
-    fi
-
-    if [[ x$2 != x ]]; then
-        fromdir=$2
-    else
-        fromdir=~/src/htmlpreso
-    fi
-    echo "Copying from $fromdir"
-
-    if [ ! -d $newdir ]; then
-        echo Creating $newdir
-        mkdir $newdir
-    fi
-
-    cp $fromdir/blank.html $fromdir/img.html $fromdir/navigate.js $fromdir/notes.js $fromdir/slides.css $fromdir/slides.js $fromdir/credits.js $newdir
-    mkdir $fromdir/pix
-
-    echo "New presentation files in $newdir"
-}
-
 # Making a PDF from a bunch of slides
 alias talk2pdf='qhtmlprint $( fgrep .html slides.js  | grep -v // | sed -e "s/\",/\"/" -e "s/\"//g" ) '
 alias talk2pdf1024='qhtmlprint -1024 $( fgrep .html slides.js  | grep -v // | sed -e "s/\",/\"/" -e "s/\"//g" ) '
@@ -816,16 +741,18 @@ alias talk2pdf1366='qhtmlprint -1366 $( fgrep .html slides.js  | grep -v // | se
 # Photo alias: Delete all .cr2 files that don't have a corresponding .jpg.
 # (That way I can manage my jpgs with metapho and anything deleted, I
 # can easily delete the corresponding raw file as well.)
-# This doubles as a reminder of how to do fancy pattern subs in zsh scripts.
-# Assume the current directory.
+# I don't use this much, but it doubles as a reminder of how to do
+# fancy pattern subs in zsh scripts.
+# Assume files are in the current directory.
 delcr2() {
     echo Removing *.cr2(e:'[[ ! -e ${REPLY%.cr2}.jpg ]]':)
     sleep 3
     rm *.cr2(e:'[[ ! -e ${REPLY%.cr2}.jpg ]]':)
 }
 
-############################################
-# Mount-related aliases
+################################################
+# Mount, df and other filesystem-related stuff,
+# to get rid of all the crap they show now.
 
 # Mount and df no longer suffice to show mounted filesystems,
 # since they show so much irrelevant virtual filesystem crap now.
@@ -837,7 +764,7 @@ mount() {
     fi
 
     # Else called with no arguments: we want to list mounted filesystems.
-    /bin/mount -t nosysfs,nodevtmpfs,nocgroup,nomqueue,notmpfs,noproc,nopstore,nohugetlbfs,nodebugfs,nodevpts,noautofs,nosecurityfs,nofusectl
+    /bin/mount -t nosysfs,nodevtmpfs,nocgroup,nomqueue,notmpfs,noproc,nopstore,nohugetlbfs,nodebugfs,nodevpts,noautofs,nosecurityfs,nofusectl,nosquashfs,nocgroup2,noefivarfs,nobpf,noconfigfs,nofuse.gvfsd-fuse
 
     # Two other options, in case that stops working:
     # mount -t ext3,ext4,cifs,nfs,nfs4,zfs
@@ -851,7 +778,7 @@ df() {
     fi
 
     # Else called with no arguments: we want to list mounted filesystems.
-    /bin/df -hTx tmpfs -x devtmpfs -x rootfs
+    /bin/df -hTx tmpfs -x devtmpfs -x rootfs -x squashfs
 }
 
 alias fumount="fusermount -u"
@@ -876,20 +803,9 @@ cryptunmount() {
 #########################################
 # Raspberry Pi and other embedded computers:
 
-# If we're logged in over a serial port, we might be using screen,
-# in which case we need to set the terminal size explicitly:
-if [[ $(tty) =~ /dev/ttyAMA0 ]]; then
-    termsize
-fi
-
-# Serial connections to embedded computers:
-#alias plug='minicom -D /dev/ttyUSB1 -b 115200'
-alias plug='screen /dev/ttyUSB1 115200'
-alias guru='screen /dev/ttyUSB0 115200'
 # For the Raspberry Pi, the serial port connections are
 # 6=black, 8=white, 10=green
 alias rpi='titlebar "Raspberry Pi"; echo "black=Gnd white=TX green=RX"; echo "Disconnect with Ctrl-backquote d"; screen /dev/ttyUSB0 115200; titlebar "local"'
-alias pion='titlebar "Raspberry Pi Pion"; ssh -X pi@pion; titlebar "local"'
 
 # Get my current network interface
 myif() {
@@ -942,46 +858,6 @@ localnet() {
 localport() {
     allnet=$(mynet | sed 's_\.[0-9]*/24_.1-254_')
     nmap $allnet -p$1 --open -oG - | grep $1/open
-}
-
-# Set up a Linux box to talk to a Pi0 using USB gadget on 192.168.0.7:
-pigadget() {
-    iface=''
-    # How to iterate over a line and set words, without needing an array:
-    ip -o link | grep en | grep u | awk '{print $2, $17}' | \
-        while read -r iff mac; do
-            # LON is a numeric variable containing the digit we care about.
-            # The "let" is required so zsh will know it's numeric,
-            # otherwise the bitwise test will fail.
-            let LON=0x$(echo $mac | sed -e 's/:.*//' -e 's/.//')
-
-            # Is the 2 bit set? Meaning it's a locally administered MAC
-            if ((($LON & 0x2) != 0)); then
-                iface=$(echo $iff | sed 's/:.*//')
-                echo Locally administered bit is set
-                break
-            else
-                echo Locally administered bit is clear
-            fi
-        done
-
-    if [[ x$iface == x ]]; then
-        echo "No enp interface:"
-        ip -o link
-        echo Bailing.
-        return
-    fi
-
-    echo "enp interface:" $iface
-    echo_and_do sudo ip a add 192.168.7.1/24 dev $iface
-    echo_and_do sudo ip link set dev $iface up
-
-    # Enable routing so the gadget can get to the outside world:
-    echo_and_do sudo sh -c 'echo 1 > /proc/sys/net/ipv4/ip_forward'
-    echo_and_do sudo iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
-
-    # Install dnsmasq if you want the gadget to have DNS
-    # without needing to use 8.8.8.8.
 }
 
 # A few electronics cheatsheets:
@@ -1191,165 +1067,7 @@ bindkey '^X^D' describe-key-briefly
 ################################################
 # Build/development helpers
 
-GIMP_PREFIX=/usr/local/gimp-git
-
-# meson/ninja are now used for babl
-meson-build() {
-    # From Jehan, for Meson/Ninja builds:
-    MESONSRC=$(pwd)
-    BUILD_DIR=$MESONSRC/obj-$(arch)
-    mkdir -p $BUILD_DIR
-    cd $BUILD_DIR
-    meson -Dprefix=$GIMP_PREFIX --libdir=lib $MESONSRC && ninja && ninja install
-}
-
-# update-clone dir repo: if dir already exists, go there and git pull,
-# then do a git clean -dfx.
-# Otherwise, make the directory and clone the repo into it.
-# Either way, we should end up in the directory with an up-to-date repo.
-# At the end we should be in $d.
-# Usage: pull-clone-clean git_url clean|no [branch]
-pull-clone() {
-    repo=$1
-    clean=$2
-    branch=$3
-    # Find the directory by stripping the extension from the URL basename
-    d=$(basename $repo:r)
-    cd $HOME/outsrc
-    echo repo $repo, d $d, clean $clean, branch $branch
-    if [ -d $d ]; then
-        cd $d
-        git pull
-        if [ "$clean" = clean ]; then
-            git clean -dfx
-        fi
-    else
-        git clone $repo
-        cd $d
-        if [[ x$branch != x ]]; then   # no branch
-            git checkout -t origin/$branch
-        fi
-    fi
-}
-
-# Build GIMP: if clean is specified as a first argument,
-# also update the config.site and
-# run git clean -dfx in any srcdir that wasn't freshly checked out.
-#
-# This also serves as a cheatsheet for how to build GIMP.
-#
-gimpmaster() {
-    # Make sure this exits on errors:
-    setopt localoptions errreturn
-
-    if [[ x$1 == xclean ]]; then
-        clean=true
-    fi
-
-    SRCDIR=$HOME/outsrc
-
-    # Download all the source
-    cd $SRCDIR
-    pull-clone https://gitlab.gnome.org/GNOME/babl.git $clean
-    cd $SRCDIR
-    pull-clone https://gitlab.gnome.org/GNOME/gegl.git $clean
-    cd $SRCDIR
-    pull-clone https://gitlab.gnome.org/GNOME/gimp.git $clean
-
-    # These two only needed for master builds, not 2.10
-    cd $SRCDIR
-    pull-clone https://github.com/mypaint/mypaint-brushes.git $clean
-    cd $SRCDIR
-    # pull-clone https://github.com/Jehan/mypaint-brushes.git $clean
-    pull-clone https://github.com/mypaint/libmypaint.git libmypaint-v1 $clean
-
-    # Overwrite config.site:
-    if [ "$clean" = clean ]; then
-        mkdir -p $GIMP_PREFIX/share/
-        cat >$GIMP_PREFIX/share/config.site <<EOF
-GIMP_PREFIX=$GIMP_PREFIX
-export PATH="\$GIMP_PREFIX/bin:\$PATH"
-export PKG_CONFIG_PATH="\$GIMP_PREFIX/lib/pkgconfig:\$GIMP_PREFIX/share/pkgconfig:\$PKG_CONFIG_PATH"
-export LD_LIBRARY_PATH="\$GIMP_PREFIX/lib:\$LD_LIBRARY_PATH"
-export ACLOCAL_FLAGS="-I \$GIMP_PREFIX/share/aclocal \$ACLOCAL_FLAGS"
-EOF
-    fi
-
-    echo "================ libmypaint"
-    cd $SRCDIR/libmypaint
-    ./autogen.sh && ./configure --prefix=$GIMP_PREFIX && make -j4 && make install
-
-    echo "================ mypaint-brushes"
-    cd $SRCDIR/mypaint-brushes
-    ./autogen.sh && ./configure --prefix=$GIMP_PREFIX && make -j4 && make install
-
-    echo "================ babl"
-    cd $SRCDIR/babl
-    meson-build
-
-    echo "================ gegl"
-    cd $SRCDIR/gegl
-    ./autogen.sh --prefix=$GIMP_PREFIX && make -j4 && make install
-
-    echo "================ gimp"
-    cd $SRCDIR/gegl
-    ./autogen.sh --prefix=$GIMP_PREFIX && make -j4 && make install
-
-    popd_maybe
-}
-
-# It often happens that some change in the build system makes autogen/configure
-# fail, which also prevents you from doing a make clean.
-# But sometimes, running autogen.sh with no arguments will fix this,
-# let you run a distclean, and then everything will work again.
-alias distclean1="./autogen.sh && ./configure && make clean"
-
-distclean() {
-    setopt localoptions errreturn
-
-    args=$(egrep '^  \$ ./configure' config.log | sed 's_^  \$ ./configure __')
-    echo "Saving args:" $args
-    ./autogen.sh
-    ./configure
-    make clean
-
-    echo "=========================================="
-    echo "Running ./autogen.sh $args"
-    sleep 3
-    ./autogen.sh $args
-}
-
-# Run a git with all-default settings. RUN IT, NOT BUILD IT.
-# Usage: gimpclean VERSION SWM
-# e.g. gimpclean git no, gimpclean 2.8 yes
-gimpclean() {
-    gimpdir=`mktemp -d /tmp/gimpenv.XXXXX`
-
-    # GIMP 2.8 gets very confused about GIMP2_DIRECTORY,
-    # and won't create the directories it needs. So we
-    # have to create them first.
-    for f in brushes dynamics patterns gradients palettes tool-presets; do
-        mkdir $gimpdir/$f
-    done
-    # But, sadly, that's not enough, and 2.8 still won't bring up
-    # a window of a reasonable size in either swm or mwm mode.
-
-    if [[ x$1 != x ]]; then
-        version=-$1
-    else
-        version=
-    fi
-    if [[ x$2 == 'swm' ]]; then
-        echo Single Window Mode
-    else
-        echo Multi Window Mode
-        # This doesn't really work, alas.
-        echo "(single-window-mode no)" > $gimpdir/sessionrc
-    fi
-    echo version is $version
-    echo "GIMP2_DIRECTORY=$gimpdir gimp$version --new-instance"
-    GIMP2_DIRECTORY=$gimpdir gimp$version --new-instance
-}
+export GIMP_PREFIX=$HOME/run/gimp-master
 
 # Build a new copy of my forked hexchat.
 # This frequently fails with meson/ninja errors because those tools
@@ -1373,7 +1091,7 @@ newhexchat() {
     # make install
 
     # http://hexchat.readthedocs.io/en/latest/building.html#unix
-    meson build
+    meson -Dprefix=$HOME/run/hexchat build
     ninja -C build
     ninja -C build install
 
@@ -1412,70 +1130,6 @@ tempwatch() {
 #############################################################
 # Debian apt helpers.
 
-# There doesn't seem to be any way to exclude all those i386 packages
-# when searching, so search results are twice as long as they need to be.
-# Also, there's no easy way to search for only installed packages.
-# There are ways, but they're quite hard to type:
-# packages whose name contains bash: aptitude search '~i bash'
-# also, aptitude search '?narrow(?installed, …)'
-# packages whose description contains bash: aptitude search '~i ~d bash'
-# packages that are not installed: aptitude search '!~i bash'
-#
-# aptitude's notion of "description" is the long description, not the
-# short one that shows up in aptitude search. So if you search on ~d
-# (-D in this function) you'll get matches that don't include the search
-# term anywhere. -d in this function implies -D but then greps the output
-# to ensure the search term is there.
-#
-# aptitude search reference:
-# https://www.debian.org/doc/manuals/aptitude/ch02s04s05.en.html
-aptsearch() {
-    as_usage() { echo "Usage: aptsearch [-idD] pattern" }
-
-    local OPTIND o only_installed description
-    while getopts ":idD" o; do
-        case "${o}" in
-            i)
-                only_installed=1
-                ;;
-            d)
-                shortdesc=1
-                description=1
-                ;;
-            D)
-                description=1
-                ;;
-            *)
-                aptsearch_usage
-                return
-                ;;
-        esac
-    done
-    shift $((OPTIND-1))
-
-    if [[ $only_installed ]]; then
-        argstr='~i '
-    else
-        argstr=''
-    fi
-
-    if [[ $description ]]; then
-        argstr="${argstr}~d "
-    fi
-
-    argstr="${argstr} $*"
-
-    if [[ $shortdesc ]]; then
-        # restrict output to lines actually containing the search term
-        echo "aptitude search \"${argstr}\" | grep $1"
-        echo
-        aptitude search "${argstr}" | grep "$1"
-    else
-        echo "aptitude search \"${argstr}\""
-        echo
-        aptitude search "${argstr}"
-    fi
-}
 
 # Debian apt: Check on status of all held packages:
 check_holds() {
@@ -1504,9 +1158,9 @@ check_holds() {
 # python3, since the packages will overwrite each other.)
 #
 # Set each one up once with:
-# virtualenv --system-site-packages $HOME/.python2env-$archbits (python2)
+# virtualenv --system-site-packages ~/pythonenv/2env (python2)
 #   (requires virtualenv and python-virtualenv)
-# python3 -m venv --system-site-packages .python3env-$archbits (python3)
+# python3 -m venv --system-site-packages ~/pythonenv/3env (python3)
 #   (requires python3-venv)
 #
 # If you need a specific version of Python, try e.g.:
@@ -1529,24 +1183,29 @@ nopythonenv() {
 switchpythonenv() {
     nopythonenv
 
+    env2=$HOME/pythonenv/2env
+    env3=$HOME/pythonenv/3env
+
     if [[ x$1 == x ]]; then
         vers=2
+        pyenv=$env2
     else
         vers=$1
+        pyenv=$env3
     fi
-    if [[ $arch == 'x86_64' ]]; then
-        archbits=64
-    else
-        archbits=32
-    fi
+    # if [[ $arch == 'x86_64' ]]; then
+    #     archbits=64
+    # else
+    #     archbits=32
+    # fi
 
     if [[ $vers == 23 ]]; then
-        echo Using both Python 2 and 3 envs on ${archbits} bit
-        VIRTUAL_ENV_DISABLE_PROMPT=1 source $HOME/.python2env-${archbits}/bin/activate
-        VIRTUAL_ENV_DISABLE_PROMPT=1 source $HOME/.python3env-${archbits}/bin/activate
+        echo "Using both Python 2 and 3 envs (experimental)"
+        VIRTUAL_ENV_DISABLE_PROMPT=1 source $env2/bin/activate
+        VIRTUAL_ENV_DISABLE_PROMPT=1 source $env3/bin/activate
     else
-        echo Switching Python envs to python${vers}, ${archbits} bit
-        VIRTUAL_ENV_DISABLE_PROMPT=1 source $HOME/.python${vers}env-${archbits}/bin/activate
+        echo Switching Python envs to python${vers}
+        VIRTUAL_ENV_DISABLE_PROMPT=1 source $pyenv/bin/activate
     fi
 
     set_prompt
@@ -1702,6 +1361,26 @@ andimport() {
 
 # End Android
 
+
+# Now that I'm running feeds on shallowsky.com,
+# local/xtra urls have to be saved there too,
+# so this alias appends the given URL to the file there.
+# Run with e.g. localurl 'http://blahblah'
+# The single quotes are only needed if the URL has an embedded newline,
+# like a long URL pasted from mutt or from email from an Apple user.
+# Removing the newlines isn't needed with modern zsh that allows
+# multiline pastes, but it doesn't hurt anything to keep it.
+# Note: in zsh this is no longer needed since pasting newlines
+# no longer executes the line immediately and you can edit them out.
+remove_newlines() {
+    echo ${1/$'\n'/}
+}
+
+localurl() {
+    ( for url in $* ; remove_newlines $url ) | ssh shallow 'cat >> web/feedme/feeds/localurls'
+}
+
+
 ##################################
 # Spam and email-related aliases
 
@@ -1758,17 +1437,21 @@ spams() {
     #grep Subject ~/Spam/saved ~/Spam/trained/saved | egrep -i "$*"
     echo "============ Recent =============="
     decodemail -a Subject: ~/Spam/saved | egrep -a -i "$*"
-    echo
-    echo "============ Older =============="
-    decodemail -a Subject: ~/Spam/oldheaders/saved | egrep -a -i "$*"
+    if [ -d ~/Spam/oldheaders ]; then
+        echo
+        echo "============ Older =============="
+        decodemail -a Subject: ~/Spam/oldheaders/saved | egrep -a -i "$*"
+    fi
 }
 spamf() {
     #grep -a -h '^From:' ~/Spam/trained/saved ~/Spam/saved | egrep -a -i "$*"
     echo "============ Recent =============="
     decodemail -a From: ~/Spam/saved | egrep -a -i "$*"
-    echo
-    echo "============ Older =============="
-    decodemail -a From: ~/Spam/oldheaders/saved | egrep -a -i "$*"
+    if [ -d ~/Spam/oldheaders ]; then
+        echo
+        echo "============ Older =============="
+        decodemail -a From: ~/Spam/oldheaders/saved | egrep -a -i "$*"
+    fi
 }
 spamff() {
     #grep -a -h '^From' ~/Spam/trained/saved ~/Spam/saved | egrep -a -i "$*"
@@ -1782,6 +1465,7 @@ cleanspam() {
     # Periodically, we need to clean out the current spam folders
     # but save the old headers (not message bodies) for spam filter
     # development purposes.
+    mkdir -p $HOME/Spam/oldheaders
     for folder in $HOME/Spam/*; do
         if [[ -f $folder && -s $folder ]]; then
             echo $folder
@@ -1823,94 +1507,12 @@ blogup() {
 }
 
 # Sync new blog files back to the server:
-alias blogsync='rsync -av --delete ~/web/blog ~/web/blogfiles shallowsky.com:web/'
+alias blogsync='rsync -av --delete ~/web/blog ~/web/blogfiles shallow:web/'
 
 # End PyBlosxom helpers.
 
 ####################################################################
-# Full and nearly-full backups.
-
-# Do a full backup. First argument is path to mounted backup directory.
-# Second, optional, argument is whether to do a "mini" backup:
-# if "mini" it will be a mini backup, if "full" or unset, it will be full.
-dobackup() {
-    if [[ $# -eq 0 || $1 == '' ]]; then
-        echo "Back up to where?"
-        return
-    fi
-
-    # Exclude files/dirs with these names from all backups, even full ones:
-    fullexcludes=( Cache ".cache/*" core Spam LOG log olog foo .Xout feeds \
-        .local .pythonenv Tarballs \
-        desert-center planetarium-movies \
-        ebirddata \
-        VaioWin core outsrc .imap \
-        .icons .thumbnails .cache/thumbnails .imap .macromedia .histfile \
-        .gradle/ .dbus/ .emacs-saves \
-        .config/chromium .googleearth/Temp .googleearth/Cache \
-
-        # All the places virtualbox stores profiles:
-        'VirtualBox VMs' Virtualbox .VirtualBox \
-
-        # All the various crap firefox stores:
-        "*.Default User" \
-        "gmp-gmp*"/ crashes/ datareporting/ '/healthreport.sqlite*' \
-        'webapps*' \
-        storage/permanent/ storage/default/ storage/temporary/ \
-        sessionstore-backups/ saved-telemetry-pings/ "*store.json*" \
-
-        )
-
-    # Exclude these from "mini-full" backups (e.g. if low on backup disk space)
-    moreexcludes=( '*.mp4' '*.img' '*.iso' DVD \
-        outsrc kobo planetarium-movies \
-        droidsd-old .googleearth )
-
-    # Things we want even though they're under otherwise excluded patterns.
-    # If these are part of patterns that would otherwise be excluded,
-    # use a * in the exclude pattern.
-    # E.g. include .cache/feedme/, exclude .cache/* instead of .cache/
-    includes=( .cache/feedme/ outsrc/gimp/ outsrc/hexchat/ outsrc/openbox/ )
-
-    # Build up the excludes list:
-    excludesflags=( )
-
-    for i in $includes; do
-        excludesflags+="--include"
-        excludesflags+="$i"
-    done
-
-    for ex in $fullexcludes; do
-        excludesflags+="--exclude"
-        excludesflags+="$ex"
-    done
-
-    if [[ $# -eq 2 && $2 == "mini" ]]; then
-        echo "Mini backup to" $1
-        for ex in $moreexcludes; do
-            excludesflags+="--exclude"
-            excludesflags+="$ex"
-        done
-    else
-        echo "Full backup to" $1
-    fi
-
-    if [[ ! -f $1/.config/zsh/.zshrc ]]; then
-        echo
-        echo "********************************************************"
-        echo "WARNING: $1 doesn't appear to be an existing backup dir."
-        echo "Are you sure?"
-        echo "Waiting for 10 seconds ..."
-        echo "********************************************************"
-        echo
-        sleep 10
-    fi
-    echo sudo rsync -av --delete --delete-excluded "${excludesflags[@]}" ./ $1
-    sleep 2
-    pushd_maybe ~
-    sudo rsync -av --delete --delete-excluded "${excludesflags[@]}" ./ $1
-    popd_maybe
-}
+# Backups, and syncing with web servers
 
 #
 # Usage: fullbackup target, e.g. fullbackup /backupdisk/username/
@@ -1921,101 +1523,6 @@ fullbackup() {
 
 minibackup() {
     dobackup "$1" mini
-}
-
-############# end backups
-
-####################################################################
-# Rsync local files up to a web server
-# Usage: towebhost dir
-# $webserver will be used as the webserver default, if not specified.
-# Set up pre-defined web hosts and their local and remote paths as follows:
-# webhosts=(      mywebserver1.com mywebserver2.com )
-# weblocalpaths=( $home/mywebdir   /public/myotherwebdir )
-
-towebhost() {
-    fromwebhost=0
-    flags=''
-    # For testing, this is a convenient place to force -n
-    # flags='-n'
-
-    # Evaluate arguments: -n and/or -f
-    for i in "$@"
-    do
-        case $i in
-            -n)
-                flags='-n'
-                shift
-                ;;
-            -f)
-                fromwebhost=1
-                shift
-                ;;
-            --default)
-                break
-                ;;
-        esac
-    done
-
-    if [[ $# == 0 ]]; then
-        print "Usage: towebhost file_or_dir"
-        return
-    fi
-
-
-    excludes="--exclude .git --exclude cache --exclude __pycache__ --exclude '*.pyc' --exclude 'webhits*'"
-
-    for dst in "$@"; do
-        echo $dst
-
-        # Get the full path of the argument:
-        localpath=$dst:A
-
-        # Sanity check our three webhosts variables:
-        if [[ $#weblocalpaths != $#webhosts ]]
-        then
-            echo "Error: webhosts and weblocalpaths don't match"
-            return
-        fi
-        webhost='none'
-        for i in {1..$#webhosts}; do
-            if [[ $localpath == $weblocalpaths[$i]* ]]; then
-                webhost=$webhosts[$i]
-                localbase=$weblocalpaths[$i]
-                break
-            fi
-        done
-
-        if [[ $webhost == 'none' ]]; then
-            echo "$localpath doesn't match any known local path in $weblocalpaths"
-            return
-        fi
-
-        # Make sure directories have a terminal slash,
-        # whether or not the user provided one.
-        if [ -d $localpath ]; then
-            # Remove terminal slash.
-            ## requires extendedglob, so make sure it's set locally.
-            setopt localoptions extendedglob
-            localpath=${localpath%%/##}/
-        fi
-
-        remotepath=${localpath#$localbase}
-
-        if [[ $fromwebhost == 1 ]]; then
-            echo "Copying from $webhost$remotepath to local $localpath"
-            echo
-            cmd="rsync -av $flags --delete $excludes $webhost$remotepath $localpath"
-
-        else
-            echo "Copying $localpath to $webhost$remotepath"
-            echo
-            cmd="rsync -av $flags --delete $excludes $localpath $webhost$remotepath"
-        fi
-
-        echo $cmd
-        eval $cmd
-    done
 }
 
 fromwebhost() { towebhost -f $@ }
@@ -2050,27 +1557,6 @@ composekey() {
 
 alias remindme='remind -g ~/Docs/Lists/remind'
 
-# Display a text calendar some number of months (default 2)
-# using my remind database:
-mycal() {
-    months=$1
-    if [[ x$months == x ]]; then
-        months=1
-    fi
-    remind -c$months ~/Docs/Lists/remind
-}
-
-# Display a postscript calendar some number of months (default 2)
-# using my remind database:
-mycalp() {
-    months=$1
-    if [[ x$months == x ]]; then
-        months=2
-    fi
-    remind -p$months ~/Docs/Lists/remind  | rem2ps -e -l >/tmp/mycal.ps; gv /tmp/mycal.ps &
-}
-
-alias akk="aplay $HOME/.xchat2/sounds/akk.wav"
 alias screenshot="scrot -b -s screenshot.jpg"
 alias thes="dict -h localhost -d moby-thesaurus"
 
@@ -2090,17 +1576,6 @@ pdfreduce() {
     gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/screen -dNOPAUSE -dQUIET -dBATCH -sOutputFile="$2" $1
 }
 
-# Mirror a website on a directory. Be sure to include an end slash
-# on the URL!
-mirror() {
-    d=$1
-    if [[ $d =~ '.*/$' ]]; then
-        wget -np -r $d
-    else
-        echo "$d needs to end with a slash"
-    fi
-}
-
 ##### printers ################
 
 # Nice overview of lp options: https://www.computerhope.com/unix/ulp.htm
@@ -2108,24 +1583,6 @@ mirror() {
 # Which printers are available? lpstat -p -d also works.
 alias whichprinters='lpstat -a; echo "print with lp -d dest -n num-copies"; echo "For PDF consider adding -o fit-to-page or -o scaling=100, or using pdfpages or pdfjam"'
 
-# Print duplex on a printer that supports it.
-# If using this with -n num_copies, be sure to add -o collate=true too,
-# or else you'll get a sheet with page 1 on both sides, etc.
-duplexlp() {
-    lp -o sides=two-sided-long-edge -o collate=true "$@"
-}
-duplexbrother() {
-    lp -o sides=two-sided-long-edge -o collate=true -d Brother_HL-3170CDW "$@"
-}
-duplexdell() {
-    lp -o sides=two-sided-long-edge -o collate=true -d Dell_Printer_E310dw "$@"
-}
-
-# lp inconsistently decides to use zero margins. When it does, this helps.
-# (In theory, adding -o page-top=17 should add a top margin, but in
-# 2014 this seems to make a negative margin, dropping the first few
-# lines. All hail Linux printing!)
-alias lpp='lp -o page-left=38'
 
 ##### dates ################
 
@@ -2157,17 +1614,6 @@ dayofweek() {
 
 # Tell aptitude not to limit descriptions to the terminal width
 alias aptitude='/usr/bin/aptitude --disable-columns'
-
-# Adjust for day or nighttime monitor modes
-alias day="xrandr --output HDMI1 --brightness 1.0"
-alias night="xrandr --output HDMI1 --brightness .8"
-
-# Run ebook programs, except that neither of them work in wine any more:
-alias kindle="wine ~/.wine/drive_c/Program\ Files/Amazon/Kindle/Kindle.exe"
-# alias adobeDE="wine ~/.wine/drive_c/Program\ Files/Adobe/Adobe\ Digital\ Editions/digitaleditions.exe"
-# alias adobeDE="cxrun ~/.cxoffice/ADE_4/drive_c/Program\ Files/Adobe/Adobe\ Digital\ Editions\ 4.5/DigitalEditions.exe"
-alias adobeDE="wine .wine/drive_c/Program\ Files\ \(x86\)/Adobe/Adobe\ Digital\ Editions1.7.2/digitaleditions.exe"
-# To open something like a URLLink.acsm file: wine start URLLink.acsm
 
 # R has no way to tell it not to prompt annoyingly to save the environment
 # every time you quit, except as a commandline flag:
