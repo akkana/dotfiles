@@ -14,7 +14,7 @@ Xcursor.theme: default
 Xcursor.size: 48
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!! Xterm colors (e.g. for rxvt)
+!! Xterm colors (includes urxvt)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Green-on-black scheme:
 !XTerm*background: grey30
@@ -31,7 +31,7 @@ Emacs*Xcursor.size: 16
 ! black-on-light-grey scheme:
 XTerm*foreground: black
 ! background was #ccdddd, but make it brighter for bright office
-XTerm*background: #eeffff
+XTerm*background: #ecf5ff
 
 ! XTerm*pointerColor: red
 ! Good xterm pointer shapes: diamond_cross, fleur, double_arrow
@@ -43,6 +43,15 @@ XTerm*background: #eeffff
 XTerm*cursorColor: red
 XTerm*colorBD: dark blue
 XTerm*colorUL: purple4
+
+! Make Xterm pass alt-key editing sequences like alt-f and alt-b:
+! https://superuser.com/questions/285306/alt-d-alt-f-etc-stops-working-in-my-xterm
+XTerm.vt100.eightBitInput: false
+XTerm*eightBitInput: False
+XTerm*metaSendsEscape:  true
+
+! Trim trailing spaces when copying:
+XTerm*VT100.trimSelection: True
 
 ! Try to make titlebar setting work again, as per
 ! https://bugs.launchpad.net/ubuntu/+source/xterm/+bug/408496
@@ -95,17 +104,12 @@ XTerm*titeInhibit: true
 XTerm*locale: UTF-8
 
 ! I think I had this enabled, but it disallows changing the titlebar
-! and it looks like crikey doesn't need it any more (whew):
+! and it looks like crikey no longer needs it (whew):
 !XTerm*allowSendEvents: true
 
 ! Debian/ubuntu weirdly changed the default to not allow tracking
 ! window size:
 XTerm*allowWindowOps: true
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!! resources specific to urxvt
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-urxvt*termName: rxvt-unicode-noalt
 
 ! Bold and underline colors -- not for regular xterm,
 !! but rxvt does, and perhaps others do as well.
@@ -124,7 +128,7 @@ XTerm*charClass:33:48,35-38:48,42-44:48,45-47:48,58:48,61:48,63-64:48,126:48
 ! :!%$*+-./@?~ are word chars..
 ! should also work for ~, but fails, for some reason.
 ! And the equivalent, list of word separators for rxvt (much easier syntax!):
-XTerm*cutchars: \\'`"�()*;<>[]{|}   !' extra quote for broken Xdefaults parser
+XTerm*cutchars: \\'`"´()*;<>[]{|}   !' extra quote for broken Xdefaults parser
 ! Here is a good test url:
 ! http://bugzilla.mozilla.org/show_bug.cgi?id=40340&user=akkana@netscape.com
 
@@ -132,26 +136,69 @@ XTerm*cutchars: \\'`"�()*;<>[]{|}   !' extra quote for broken Xdefaults parser
 !
 ! This is my favorite font -- I wish I could get it in a 70 width,
 ! since 60 (available in 12-point) is too narrow and 80 is too wide:
-!XTerm*font: -schumacher-clean-bold-r-normal--14-*-*-*-*-*-*-*
+! XTerm*font: -schumacher-clean-bold-r-normal--13-*-*-*-*-*-*-*
 !
 ! Here is one that works on Dapper through Hardy at 1280x1024:
 ! not as nice as schumacher clean, but it has some smartquote characters.
 ! The 'c' is important -- m and c give very slightly different fonts!
 ! XTerm*font: -bitstream-bitstream vera sans mono-bold-r-normal-*-12-*-*-*-c-*-iso10646-1
 ! but Ubuntu removed the vera fonts in Karmic!
-!XTerm*font: -*-clean-*-r-*-*-13-*-*-*-c-*-*-*
-XTerm*font: -misc-fixed-bold-r-normal-*-*-130-*-*-c-*-iso8859-15
+
+! Worth trying:
+! XTerm*font: -*-clean-*-r-*-*-16-*-*-*-c-*-*-*
+
+! Inconsolata is a nice font but bold no longer works:
 !XTerm*font: xft:Inconsolata
 !XTerm*faceName: Inconsolata bold
 !XTerm*faceSize: 10
 !XTerm*faceWeight: bold
 
+! Good font for the Carbon X1 built-in screen:
+XTerm*faceName: Monoid HalfTight:size=10:antialias=true
+! but for an external display it needs to be smaller:
+monxterm*faceName: Monoid HalfTight:size=8:antialias=true
+
+! XTerm*faceName: Fantasque Sans Mono:size=13:antialias=true:weight=bold
+! XTerm*faceName: Fantasque Sans Mono:size=13:antialias=true
+! XTerm*faceName: Monoid HalfTight:size=11:antialias=true:weight=bold
+! XTerm*faceName: Monoisome HalfTight:size=9:antialias=true:weight=bold
+! XTerm*faceName: Noto Sans Mono CJK JP:size=12:antialias=true:weight=bold
+
 ! Have not been able to get inconsolata to display via the X font mechanism:
 !XTerm*font: -inconsolata-*-*-*-*-*-14-*-*-*-*-*-*
 
-! Separate font for urxvt:
-! An attempt to use dejavu to get more characters:
-urxvt*font: -dejavu-dejavu sans mono-bold-r-normal-*-*-m-*-*-*-*-iso8859-15
+! This one worked through Debian jessie, but on stretch it no longer
+! has correct glyphs for things like smartquotes:
+!XTerm*font: -misc-fixed-bold-r-normal-*-14-*-*-*-*-*-iso8859-15
+
+! But this works (thanks Mikachu):
+! XTerm*font: -misc-fixed-bold-r-normal-*-14-*-*-*-*-*-iso10646-1
+
+! Here's what I use in emacs, probably the same as above:
+! XTerm*font: -misc-fixed-bold-r-normal-*-14-*-*-*-*-*-*-*
+
+! This is pretty enough and has all the characters, but is overly antialiased:
+! XTerm*faceName: DejaVu Sans Mono:size=9:embolden=true
+! XTerm*faceName: DejaVu Sans Mono:bold:size=8.75
+! XTerm*faceName: DejaVu Sans Mono:bold:size=9:antialias=false
+! Other options:
+! https://www.freedesktop.org/software/fontconfig/fontconfig-user.html
+! hinting=false autohint=false
+! embolden=true is different from using :bold:.
+! Testing: fc-match fixed says it's using DejaVuSans.ttf: "DejaVu Sans" "Book"
+
+! XTerm*font: -misc-fixed-medium-r-normal--13-120-75-75-c-70-
+! Some other options:
+! XTerm*faceName: Source Code Pro Bold:bold:size=9:antialias=false
+! XTerm*faceName: Fira Code:size=8.5:embolden=true
+! XTerm*faceName: Book:bold:size=9
+! XTerm*faceName: DejaVu Sans Mono:bold:size=9
+! XTerm*faceName: Liberation mono:bold:size=9
+
+! This is also overly anti-aliased, but it's so compact vertically
+! that I can use a larger font which makes it readable again:
+! XTerm*faceName: Lucida console:bold:size=10
+
 ! and here is one for breezy at 1024x768 or edgy at 1280x1024:
 !XTerm*font: -misc-fixed-bold-r-normal-*-*-130-*-*-c-*-iso10646-1
 
@@ -161,18 +208,145 @@ urxvt*font: -dejavu-dejavu sans mono-bold-r-normal-*-*-m-*-*-*-*-iso8859-15
 *XTerm*VT100*Font3:            9x15
 *XTerm*fontMenu*font3*Label:   Big
 
+!! Shift-INSERT pastes the PRIMARY selection.
+!! Make Shift-Ctrl-INSERT paste the CLIPBOARD;
+!! and, while we're at it, make Shift-Ctrl-c and v copy and paste CLIPBOARD.
+!! Super is the "Windows" key, and can be used to make the font
+!! smaller or larger. Nice discussion at:
+!! http://www.futurile.net/2016/06/14/xterm-setup-and-truetype-font-configuration/
 *XTerm*VT100.Translations: #override \n\
-    Hyper<Key>1:       set-vt-font(d) \n\
-    Hyper<Key>2:       set-vt-font(1) \n\
-    Hyper<Key>3:       set-vt-font(2) \n
+    Shift Ctrl <Key> Insert: insert-selection(CLIPBOARD)\n\
+    Shift Ctrl <KeyPress> v: insert-selection(CLIPBOARD)\n\
+    Shift Ctrl <KeyPress> c: copy-selection(CLIPBOARD)\n\
+    Super <Key> minus: smaller-vt-font() \n\
+    Super <Key> plus: larger-vt-font() \n\
+    Super <Key> 0: set-vt-font(d)
 
 !*XmScrollBar.width: 10
 
-! Unsuccessful attempts to change the default Tk menu font:
-!tik*Button*fontList: -*-helvetica-bold-i-normal-*-*-140-*-*-p-*-iso8859-2
-!tik*Menu*font: -*-helvetica-bold-i-normal-*-*-140-*-*-p-*-iso8859-2
-!tik*font: -*-helvetica-bold-i-normal-*-*-140-*-*-p-*-iso8859-2
-!tik*fontList: -*-helvetica-bold-i-normal-*-*-140-*-*-p-*-iso8859-2
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!! urxvt
+!!
+!! https://git.madduck.net/etc/xsession.git/blob/HEAD:/.Xresources
+!! https://www.askapache.com/linux/rxvt-xresources/
+!! https://addy-dclxvi.github.io/post/configuring-urxvt/
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+! The term name controls what TERM is set to.
+urxvt*termName: rxvt-unicode-256color
+
+URxvt.font: xft:Monoid HalfTight:size=9:antialias=true
+! Helping someone test:
+! URxvt.font: xft:Inconsolata:size=9:antialias=true
+
+! URxvt*boldFont: xft:Monoid HalfTight:bold:size=8
+
+! urxvt spaces fonts wider than other terminals, apparently,
+! but allows reducing it this way:
+URxvt.letterSpace: -1
+
+URxvt*loginShell: true
+
+! Extensions (comma separated):
+! font-size: Enable font size switching on the fly
+! matcher: allow clicking on URLs, but it doesn't handle multi-line
+! URLs and makes it impossible to select a URL.
+! selection: supposedly make selection configurable with perl defs,
+! but that didn't work for me.
+! URxvt.perl-ext-common: font-size,selection
+URxvt.perl-ext-common: default,font-size
+
+! black-on-light-grey scheme:
+URxvt*foreground: black
+URxvt*background: #ecf5ff
+
+! Font size changes: see man urxvt-font-size.
+! Ctrl-+ is bound by default, but since that's a shifted key on US keyboards,
+! bind it to the unshifted key as well.
+URxvt.keysym.C-equal:     font-size:increase
+! It's supposed to be possible to get all open urxvts to increase or decrease,
+! but incglobal/decglobal don't work for me, they still only change one term.
+! URxvt.keysym.C-S-equal:          font-size:incglobal
+! URxvt.keysym.C-S-minus:          font-size:decglobal
+! URxvt.keysym.C-S-Up:   font-size:incglobal
+! URxvt.keysym.C-S-Down: font-size:decglobal
+
+! Whee, urxvt can actually map key sequences:
+! URxvt.keysym.Control-Up: HELLO WORLD
+! URxvt.keysym.Shift-Tab: HELLO WORLD
+! URxvt.keysym.S-Tab: HELLO WORLD
+! URxvt.keysym.Shift-ISO_Left_Tab: string:HELLO
+
+! Allow copy and paste of CLIPBOARD as well as PRIMARY.
+! This requires "default" in the list of extensions.
+! Just adding "clipboard" doesn't help, but "default" does.
+! URxvt.keysym.Control-Meta-c: builtin-string:
+! URxvt.keysym.Control-Meta-v: builtin-string:
+URxvt.keysym.Shift-Control-V: eval:paste_clipboard
+URxvt.keysym.Shift-Control-C: eval:selection_to_clipboard
+URxvt.keysym.Shift-Control-Insert: eval:paste_clipboard
+
+! Don't waste screen space on ugly scrollbars
+URxvt*scrollBar:  false
+
+! Fade by this percentage when focus is lost
+! URxvt*fading: 10
+
+URxvt*visualBell:  true
+
+! Adjust colors that by default aren't visible on a light background
+! Was light green
+URxvt*color2: ForestGreen
+! URxvt*color10: ForestGreen
+URxvt*color10: rgb:00/aa/00
+! was yellow
+URxvt*color3: dark orange
+URxvt*color11: orange
+! was cyan
+URxvt*color6: cyan4
+URxvt*color14: dark cyan
+
+! cutchars to help with URL selection.
+! None of the fancy urxvt extensions like matcher or selection
+! seem to handle this reasonably, but cutchars is okay.
+URxvt*cutchars: \\'`"´()*;<>[]{|}
+!! extra ' for broken xrdb parsing
+
+! urxvt has these weird modes like "keycap insert mode" that pop up
+! when typing things like ctrl-shift. Nobody seems to know or document
+! what they are for -- something about typing special characters,
+! but without documentation they are not very useful.
+URxvt.iso14755: false
+URxvt.iso14755_52: false
+
+! Failed attempts at configuring fancy urxvt features:
+
+! Selection: make it easier to select URLs, among other changes.
+! Doesn't work, seems to be ignored. I think urxvt-selection is obsolete
+! even though it's included by default in the ubuntu package.
+! URxvt*selection.pattern-0: ^.*$
+
+! Ugh, this just makes things worse. It doesn't work as described in the man.
+! With this set, whether or not selection is specified as an extension,
+! clicking in the early parts of ‘757px-Mons_Rümker_Apollo_15.jpg’
+! will include the first single quote, then break before the A in Apollo.
+! Without it, without the selection extension, the single quotes are selected;
+! with the extension, sometimes single quotes are selected, sometimes not.
+! URxvt*cutchars:           BACKSLASH '"'&()*,;<=>?@[]^{|}
+
+! ! key bindings
+! URxvt.matcher.button:       1
+! URxvt.keysym.C-Delete:    matcher:last
+! URxvt.keysym.M-Delete:    matcher:list
+! ! regexps
+! ! .0 for web links
+! ! URxvt.matcher.pattern.1: \\B(/\\S+?):(\\d+)(?=:|$)               ! gcc and all
+! ! URxvt.matcher.pattern.2: (?:\\s)([\\~\\.]?\\/\{1,1\}[\\.\\w]\\S+)\\b
+! ! launchers . Need all 0..x defined
+! URxvt.matcher.launcher.0: xdg-open
+! ! URxvt.matcher.launcher.1: gvim +$2 $1
+! ! URxvt.matcher.launcher.2: emacsclient $1
+! URxvt.urlLauncher:          xdg-open
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !    GNU emacs, epoch, and xemacs resources
@@ -190,25 +364,25 @@ urxvt*font: -dejavu-dejavu sans mono-bold-r-normal-*-*-m-*-*-*-*-iso8859-15
 !Emacs.font: clean-10:bold
 !Emacs.font: -schumacher-clean-bold-r-normal--13-*-*-*-*-*-*-*
 !emacs.FontBackend: xft
+
+!! These were my real emacs defaults, commented out while I test
+!! removal of DejaVu fonts:
 ! On Ubuntu, emacs has a class name of Emacs23
-Emacs23.font: DejaVu Sans Mono-9:bold
+!Emacs23.font: DejaVu Sans Mono-9:bold
 ! but everywhere else it still wants just Emacs:
-Emacs.font: DejaVu Sans Mono-9:bold
-!Emacs23.font: Liberation Mono-10:bold
+!Emacs.font: DejaVu Sans Mono-9:bold
+!Emacs.font: Liberation Mono-10:bold
+
+!! Emacs apparently no longer sees X font specs:
+! Emacs*font: -misc-fixed-bold-r-normal-*-*-130-*-*-c-*-iso8859-15
 
 ! Special case for emacs with big fonts:
 bigemacs.font: DejaVu Sans Mono-16:bold
 !bigemacs*font: -*-bitstream vera sans mono-bold-r-normal-*-*-*-*-*-c-*-iso8859-15
 bigemacs*geometry: 80x40+0+0
 
-!! So irritating! Emacs changed its class from Emacs to Emacs23.
-!! So at some point everything will stop working and we will have to bump it.
-Emacs23*cursorColor: red
-Emacs23*pointerColor: magenta
-! For some reason, Netscape emacs and xemacs both think this is
-! an invalid geometry specifier.
-! And Squeeze just ignores it.
-! Emacs23*geometry: 80x42
+Emacs*cursorColor: red
+Emacs*pointerColor: magenta
 
 !! Colors are now set in .emacs using set-background-color.
 ! Emacs23*foreground: black
