@@ -39,6 +39,7 @@
 # but no, you have to change both of them.
 [diff]
     tool = tkdiff
+    external = tkdiff
 [difftool]
     tool = tkdiff
     prompt = false
@@ -68,6 +69,10 @@
         # Yet another thing zillions of people want to do that git makes
         # ridiculously difficult.
         log-branch = log --walk-reflogs
+
+        # git has no native way to show, simply, all branches with
+        # tracking info. Thanks to joh6nn for coming up with this:
+        branches = branch -a --format='%(refname:short)%(if)%(push:short)%(then) -> %(push:short)%(end)'
 
 # Oh, lovely. git 1.7.11 mandates having something here, but if you
 # pick the default (simple) then your .gitconfig won't work with
