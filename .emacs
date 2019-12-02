@@ -67,7 +67,7 @@
                  ; + 0 here used to be +4, but the window comes out
                  ; too big on CX1 screen -- this frame-char-height
                  ; stuff doesn't seem to be working quite right.
-         (cons 'height (+ 0 (floor (/ (* (x-display-pixel-height) 0.85)
+         (cons 'height (+ 0 (floor (/ (* (x-display-pixel-height) 0.80)
                                       (frame-char-height))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -698,7 +698,7 @@
 ))
 
 (add-to-list 'auto-insert-alist
-             '((".*lwvweb.*\\.html$" . "LWVNM HTML file")
+             '((".*\\(lwvweb\\|fairdistricts\\).*\\.html$" . "LWVNM HTML file")
                "Title: "
                "<?php\n"
                "  $title = \"" str "\";\n"
@@ -865,8 +865,11 @@
   (message "HTML wrap mode")
 
   (auto-fill-mode)
-  (flyspell-mode 1)
-  (flyspell-buffer)
+  (if (<= (buffer-size) 10000)
+      (progn (flyspell-mode 1)
+             (flyspell-buffer) )
+      (message "Buffer too big, not spellchecking")
+      )
 
   ;; New annoyance in emacs24: every time you save an html file,
   ;; it calls a browser on it, replacing whatever's in your current
@@ -1694,7 +1697,8 @@
  '(package-selected-packages (quote (markdown-mode elpy undo-tree)))
  '(safe-local-variable-values
    (quote
-    ((not-flyspell-mode)
+    ((auto-fill)
+     (not-flyspell-mode)
      (encoding . utf-8)
      (auto-fill-mode)
      (wrap-mode))))
