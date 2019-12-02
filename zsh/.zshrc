@@ -55,20 +55,6 @@ setopt printexitvalue
 # Prevent any repeated entries in $PATH
 typeset -U PATH
 
-# Set path
-arch=$(uname -m)
-export PATH=$HOME/bin:$HOME/bin/linux-$arch:/usr/local/bin:$PATH:.:/usr/sbin:/sbin:$HOME/Archive/outsrc/android-sdk-linux/platform-tools:$HOME/Archive/outsrc/android-sdk-linux/tools:$HOME/.local/bin
-
-if (( ! ${+PYTHONPATH} )); then
-    export PYTHONPATH=$HOME/bin/pythonlibs
-fi
-
-# Autocomplete in the python console:
-# https://python.readthedocs.io/en/v2.7.2/tutorial/interactive.html
-if [[ -f ~/.pystartup ]]; then
-    export PYTHONSTARTUP=~/.pystartup
-fi
-
 ulimit -c unlimited
 HISTSIZE=200
 
@@ -139,16 +125,6 @@ RPS1="%F{red}%~%f%k"
 # Bash defaults to a really short timeout, and exits on inactivity.
 # Not sure if zsh needs this as well.
 TMOUT=0
-
-# Environment
-export PAGER=less
-# Need -er in LESS, for git colors to work
-export LESS="-EerX"
-export LC_COLLATE=C
-
-export MAILER=mutt
-export EDITOR=vim
-export VISUAL=vim
 
 # Note: using "$@" instead of $* or $@ in case of sharing code with
 # bash users, though in zsh, they're all equivalent and all
@@ -641,6 +617,8 @@ booksread() {
 screenblankoff() {
     xset -dpms
     xset s off
+    # If those aren't enough, try adding this
+    # xset s 0
 }
 
 screenblankon() {
@@ -649,7 +627,7 @@ screenblankon() {
 }
 
 # Connect to a projector on the VGA port:
-alias projector='xrandr --output VGA-1 --mode 1024x768; noscreenblank'
+alias projector='xrandr --output VGA-1 --mode 1024x768; screenblankoff'
 
 # and on the HDMI port duplicating the laptop screen:
 # alias projectorh='xrandr --output HDMI1 --mode 1024x768'
@@ -678,54 +656,7 @@ alias mondock='xrandr --output DP-1 --auto --output eDP-1 --off'
 # You may need to run pavucontrol first and disable all but the real output
 # since that seems to be the only way to set the default sink.
 alias mute="pactl set-sink-mute @DEFAULT_SINK@ toggle"
-
-# Send all audio output to HDMI.
-# Usage: hdmisound [on|off], default is on.
-# Note: this is unreliable on iridum: it switches off after a short time
-# and then when it auto-switches back on, you'll miss the first
-# few seconds of a sound. Maybe they'll eventually fix that bug.
-hdmisound() {
-    if [[ $1 == 'off' ]]; then
-        if [[ -f ~/.asoundrc ]]; then
-            mv ~/.asoundrc ~/.asoundrc.hdmi
-        fi
-        amixer sset IEC958 mmute
-    else
-        if [[ -f ~/.asoundrc ]]; then
-            mv ~/.asoundrc ~/.asoundrc.nohdmi
-        fi
-        cat >> ~/.asoundrc <<EOF
-pcm.dmixer {
-  type dmix
-  ipc_key 1024
-  ipc_key_add_uid false
-  ipc_perm 0660
-  slave {
-    pcm "hw:0,3"
-    rate 48000
-    channels 2
-    period_time 0
-    period_size 1024
-    buffer_time 0
-    buffer_size 4096
-  }
-}
-
-pcm. !default {
-  type plug
-  slave.pcm "dmixer"
-}
-EOF
-        amixer sset IEC958 unmute
-    fi
-}
 # End external monitor/audio connections
-
-# Large-type versions of terminal and emacs, for presentations:
-# alias bigterm="rxvt -geometry 80x33 -fn '-*-lucidatypewriter-*-*-*-*-19-*-*-*-*-*-*-*'"
-alias bigterm="rxvt -fn terminus-iso8859-2-bold-18"
-# alias noteterm="nohup xterm -geometry 30x34+1025+0 -fn '-*-terminus-bold-*-*-*-22-*-*-*-*-*-*-*' &"
-alias noteterm="nohup xterm -geometry 33x37+1025+0 -fn '-*-terminus-bold-*-*-*-20-*-*-*-*-*-*-*' &"
 
 # For notes during planetarium shows:
 # red/black for night vision, narrow to show two at once on a laptop.
@@ -1181,18 +1112,13 @@ nopythonenv() {
 }
 
 switchpythonenv() {
+    vers=$1
+
     nopythonenv
 
     env2=$HOME/pythonenv/2env
     env3=$HOME/pythonenv/3env
 
-    if [[ x$1 == x ]]; then
-        vers=2
-        pyenv=$env2
-    else
-        vers=$1
-        pyenv=$env3
-    fi
     # if [[ $arch == 'x86_64' ]]; then
     #     archbits=64
     # else
@@ -1203,13 +1129,21 @@ switchpythonenv() {
         echo "Using both Python 2 and 3 envs (experimental)"
         VIRTUAL_ENV_DISABLE_PROMPT=1 source $env2/bin/activate
         VIRTUAL_ENV_DISABLE_PROMPT=1 source $env3/bin/activate
+    elif [[ $vers == 2 ]]; then
+        echo Switching to Python2 env
+        VIRTUAL_ENV_DISABLE_PROMPT=1 source $env2/bin/activate
+    elif [[ $vers == 3 ]]; then
+        echo Switching to Python3 env
+        VIRTUAL_ENV_DISABLE_PROMPT=1 source $env3/bin/activate
     else
-        echo Switching Python envs to python${vers}
-        VIRTUAL_ENV_DISABLE_PROMPT=1 source $pyenv/bin/activate
+        echo Version should be 2, 3 or 23
+        unset vers
+        return
     fi
 
     set_prompt
     PS1="%F{magenta}Py${vers} ${PS1}"
+    unset vers
 }
 
 alias python2env='switchpythonenv 2'
