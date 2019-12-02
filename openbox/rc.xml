@@ -83,9 +83,9 @@
 
   <!-- Settings for specific windows -->
   <applications>
-    <application name="mmmmoonroot">
+    <application name="moonroot">
       <!-- In theory decor=no shouldn't be necessary because MWM_HINTS_DECORATIONS. In practice, openbox still needs it. -->
-      <!-- <decor>no</decor> -->
+      <decor>no</decor>
       <!-- <desktop>all</desktop> -->
       <position>
         <x>-10</x>
@@ -169,15 +169,15 @@
       </action>
     </keybind>
 
-    <!-- Added for CX1 -->
+    <!-- Added for CX1, Intel backlight -->
     <keybind key="XF86MonBrightnessDown">
       <action name="Execute">
-        <execute>sudo /home/akkana/bin/intel_backlight -2</execute>
+        <execute>sudo /home/akkana/bin/intel_backlight -4</execute>
       </action>
     </keybind>
     <keybind key="XF86MonBrightnessUp">
       <action name="Execute">
-        <execute>sudo /home/akkana/bin/intel_backlight +2</execute>
+        <execute>sudo /home/akkana/bin/intel_backlight +3</execute>
       </action>
     </keybind>
 
@@ -187,38 +187,27 @@
       </action>
     </keybind>
 
-  <!-- Keybinding for audio volume when Pulse is running -->
-  <keybind key="XF86AudioRaiseVolume">
-    <action name="Execute">
-      <!-- <command>amixer -q -D pulse sset Master 3%+ unmute</command>
-           but pulse can't actually change volume, so: -->
-      <command>amixer sset PCM 4%+ unmute</command>
-    </action>
-  </keybind>
-  <keybind key="XF86AudioLowerVolume">
-    <action name="Execute">
-      <!-- <command>amixer -q -D pulse sset Master 3%- unmute</command> -->
-      <command>amixer sset PCM 4%- unmute</command>
-    </action>
-  </keybind>
-  <keybind key="XF86AudioMute">
-    <action name="Execute">
-      <command>amixer -q -D pulse sset Master toggle</command>
-    </action>
-  </keybind>
-
-    <keybind key="W-F7">
+    <!-- Keybinding for audio volume when Pulse is running -->
+    <keybind key="XF86AudioRaiseVolume">
       <action name="Execute">
-        <execute>/home/akkana/bin/moncycle</execute>
-      </action>
+            <!-- <command>amixer -q -D pulse sset Master 3%+ unmute</command>
+               but pulse can't actually change volume, so: -->
+            <command>amixer sset PCM 4%+ unmute</command>
+        </action>
     </keybind>
-    <keybind key="XF86Display">
-      <action name="Execute">
-        <execute>/home/akkana/bin/moncycle</execute>
-      </action>
+    <keybind key="XF86AudioLowerVolume">
+        <action name="Execute">
+            <!-- <command>amixer -q -D pulse sset Master 3%- unmute</command> -->
+            <command>amixer sset PCM 4%- unmute</command>
+        </action>
+    </keybind>
+    <keybind key="XF86AudioMute">
+        <action name="Execute">
+            <command>amixer -q -D pulse sset Master toggle</command>
+        </action>
     </keybind>
 
-    <!-- volume bindings for desktop keyboard: -->
+    <!-- volume bindings for desktop keyboard, no Pulse:
     <keybind key="W-F7">
       <action name="Execute">
         <execute>/home/akkana/bin/quieter</execute>
@@ -229,9 +218,9 @@
         <execute>/home/akkana/bin/louder</execute>
       </action>
     </keybind>
+    -->
 
-    <!-- volume bindings for laptop keyboard: -->
-    <!--
+    <!-- volume bindings for laptop keyboard, no Pulse
     <keybind key="XF86AudioLowerVolume">
       <action name="Execute">
         <execute>/home/akkana/bin/quieter</execute>
@@ -249,30 +238,23 @@
     </keybind>
     -->
 
-    <!--
-    <keybind key="C-w">
+    <!-- Cycle monitor outputs from laptop to external to both -->
+    <keybind key="W-F7">
       <action name="Execute">
-        <execute>/home/akkana/bin/keys4apps "\Cw"</execute>
+        <execute>/home/akkana/bin/moncycle</execute>
       </action>
     </keybind>
-    -->
+    <keybind key="XF86Display">
+      <action name="Execute">
+        <execute>/home/akkana/bin/moncycle</execute>
+      </action>
+    </keybind>
 
-    <!-- disabled because I keep hitting this intending on alt-F12
-    <keybind key="W-F12">
-      <action name="Execute">
-        <execute>/home/akkana/bin/screenoff</execute>
-      </action>
-    </keybind>
-     -->
-    <keybind key="A-F11">
-      <action name="Execute">
-        <execute>/home/akkana/bin/crikey/sayshortpw</execute>
-      </action>
-    </keybind>
+    <!-- Crikey bindings -->
     <keybind key="A-F12">
-      <action name="Execute">
-        <execute>/home/akkana/bin/crikey/saypwd</execute>
-      </action>
+        <action name="Execute">
+            <execute>/home/akkana/bin/crikey/saypwd</execute>
+        </action>
     </keybind>
 
     <!-- Define C-Insert to always insert the primary selection,
@@ -296,14 +278,9 @@
       </action>
     </keybind>
 
-    <keybind key="A-F10">
-      <action name="MaximizeFull"/>
-    </keybind>
-    <keybind key="A-F5">
-      <action name="UnmaximizeFull"/>
-    </keybind>
-    <!-- Set dialog to no for desktop switching, because of a bug
-       that makes it sometimes steal focus
+    <!-- Desktop switching.
+         Set dialog to no, because of a bug
+         that makes it sometimes steal focus
     -->
     <keybind key="C-A-Left">
       <action name="DesktopLeft">
@@ -332,9 +309,8 @@
     <keybind key="C-A-d">
       <action name="ToggleShowDesktop"/>
     </keybind>
-    <keybind key="A-F4">
-      <action name="Close"/>
-    </keybind>
+
+    <!-- Window focus -->
     <keybind key="A-Tab">
       <action name="NextWindow">
         <dialog>no</dialog>
@@ -373,11 +349,7 @@
     <keybind key="A-F8">
       <action name="Resize"/>
     </keybind>
-    <!-- 
-    <keybind key="A-F9">
-      <action name="Iconify"/>
-    </keybind>
-     -->
+
     <keybind key="A-space">
       <action name="ShowMenu">
         <menu>client-menu</menu>

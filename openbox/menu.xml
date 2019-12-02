@@ -6,68 +6,58 @@
                 file:///usr/share/openbox/menu.xsd">
 
 <menu id="root-menu" label="Openbox 3">
+  <item label="Terminal">
+    <action name="Execute"><execute>urxvt -geometry 80x32</execute></action>
+  </item>
+  <!--
   <item label="xterm">
     <action name="Execute"><execute>xterm -geometry 80x32</execute></action>
   </item>
-  <!-- 
+  <item label="xterm for monitor">
+    <action name="Execute"><execute>monxterm -geometry 80x32</execute></action>
+  </item>
   <item label="rxvt">
     <action name="Execute"><execute>rxvt -geometry 80x38-0+0</execute></action>
   </item>
   -->
   <separator />
-  <item label="Firefox">
-    <action name="Execute"><execute>/home/akkana/local/firefox/firefox -P masterprofile</execute></action>
+  <item label="Firefox Mobile">
+    <action name="Execute"><execute>firefox -P masterprofile</execute></action>
+  </item>
+  <item label="Quickbrowse">
+    <action name="Execute"><execute>quickbrowse</execute></action>
   </item>
   <menu id="browser-menu" label="Other browsers">
-  <!-- after firefox 11, add -new-instance instead of -no-remote -->
-  <item label="Social Firefox">
-    <action name="Execute"><execute>/home/akkana/local/firefox/firefox -new-instance -P facebook</execute></action>
-  </item>
-  <item label="Midori">
-    <action name="Execute"><execute>midori</execute></action>
-  </item>
-  <item label="Default Firefox">
-    <action name="Execute"><execute>/home/akkana/local/firefox/firefox -new-instance -P Default</execute></action>
-  </item>
-  <item label="Ubuntu Firefox">
-    <action name="Execute"><execute>/usr/bin/firefox -P ubuprofile</execute></action>
-  </item>
-  <item label="Firefox in safe mode">
-    <action name="Execute"><execute>/home/akkana/local/firefox/firefox -safe-mode -P masterprofile</execute></action>
-  </item>
-  <separator />
-  <item label="open selection in Firefox">
-    <action name="Execute"><execute>sh -c 'firefox `pyclip`'</execute></action>
-  </item>
-  <item label="open selection in new tab">
-    <action name="Execute"><execute>sh -c 'firefox -new-tab `pyclip`'</execute></action>
-  </item>
-<!-- Here's how to do an extended comment that can even allow double-dashes: -->
+    <item label="Default Private Firefox">
+      <!-- after firefox 11, add -new-instance instead of -no-remote -->
+      <action name="Execute"><execute>firefox --private-window --new-instance -P default</execute></action>
+    </item>
+    <separator />
+    <item label="Chromium Incognito">
+      <action name="Execute"><execute>chromium-browser --incognito</execute></action>
+    </item>
+    <item label="Chromium">
+      <action name="Execute"><execute>chromium-browser</execute></action>
+    </item>
+    <item label="Default Firefox">
+      <action name="Execute"><execute>firefox -new-instance -P Default</execute></action>
+    </item>
+    <item label="Firefox in safe mode">
+      <action name="Execute"><execute>firefox -safe-mode -P masterprofile</execute></action>
+    </item>
+    <separator />
+    <item label="Firefox on selection">
+      <action name="Execute"><execute>sh -c 'firefox --private-window --new-instance -P default `pyclip`'</execute></action>
+    </item>
+    <item label="open selection in Firefox">
+      <action name="Execute"><execute>sh -c 'firefox -P default `pyclip`'</execute></action>
+    </item>
+    <item label="Firefox open selection in new tab">
+      <action name="Execute"><execute>sh -c 'firefox -P default -new-tab `pyclip`'</execute></action>
+    </item>
+  <!-- Here's how to do an extended comment that can even allow double-dashes: -->
 <![CDATA[
 ]]> <!-- -->
-  <item label="Chromium">
-    <action name="Execute"><execute>chromium-browser</execute></action>
-  </item>
-  <item label="Arora">
-    <action name="Execute"><execute>arora</execute></action>
-  </item>
-  <item label="Opera">
-    <action name="Execute"><execute>opera</execute></action>
-  </item>
-  <item label="Netsurf">
-    <action name="Execute"><execute>netsurf</execute></action>
-  </item>
-<!-- 
-  <item label="Ubuntu's Firefox3">
-    <action name="Execute"><execute>firefox-3.0</execute></action>
-  </item>
-  <item label="Kitfox">
-    <action name="Execute"><execute>/usr/local/kitfox/firefox</execute></action>
-  </item>
-  <item label="Firefox">
-    <action name="Execute"><execute>mozilla-firefox -splash</execute></action>
-  </item>
- -->
   </menu>
   <item label="Shorten URL">
     <action name="Execute"><execute>shorturl</execute></action>
@@ -81,26 +71,28 @@
     <action name="Execute"><execute>/usr/local/bin/xchat</execute></action>
     <action name="ToggleOmnipresent" />
   </item>
- -->
   <item label="xchat">
     <action name="Execute"><execute>xchat</execute></action>
   </item>
+ -->
+  <item label="hexchat">
+    <action name="Execute"><execute>hexchat</execute></action>
+  </item>
   <separator />
-  <item label="GIMP 2.8">
-    <action name="Execute"><execute>/home/akkana/bin/gimp-2.8</execute></action>
+  <item label="GIMP 2.10">
+    <action name="Execute"><execute>gimp-2.10</execute></action>
   </item>
-  <item label="GIMP 2.6 (Ubuntu)">
-    <action name="Execute"><execute>/usr/bin/gimp</execute></action>
-  </item>
-  <item label="GIMP git">
-    <action name="Execute"><execute>/home/akkana/bin/gimp-git</execute></action>
+  <item label=".... GIMP master">
+    <action name="Execute"><execute>~/bin/gimp-master</execute></action>
   </item>
 
   <separator />
 
+<!--
   <item label="Eclipse">
-    <action name="Execute"><execute>/home/akkana/Archive/android/eclipse/eclipse</execute></action>
+    <action name="Execute"><execute>~/Archive/android/eclipse/eclipse</execute></action>
   </item>
+ -->
   <item label="Libre Office">
     <action name="Execute"><execute>libreoffice</execute></action>
   </item>
@@ -113,15 +105,14 @@
   <item label="Fritzing">
     <action name="Execute"><execute>Fritzing</execute></action>
   </item>
-  <item label="Music (audavious)">
-    <action name="Execute"><execute>audacious /home/akkana/Music</execute></action>
-  </item>
-  <item label="Music (vlc)">
-    <action name="Execute"><execute>vlc --random /home/akkana/Music</execute></action>
-  </item>
 
   <separator />
 
+<!--
+  <item label="weatherwin">
+    <action name="Execute"><execute>weatherwin USNM0179 USNM0531 USCA0993</execute></action>
+  </item>
+-->
   <item label="moonroot">
     <!-- <decor>no</decor> -->
     <action name="Execute"><execute>moonroot -s</execute></action>
@@ -138,6 +129,7 @@
   <item label="xconsole">
     <action name="Execute"><execute>xconsole</execute></action>
   </item>
+  <!--
   <item label="xosview">
     <action name="Execute"><execute>xosview -geometry 330x300 +cpu +load +mem -swap -page -ints -disk</execute></action>
   </item>
@@ -148,12 +140,13 @@
     <action name="Execute"><execute>gmemusage</execute></action>
   </item>
   <separator />
+  -->
 
   <!-- 
   <menu id="pipe-wifi" label="Test Pipe menu..."
-   execute="/home/akkana/.config/openbox/testpipe.py" />
+   execute="~/.config/openbox/testpipe.py" />
   <menu id="pipe-wifi" label="Wifi..."
-   execute="/home/akkana/.config/openbox/wifi-pipe.py eth0" />
+   execute="~/.config/openbox/wifi-pipe.py eth0" />
    -->
 
 <!--
@@ -168,9 +161,17 @@
   <item label="xephem">
     <action name="Execute"><execute>xephem</execute></action>
   </item>
+  <item label="nightshade">
+    <action name="Execute"><execute>~/bin/nightshade</execute></action>
+  </item>
+  <!--
+  <item label="stellarium">
+    <action name="Execute"><execute>stellarium</execute></action>
+  </item>
   <item label="kstars">
     <action name="Execute"><execute>kstars</execute></action>
   </item>
+  -->
   <separator />
   <item label="Screenshot a Window">
     <action name="Execute">
@@ -185,11 +186,12 @@
   </item>
   <item label="New Background">
     <!-- <action name="Execute"><execute>bash -c 'hsetroot -center `find -L $HOME/Backgrounds -name "*.*" | $HOME/bin/randomline`'</execute></action> -->
-    <action name="Execute"><execute>/home/akkana/bin/randombg</execute></action>
+    <!-- <action name="Execute"><execute>~/bin/randombg</execute></action> -->
+    <action name="Execute"><execute>~/bin/randombg</execute></action>
   </item>
   <!--
   <item label="Invert">
-    <action name="Execute"><execute>/home/akkana/bin/linux/invgamma</execute></action>
+    <action name="Execute"><execute>invgamma</execute></action>
   </item>
   -->
   <separator />
@@ -217,17 +219,18 @@
   </item>
   <!-- 
   <item label="Monitor Off">
-    <action name="Execute"><execute>/home/akkana/bin/screenoff</execute></action>
+    <action name="Execute"><execute>~/bin/screenoff</execute></action>
   </item>
    -->
   <item label="Sleep">
-    <action name="Execute"><execute>sudo pm-suspend --auto-quirks</execute></action>
+    <!-- <action name="Execute"><execute>sudo pm-suspend - - auto-quirks</execute></action> -->
+    <action name="Execute"><execute>systemctl suspend</execute></action>
   </item>
   <item label="Reboot">
-    <action name="Execute"><execute>sudo shutdown -r now</execute></action>
+    <action name="Execute"><execute>sudo reboot</execute></action>
   </item>
   <item label="Shut Down">
-    <action name="Execute"><execute>sudo shutdown -h now</execute></action>
+    <action name="Execute"><execute>sudo poweroff</execute></action>
   </item>
 <comment><!-- openbox ignores unknown tags, like 'comment' -->
   <item label="Old openbox">
