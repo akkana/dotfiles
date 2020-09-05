@@ -99,7 +99,7 @@ XTerm*utmpInhibit: false
 XTerm*loginShell: true
 XTerm*saveLines: 3000
 XTerm*scrollBar: false
-XTerm*geometry: 80x60
+XTerm*geometry: 80x40
 XTerm*titeInhibit: true
 XTerm*locale: UTF-8
 
@@ -119,9 +119,9 @@ XTerm*colorULMode: true
 
 ! Tell Xterm that page up really means page up!  No shift required.
 ! Try to make the page up/down keys work normally: this fails.
-XTerm.vt100.translations: #override\n\
-  <KeyPress>Prior : scroll-back(1,page)\n\
-  <KeyPress>Next : scroll-forw(1,page)\n
+! XTerm.vt100.translations: #override\n\
+!   <KeyPress>Prior : scroll-back(1,page)\n\
+!   <KeyPress>Next : scroll-forw(1,page)\n
 
 ! Make it easier to grab URLs by double-clicking:
 XTerm*charClass:33:48,35-38:48,42-44:48,45-47:48,58:48,61:48,63-64:48,126:48
@@ -154,7 +154,7 @@ XTerm*cutchars: \\'`"´()*;<>[]{|}   !' extra quote for broken Xdefaults parser
 !XTerm*faceWeight: bold
 
 ! Good font for the Carbon X1 built-in screen:
-XTerm*faceName: Monoid HalfTight:size=10:antialias=true
+XTerm*faceName: Monoid HalfTight:size=9:antialias=true
 ! but for an external display it needs to be smaller:
 monxterm*faceName: Monoid HalfTight:size=8:antialias=true
 
@@ -208,19 +208,28 @@ monxterm*faceName: Monoid HalfTight:size=8:antialias=true
 *XTerm*VT100*Font3:            9x15
 *XTerm*fontMenu*font3*Label:   Big
 
-!! Shift-INSERT pastes the PRIMARY selection.
-!! Make Shift-Ctrl-INSERT paste the CLIPBOARD;
-!! and, while we're at it, make Shift-Ctrl-c and v copy and paste CLIPBOARD.
+!! In Firefox, Ctrl-INSERT copies the CLIPBOARD selection,
+!! Shift-INSERT pastes it. Make urxvt do the same.
+!! But it doesn't work: insert-selection(CLIPBOARD) actually inserts PRIMARY.
+!! Make Shift-Ctrl-INSERT paste PRIMARY.
+!! Shift-Ctrl-c and v copy and paste CLIPBOARD by default.
+!! and make Ctrl-INSERT copy CLIPBOARD, like Firefox.
 !! Super is the "Windows" key, and can be used to make the font
 !! smaller or larger. Nice discussion at:
 !! http://www.futurile.net/2016/06/14/xterm-setup-and-truetype-font-configuration/
 *XTerm*VT100.Translations: #override \n\
-    Shift Ctrl <Key> Insert: insert-selection(CLIPBOARD)\n\
-    Shift Ctrl <KeyPress> v: insert-selection(CLIPBOARD)\n\
-    Shift Ctrl <KeyPress> c: copy-selection(CLIPBOARD)\n\
+    Ctrl <Key> Insert: copy-selection(CLIPBOARD)\n\
+    Shift Ctrl <Key> Insert: insert-selection(PRIMARY)\n\
+    Shift <Key> Insert: insert-selection(CLIPBOARD)\n\
     Super <Key> minus: smaller-vt-font() \n\
     Super <Key> plus: larger-vt-font() \n\
-    Super <Key> 0: set-vt-font(d)
+    Super <Key> 0: set-vt-font(d) \n\
+    <KeyPress>Prior : scroll-back(1,page)\n\
+    <KeyPress>Next : scroll-forw(1,page)
+
+!! Are these really needed?
+!!    Shift <KeyPress> Insert: insert-selection(CLIPBOARD)\n\
+!!    Shift Ctrl <KeyPress> Insert: insert-selection(PRIMARY)\n\
 
 !*XmScrollBar.width: 10
 
@@ -235,9 +244,27 @@ monxterm*faceName: Monoid HalfTight:size=8:antialias=true
 ! The term name controls what TERM is set to.
 urxvt*termName: rxvt-unicode-256color
 
-URxvt.font: xft:Monoid HalfTight:size=9:antialias=true
-! Helping someone test:
-! URxvt.font: xft:Inconsolata:size=9:antialias=true
+! Specify a main font,
+! plus fallback fonts for characters that aren't in the main font.
+! For the main font, Noto, JetBrains and Monoid are all good.
+! FiraCode is also good.
+! JetBrains makes it hard to differentiate zero from eight;
+! with Monoid I'm always confusing ell and eye.
+! Noto Sans Mono Semicondensed has Y that's hard to tell from V.
+! Noto Emoji doesn't work with urxvt, alas, but Symbola at least
+! has monochrome versions of emojis,
+! and supposedly Unifont has good general coverage.
+! URxvt.font: xft:
+URxvt.font: xft:JetBrains Mono:size=9:antialias=true, \
+            xft:Monoid HalfTight:size=8:antialias=true, \
+            xft:Noto Sans Mono:size=9:style=Semicondensed:antialias=true, \
+            xft:Unifont:pixelsize=9:antialias=true, \
+            xft:Symbola
+! Some folks say playing with letterSpace helps with wide characters,
+! but it didn't seem to make any difference for me.
+! URxvt.letterSpace: 1
+! Adding this to the font descriptions also didn't make any difference:
+! :minspace=False
 
 ! URxvt*boldFont: xft:Monoid HalfTight:bold:size=8
 
@@ -254,7 +281,8 @@ URxvt*loginShell: true
 ! selection: supposedly make selection configurable with perl defs,
 ! but that didn't work for me.
 ! URxvt.perl-ext-common: font-size,selection
-URxvt.perl-ext-common: default,font-size
+! searchable-scrollback uses M-s to search back.
+URxvt.perl-ext-common: default,font-size,searchable-scrollback,bell-command
 
 ! black-on-light-grey scheme:
 URxvt*foreground: black
@@ -291,8 +319,6 @@ URxvt*scrollBar:  false
 
 ! Fade by this percentage when focus is lost
 ! URxvt*fading: 10
-
-URxvt*visualBell:  true
 
 ! Adjust colors that by default aren't visible on a light background
 ! Was light green
@@ -347,6 +373,9 @@ URxvt.iso14755_52: false
 ! ! URxvt.matcher.launcher.1: gvim +$2 $1
 ! ! URxvt.matcher.launcher.2: emacsclient $1
 ! URxvt.urlLauncher:          xdg-open
+
+! URxvt*visualBell:  true
+URxvt.bell-command: aplay -q /home/akkana/Sounds/beeps/SingleClick.wav
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !    GNU emacs, epoch, and xemacs resources
