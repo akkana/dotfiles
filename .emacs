@@ -22,39 +22,32 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; Change window size on smaller screens. Adapted from
+;; Set window size according to screen size. Adapted from
 ;; http://stackoverflow.com/questions/92971/how-do-i-set-the-size-of-emacs-window
-(defun set-frame-size-according-to-resolution ()
+(defun set-frame-size-by-resolution ()
   (interactive)
   (if (display-graphic-p)    ; older: (if window-system
   (progn
     ;; Emacs can't accept some fonts via Xdefaults. Here's how to set them here,
     ;; and we'd want to do it differently based on screen size:
-    ;(message (x-display-pixel-height))
+    ;(message (number-to-string (x-display-pixel-height)))
+    ;(sleep-for 2)
 
     ;; Small laptops
     (if (<= (x-display-pixel-height) 768)
         (set-default-font "-misc-fixed-bold-r-normal-*-14-*-*-*-*-*-*-*")
 
-      ;; X1C display
-        (if (= (x-display-pixel-height) 1080)
-            (set-default-font "Monoid HalfTight-9")
+        ;; X1C display
+        (if (<= (x-display-pixel-height) 1080)
+            ;; JetBrains doesn't display the same in emacs as in urxvt,
+            ;; and ends up taking up a lot of extra vertical space.
+            (set-default-font "Monoid HalfTight-8")
+            ; (set-default-font "JetBrains Mono-10")
 
             ;; full monitor
-            (set-default-font "Monoid HalfTight-8")
+            (set-default-font "Monoid HalfTight-7.5")
+            ; (set-default-font "JetBrains Mono-9")
         ))
-
-    ;; To change temporarily for ext mon: (set-frame-font "Monoid HalfTight-9")
-    ;; Or use C-x C-+ and  C-x C--.
-    ;; (face-attribute 'default :font) gets the current font name
-    ;; but I haven't figured out how to get just the size.
-    ;;     ;(set-default-font "Inconsolata-12:bold")
-    ;;     ; This isn't found at all, though it works for xterm in Xdefaults:
-    ;;     (set-default-font "-*-clean-bold-r-*-*-13-*-*-*-c-*-*-*")
-    ;;     ; Prettier on a larger monitor:
-    ;;     (set-default-font "-misc-fixed-bold-r-normal-*-14-*-*-*-*-*-*-*")
-    ;;     (set-default-font "-misc-fixed-bold-r-normal-*-14-*-*-*-*-*-*-*")
-    ;;     )
 
     ;; for the height, subtract a couple hundred pixels
     ;; from the screen height (for panels, menubars and
@@ -67,7 +60,7 @@
                  ; + 0 here used to be +4, but the window comes out
                  ; too big on CX1 screen -- this frame-char-height
                  ; stuff doesn't seem to be working quite right.
-         (cons 'height (+ 0 (floor (/ (* (x-display-pixel-height) 0.80)
+         (cons 'height (+ 4 (floor (/ (* (x-display-pixel-height) 0.8)
                                       (frame-char-height))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -79,7 +72,7 @@
 ;; To set initial window position too:
 ;; (set-frame-position (selected-frame) 10 30)
 
-(set-frame-size-according-to-resolution)
+(set-frame-size-by-resolution)
 
 ;; Make it easy to zoom in and out, like when moving windows between
 ;; a laptop screen and large monitor.
@@ -87,27 +80,58 @@
 ;; associated with text-scale-adjust.
 (load "zoom-frm")
 
-(global-set-key (kbd "C-x C-=") 'zoom-in)
-(global-set-key (kbd "C-x C--") 'zoom-out)
-(global-set-key (kbd "C-x C-0") 'zoom-frm-unzoom)
-
 ;;
 ;; Basic key bindings
-;;
+
+;; Emacs apparently doesn't have any way to make a truly global key binding:
+;; global-set-key will be overridden by mode hooks.
+;; However, general.el might be worth investigating,
+;; https://github.com/noctuid/general.el
+(defun global-settings ()
+  (interactive)
+
 (global-set-key "\C-h" 'delete-backward-char)
 (global-set-key "\C-w" 'backward-kill-word)
 (global-set-key "\C-x\C-c" 'save-buffers-kill-emacs)
 (global-set-key "\C-x\C-v" 'find-file-other-window)
 (global-set-key "\C-xs" 'save-buffer)
 (global-set-key "\M-w" 'kill-region)
-(global-set-key "\C-m" 'newline-and-indent)
+;(global-set-key "\C-m" 'newline-and-indent)
+(global-set-key (kbd "RET") 'newline-and-indent)
 (global-set-key "\C-cc" 'comment-region)
 (global-set-key "\C-cC" 'uncomment-region)
+
+;; Zooming
+(global-set-key (kbd "C-x C-=") 'zoom-in)
+(global-set-key (kbd "C-x C--") 'zoom-out)
+;(global-set-key (kbd "C-x C-0") 'zoom-frm-unzoom)
+(global-set-key (kbd "C-x C-0") 'set-frame-size-by-resolution)
 
 ;; Need a way to insert the contents of the X clipboard,
 ;; for cases like Udacity that block X primary.
 ;; For now, this works, but it warns that it's deprecated:
-(global-set-key (kbd "C-S-y") 'x-clipboard-yank)
+(global-set-key (kbd "C-S-v") 'x-clipboard-yank)
+(global-set-key (kbd "C-M-v") 'x-clipboard-yank)
+
+;; And likewise for copy
+(global-set-key (kbd "C-S-c") 'clipboard-kill-ring-save)
+(global-set-key (kbd "C-M-c") 'clipboard-kill-ring-save)
+
+;; Make ctrl-shift-insert paste.
+
+;; This doesn't work:
+;; (global-set-key (kbd "<C-S-Insert>") 'x-clipboard-yank)
+;; but this does:
+(global-set-key [(control shift insert)] 'x-clipboard-yank)
+
+(setq indent-tabs-mode nil)
+) ;; end global-key-bindings
+
+(global-settings)
+
+(add-hook 'prog-mode-hook 'global-settings)
+(add-hook 'text-mode-hook 'global-settings)
+
 ;; If it goes away, might be able to substitute something like
 ;; (lambda () (interactive)
 ;;     (setq x-select-enable-clipboard t)
@@ -286,13 +310,20 @@
 ; Some decent colors: grey90, Alice Blue, light cyan, mint cream, Honeydew
 ;(set-background-color "mint cream")
 (set-background-color "#e9fffa")
+
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ ;;
+ ;; Find face at point: C-u C-x = or M-x describe-face
+ ;;
+
  '(flyspell-duplicate ((((class color)) (:foreground "red" :underline t :weight bold))))
+
  '(font-lock-comment-face ((((class color) (min-colors 88) (background light)) (:foreground "blue"))))
+
  '(markdown-header-face-1 ((t (:inherit markdown-header-face :height 2.0))))
  '(markdown-header-face-2 ((t (:inherit markdown-header-face :height 1.7))))
  '(markdown-header-face-3 ((t (:inherit markdown-header-face :height 1.4))))
@@ -300,6 +331,10 @@
  '(markdown-inline-code-face ((t (:inherit font-lock-constant-face :background "gainsboro"))))
  '(markdown-link-face ((t (:inherit link))))
  '(markdown-pre-face ((t (:inherit font-lock-constant-face :background "gainsboro"))))
+ '(markdown-bold-face ((t (:foreground "maroon" :weight bold))))
+ '(markdown-italic-face ((t (:foreground "navy blue" :slant italic :weight bold))))
+ ;; There is no markdown-underline-face, it uses markdown-italic-face.
+
  '(whitespace-trailing ((t (:background "cyan" :foreground "yellow" :weight bold)))))
 
 (set-face-foreground 'mode-line "yellow")
@@ -375,11 +410,20 @@
 (setq-default show-trailing-whitespace t)
 
 ;; Also show tabs. https://www.emacswiki.org/emacs/ShowWhiteSpace
-(defface extra-whitespace-face
-  '((t (:background "honeydew2")))
-  "Used for tabs and such.")
-(defvar bad-whitespace
-  '(("\t" . 'extra-whitespace-face)))
+;; but this is annoying because it also shows up in things like
+;; autocomplete of directories. XXX Make it happen in coding modes only.
+;; (defface extra-whitespace-face
+;;   '((t (:background "honeydew2")))
+;;   "Used for tabs and such.")
+;; (defvar bad-whitespace
+;;   '(("\t" . 'extra-whitespace-face)))
+
+;; Draw tabs with the same color as trailing whitespace
+(add-hook 'font-lock-mode-hook
+          (lambda ()
+            (font-lock-add-keywords
+             nil
+             '(("\t" 0 'trailing-whitespace prepend)))))
 
 ;; Emacs 23 changed up/down behavior, so it goes to the next screen
 ;; line instead of the next buffer line (on lines long enough to wrap).
@@ -884,8 +928,11 @@
 (define-derived-mode text-wrap-mode text-mode "Text wrap mode"
   "Text mode, plus autofill and flyspell"
   (auto-fill-mode)
-  (flyspell-mode 1)
-  (flyspell-buffer)
+  (if (<= (buffer-size) 10000)
+      (progn (flyspell-mode 1)
+             (flyspell-buffer) )
+      (message "Buffer too big, not spellchecking")
+      )
   )
 
 ;; Don't autofill when hitting return, only on space:
@@ -894,8 +941,6 @@
 ;; In text mode, I don't want it auto-indenting for the first
 ;; line in the file, or lines following blank lines.
 ;; Everywhere else is okay.
-;; XXX This works fine except that it stomps the X selection.
-;; XXX Maybe because of (kill-line 0) ?
 (defun newline-and-text-indent ()
   "Insert a newline, then indent the next line sensibly for text"
   (interactive)
@@ -1020,7 +1065,18 @@
   ;; You can avoid that by not inserting a newline, same as with <code>,
   ;; But better is to turn off indenting entirely in html-mode,
   ;; which is fine with me. 'ignore is elisp's nop function.
-  (setq indent-line-function 'ignore)
+  ;; That's for html mode. In web-mode, indent works better so
+  ;; no need to comment it out.
+  ;; (setq indent-line-function 'ignore)
+
+  ;; Web mode is super aggressive about indenting everything, all the time.
+  ;; Try to disable it entirely.
+  (setq web-mode-enable-auto-indentation nil)
+
+  ;; Indent for web-mode
+  (setq web-mode-markup-indent-offset 0)
+  ; (setq js-indent-level 4)
+  (setq web-mode-code-indent-offset 4)
 
   ;; Prevent the obnoxious line breaking in the middle of --
   ;; when sgml-mode thinks it's a comment.
@@ -1039,6 +1095,15 @@
 
   ;(message "Ran html-hook")
   ;(sleep-for 3)
+
+  (if (<= (buffer-size) 10000)
+      (progn (flyspell-mode 1)
+             (flyspell-buffer) )
+      (message "Buffer too big, not spellchecking")
+      )
+
+  (dubcaps-mode t)
+
   )
 (add-hook 'sgml-mode-hook 'html-hook)
 
@@ -1052,6 +1117,47 @@
 ;; (defvar sgml-specials '(?\"))
 ;; (defun sgml-comment-indent-new-line (&optional soft)
 ;;   (comment-indent-new-line soft))
+
+;; html-mode has become awful, because it treats all single quotes
+;; as the beginning of a string. So if you have any text like
+;;     here's an example
+;; in your HTML content, html-mode will colorize everything after the '
+;; as though it's part of a string. So I'm mostly using web-mode instead,
+;; and it also handles PHP and JS (sort of).
+(autoload 'web-mode "web-mode" "Web Mode")
+
+(defun web-mode-hook-fcn ()
+  "Hooks for Web mode."
+
+  ;; Start with everything that's in the html-mode hook:
+  (html-hook)
+
+  ;; Disable indentation for HTML and CSS, while keeping it for PHP and JS.
+  ;; Unfortunately web-mode often ignores this.
+  (setq-local web-mode-markup-indent-offset 0)
+  (setq-local web-mode-css-indent-offset 0)
+
+  ;; Since that doesn't work and there's apparently no way to turn off
+  ;; indentation in web-mode, at least don't do it on newline.
+  (local-set-key (kbd "RET") 'newline)
+
+  ;; The possible indent variables:
+  ;; coffee-tab-width              ; coffeescript
+  ;; javascript-indent-level       ; javascript-mode
+  ;; js-indent-level               ; js-mode
+  ;; web-mode-markup-indent-offset ; web-mode, html tag in html file
+  ;; web-mode-css-indent-offset    ; web-mode, css in html file
+  ;; web-mode-code-indent-offset   ; web-mode, js code in html file
+  ;; css-indent-offset             ; css-mode
+
+)
+(add-hook 'web-mode-hook 'web-mode-hook-fcn)
+
+;; Turn off auto-indentation in web mode: it does all kinds of crazy
+;; things and makes HTML difficult to edit:
+;; Unfortunately this may also turn off PHP indentation.
+;; But no worries about that, it doesn't work anyway.
+;; (setq web-mode-enable-auto-indentation nil)
 
 ;; Run this on a region inside a <pre> to convert chars like < into entities.
 (defun unhtml (start end)
@@ -1067,6 +1173,13 @@
       (replace-string ">" "&gt;")
       )))
 
+(defun indent-whole-buffer ()
+      "indent whole buffer and untabify it"
+      (interactive)
+      (delete-trailing-whitespace)
+      (indent-region (point-min) (point-max) nil)
+      (untabify (point-min) (point-max)))
+
 ;; A mode for editing tab-separated tables, or any other file
 ;; where you want TAB to insert a tab. (You wouldn't think that
 ;; would be difficult, but it is! indent-tabs-mode doesn't do it,
@@ -1074,6 +1187,7 @@
 (define-derived-mode tabbed-mode text-mode "Tab separated mode"
   (local-set-key (kbd "TAB") 'self-insert-command)
   )
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Markdown
@@ -1163,7 +1277,8 @@
 ;; or a color string, e.g. "red", using
 ;;   (facemenu-set-foreground COLOR &optional START END)
 ;; or nil, in which case style will be removed.
-(defun rich-style (style)
+(defun rich-style (style) "Set a style in rich-text-mode"
+  (interactive)
   (let* ((start (if (use-region-p)
                     (region-beginning) (line-beginning-position)))
          (end   (if (use-region-p)
@@ -1214,7 +1329,8 @@
   ;; 11x18 or sony 8x16 (those two look the same), Default is nice and bold
   ;; 8x13 is a little small and spidery but has great Greek and fits in
   ;; the normal window size, 9x15 isn't bad but doesn't actually fit
-  (setq buffer-face-mode-face '(:family "DejaVu Sans" :height 105 :width semi-condensed))
+  (setq buffer-face-mode-face
+        '(:family "DejaVu Sans" :height 105 :width semi-condensed))
   (buffer-face-mode)
   )
 
@@ -1313,62 +1429,29 @@
 ;; Coding helpers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; If you find you need to run something after a hook loads,
+;; look into delayed-after-hook-functions
+;; e.g., in js-hook-fcn, add things to delayed-after-hook-functions
+
 ;; Make Python files executable. It would be nice if this ran
 ;; only on Python files, but I haven't figured out how.
 ;; Hopefully it doesn't take too long to do it everywhere.
 (add-hook 'after-save-hook 'executable-make-buffer-file-executable-if-script-p)
 
-;; Mode for editing HTML/PHP files. It's not great but better than nothing.
-(load "web-mode")
-
-(defun my-web-mode-hook ()
-  "Hooks for Web mode."
-  ;; This used to work:
-  (setq web-mode-code-indent-offset 2)
-
-  ;; Disable indentation for HTML and CSS, while keeping it for PHP and JS.
-  ;; Unfortunately web-mode often ignores this.
-  (setq-local web-mode-markup-indent-offset 0)
-  (setq-local web-mode-css-indent-offset 0)
-  ;; The possible indent variables:
-  ;; coffee-tab-width              ; coffeescript
-  ;; javascript-indent-level       ; javascript-mode
-  ;; js-indent-level               ; js-mode
-  ;; web-mode-markup-indent-offset ; web-mode, html tag in html file
-  ;; web-mode-css-indent-offset    ; web-mode, css in html file
-  ;; web-mode-code-indent-offset   ; web-mode, js code in html file
-  ;; css-indent-offset             ; css-mode
-
-)
-(add-hook 'web-mode-hook 'my-web-mode-hook)
-
-;; Turn off auto-indentation in web mode: it does all kinds of crazy
-;; things and makes HTML difficult to edit:
-;; Unfortunately this may also turn off PHP indentation.
-;; But no worries about that, it doesn't work anyway.
-;; (setq web-mode-enable-auto-indentation nil)
-
-(defun indent-whole-buffer ()
-      "indent whole buffer and untabify it"
-      (interactive)
-      (delete-trailing-whitespace)
-      (indent-region (point-min) (point-max) nil)
-      (untabify (point-min) (point-max)))
-
 (setq octave-block-offset 4)
 
 ; Ruby
 (autoload 'ruby-mode "ruby-mode" "Load ruby-mode")
-(defun ruby-stuff-hook ()
+(defun ruby-hook-fcn ()
   (local-set-key "\C-m" 'newline-and-text-indent)
   (turn-on-font-lock)
   )
-(add-hook 'ruby-mode-hook 'ruby-stuff-hook)
+(add-hook 'ruby-mode-hook 'ruby-hook-fcn)
 
-(defun archive-hook ()
+(defun archive-hook-fcn ()
   (flyspell-mode 0)
   )
-(add-hook 'archive-mode-hook 'archive-hook)
+(add-hook 'archive-mode-hook 'archive-hook-fcn)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Attempts to turn off "electric" code reindenting.
@@ -1400,34 +1483,45 @@
 ;; But these stopped working, maybe because the names for the maps
 ;; are wrong. thunk on #emacs points to:
 ;; ,,df current-local-map and ,,df local-unset-key
-(add-hook 'c-mode-hook (lambda ()
-                         (no-electric c-mode-map)
-                         (font-lock-add-keywords nil bad-whitespace)))
-(add-hook 'c++-mode-hook (lambda ()
-                           (no-electric c-mode-map)
-                           (font-lock-add-keywords nil bad-whitespace)))
-(add-hook 'java-mode-hook (lambda ()
-                            (no-electric java-mode-map)
-                            (font-lock-add-keywords nil bad-whitespace)))
+(defun c-hook-fcn ()
+  (no-electric c-mode-map)
+  ;; Now giving: file mode specification error:
+  ;;   (void-variable bad-whitespace)
+  ;;(font-lock-add-keywords nil bad-whitespace)
+  )
+(add-hook 'c-mode-hook 'c-hook-fcn)
+(add-hook 'c++-mode-hook 'c-hook-fcn)
+(add-hook 'java-mode-hook 'c-hook-fcn)
 
 ;; no-electric doesn't work for python mode -- even if : is bound
 ;; to self-insert it still reindents the line.
 ;(add-hook 'python-mode-hook (lambda () (electric-indent-mode -1)))
 ;; But this method does work!
 ;;http://stackoverflow.com/questions/21182550/how-to-turn-of-electric-indent-mode-for-specific-major-mode
-(add-hook 'python-mode-hook
-          (lambda ()
-            (electric-indent-local-mode -1)
-            (font-lock-add-keywords nil bad-whitespace)
-            ;(local-set-key "\C-cc" 'comment-region)
-            ;(message "python hook")
-            ))
+(defun python-hook-fcn ()
+  (electric-indent-local-mode -1)
+  ;(font-lock-add-keywords nil bad-whitespace)
+  ;(local-set-key "\C-cc" 'comment-region)
+  ;(message "python hook")
+  )
+(add-hook 'python-mode-hook 'python-hook-fcn)
 
-(add-hook 'js-mode-hook (lambda ()
+;; THIS DOESN"T WORK, neither javascript-mode-hook nor js2-mode-hook
+;; gets run.
+;; javascript-mode ignores (setq-default indent-tabs-mode nil)
+;; and needs it to be specified separately.
+
+(defun js-hook-fcn ()
   (define-key js-mode-map "," 'self-insert-command)
   (define-key js-mode-map ";" 'self-insert-command)
-  (font-lock-add-keywords nil bad-whitespace)
- ))
+  ;(font-lock-add-keywords nil bad-whitespace)
+
+  (setq js-indent-level 4)
+  (setq indent-tabs-mode nil)
+  (debug-on-variable-change 'indent-tabs-mode)
+  (message "js-mode-hook running in %s" (buffer-name))
+ )
+(add-hook 'js-mode-jook 'js-hook-fcn)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; C and related modes
@@ -1466,6 +1560,8 @@
   (c-set-style "gnu"))
 (define-derived-mode linux-c-mode c-mode "Linux C mode"
   (c-set-style "linux"))
+(define-derived-mode web-wrap-mode web-mode "Web Wrap Mode"
+  (auto-fill-mode))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; auto-mode-alist: Modes to use on specific files.
@@ -1495,8 +1591,8 @@
         ("\\.R$" . R-mode)
         ("\\.m$" . octave-mode)
         ("\\.scm$" . scheme-mode)
-        ("\\.blx$" . html-wrap-mode)
-        ("\\.html$" . html-wrap-mode)
+        ("\\.blx$" . web-wrap-mode)
+        ("\\.html$" . web-wrap-mode)
         ;("\\.xml$" . xml-mode)
         ;("\\.gpx$" . xml-mode)
         ("\\.js$" . javascript-mode)
@@ -1522,7 +1618,7 @@
         ("\\.sts" . conf-mode)
 
         ;; Don't wrap on LWV HTML files -- they tend to have long lines.
-        ("lwvweb/" . html-mode)
+        ("lwvweb/" . web-mode)
 
         ;; Make sure changelogs don't use text-wrap-mode -- they're too long,
         ;; and text-mode invokes spellcheck which takes forever.
@@ -1533,7 +1629,7 @@
         ;; for files that may not have type-specific extensions:
         ("Docs/Lists" . text-mode)
         ("Docs/Lists/books" . text-wrap-mode)
-        ("blogstuff/" . html-wrap-mode)
+        ; ("blogstuff/" . web-mode)
         ("Docs/gimp/book/notes" . text-wrap-mode)
         ("README" . text-wrap-mode)
         ;; Book used to be longlines mode, but that was too flaky.
@@ -1642,6 +1738,39 @@
 (setq recentf-max-menu-items 25)
 (global-set-key "\C-x\C-r" 'recentf-open-files)
 
+;; Save recent files every N minutes.
+;; This is saved at exit, but since X crashes so often on the CX1,
+;; emacs often doesn't get a chance to exit gracefully.
+;; This is the simple way, but then you get frequent "saved recentf" messages.
+;;(run-at-time nil (* 5 60) 'recentf-save-list)
+(run-at-time nil (* 5 60)
+             (lambda ()
+               (let ((save-silently t))
+                 (recentf-save-list))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Org mode stuff.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Don't collapse document structure by default.
+;; I don't use org mode for organizing things, just for richtext
+;; (it seems like the wrong solution for that, but other solutions,
+;; like enriched-mode, aren't supported and randomly stop working).
+(setq org-startup-folded nil)
+
+;; Use colors for *bold*, *italic* etc.
+(setq org-emphasis-alist
+  '(("*" (bold :foreground "purple" ))
+    ("/" (italic :foreground "maroon"))
+    ("_" (underline :foreground "medium blue"))
+    ;; ("=" (:background "maroon" :foreground "white"))
+    ;; ("~" (:background "deep sky blue" :foreground "MidnightBlue"))
+    ;; ("+" (:strike-through t))
+    ))
+
+;; and then given that, there's no more need to show the *, / etc.
+(setq org-hide-emphasis-markers t)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Turn debugging back off.  Put any questionable code after these lines!
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1684,6 +1813,14 @@
 ;; http://cjohansen.no/an-introduction-to-elisp
 ;; http://ergoemacs.org/emacs/elisp.html
 ;;
+
+;; How to ignore a key completely:
+;; My keyboard has started misbehaving: the spacebar sends both Space and
+;; Hangul_Hanja, but only emacs sees it. Apparently either nil or 'ignore works.
+;(global-set-key [Hangul_Hanja] 'ignore)
+;(global-set-key [Hangul_Hanja] nil)
+;; https://www.reddit.com/r/emacs/comments/8on9zi/can_i_make_emacs_completely_ignore_a_key/e04wd3w/
+;; (define-key special-event-map (kbd "<Hangul_Hanja>") 'ignore)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Settings automatically added by Emacs:
