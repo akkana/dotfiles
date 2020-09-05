@@ -8,8 +8,9 @@ fi
 # Things to do only when logged on to the console, so only once
 # per session:
 if [[ $(tty) == /dev/tty1 ]]; then
-    # GTK needs this to pay attention to .XCompose bindings
-    export GTK_IM_MODULE=xim
+    # GTK needs this to pay attention to .XCompose bindings.
+    # Except maybe it doesn't anyway.
+#    export GTK_IM_MODULE=xim
 
     # On the Dell Latitude 2120, beep (if it beeps at all) is stupidly loud.
     # It's controlled by a separate ALSA channel and defaults to 100%.
@@ -22,7 +23,7 @@ if [[ $(tty) == /dev/tty1 ]]; then
 
     # Set path
     arch=$(uname -m)
-    export PATH=$HOME/bin:$HOME/bin/linux-$arch:/usr/local/bin:$PATH:.:/usr/sbin:/sbin:$HOME/Archive/outsrc/android-sdk-linux/platform-tools:$HOME/Archive/outsrc/android-sdk-linux/tools:$HOME/.local/bin
+    export PATH=$HOME/bin:$HOME/bin/linux-$arch:/usr/local/bin:$PATH:.:/usr/sbin:/sbin:$HOME/.local/bin
 
     if (( ! ${+PYTHONPATH} )); then
         export PYTHONPATH=$HOME/bin/pythonlibs
@@ -40,6 +41,7 @@ if [[ $(tty) == /dev/tty1 ]]; then
 
     # Set various XDG dirs that annoying programs might try to create unasked.
     # Full list, https://wiki.archlinux.org/index.php/XDG_user_directories
+    # This works for Zoom but, sadly, not for firefox.
     export XDG_DESKTOP_DIR=/tmp
     export XDG_DOWNLOAD_DIR=/tmp
     # export XDG_DOCUMENTS_DIR=/tmp
@@ -64,15 +66,12 @@ if [[ $(tty) == /dev/tty1 ]]; then
     # These are all directories created by programs I don't use voluntarily
     # or want to use in anonymous, no-tracking mode,
     # or keep reverting to their prefs rather than mine.
+    # Firefox in particular loves to create Downloads and Desktop
+    # even if you've specifically set the download directory otherwise.
     echo "Cleaning up bogus directories"
-    rm -rf .cache/chromium .cache/google-chrome .macromedia .vlc Downloads
-    # and Firefox creates ~/Downloads even if that isn't set as the
-    # download directory, idiotically
-    if [[ -d ~/Downloads ]]; then
-        rmdir ~/Downloads
-    fi
+    rm -rf .cache/chromium .cache/google-chrome .macromedia .vlc Downloads Desktop Videos ~/Templates
 
-    check-spam-blanks
+    # check-spam-blanks
 
     # Which hosts should start X automatically?
     autox=(hesiodus iridum)
@@ -88,6 +87,18 @@ if [[ $(tty) == /dev/tty1 ]]; then
     fi
     alias xx='startx >~/.Xout 2>&1'
 
+    if [[ $(hostname) == 'charon' ]]; then
+        pulsehelper --source none --sink 'Cannon Point Speaker'
+        # Incantation to enable all four speakers on Carbon X1 Gen 7
+        # sudo /usr/bin/hda-verb /dev/snd/hwC0D0 0x17 SET_CONNECT_SEL 1
+
+        # Turn on all speakers
+        # https://gist.github.com/hamidzr/dd81e429dc86f4327ded7a2030e7d7d9
+        # https://forums.lenovo.com/t5/Ubuntu/Guide-X1-Carbon-7th-Generation-Ubuntu-compatability/m-p/4489823?page=15
+        sudo /usr/bin/hda-verb /dev/snd/hwC0D0 0x17 SET_CONNECT_SEL 1
+    fi
+
+    # End things to do only on tty1
 else
 
     # If we're logged in over a serial port, we might be using screen
@@ -98,24 +109,34 @@ else
     fi
 fi
 
+# Macs don't have rxvt-unicode-256color, and ssh from urxvt will
+# result in all sorts of weird problems in commandline editing,
+# like echoing spaces instead of deleting characters on backspace.
+if [[ $(uname) == Darwin && $TERM == rxvt-unicode-256color ]]; then
+    export TERM=rxvt
+fi
+
+export XDG_UTILS_DEBUG_LEVEL=99
+
+if [[ $(hostname) == 'charon' ]]; then
+    echo "==================================================="
+    rancmd() {
+        echo "Random command of the day:"
+        ranman=$(ls -1 /usr/share/man/man1/ /usr/share/man/man8 | shuf -n 1)
+        echo "(from $ranman)"
+        man -f $(echo $ranman | sed 's_\.[0-9].*__')
+    }
+    rancmd
+
+    if [[ -x /usr/bin/remind && -e ~/Docs/Lists/remind ]]; then
+        echo "==================================================="
+        remind -g ~/Docs/Lists/remind
+    fi
+
+    acpi
+fi
+
 if [[ -s ~/.reminders ]]; then
     echo "==================================================="
     cat ~/.reminders
 fi
-
-
-echo "==================================================="
-rancmd() {
-    echo "Random command of the day:"
-    ranman=$(ls -1 /usr/share/man/man1/ /usr/share/man/man8 | shuf -n 1)
-    echo "(from $ranman)"
-    man -f $(echo $ranman | sed 's_\.[0-9].*__')
-}
-rancmd
-
-if [[ -x /usr/bin/remind && -e ~/Docs/Lists/remind ]]; then
-    echo "==================================================="
-    remind -g ~/Docs/Lists/remind
-fi
-
-acpi

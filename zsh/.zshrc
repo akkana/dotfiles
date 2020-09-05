@@ -15,13 +15,15 @@ fi
 
 # Source global definitions
 if [[ -f /etc/zshrc ]]; then
-	. /etc/zshrc
+    . /etc/zshrc
 fi
 
 #setopt ignoreeof
 
 # Temporary: disable fetchmail
 alias fetchmail='echo NO!!!'
+# Temporary: warn about exifautotran
+alias exifautotran-"echo exifautotran is broken, use jhead -autorot; echo See https://bugs.launchpad.net/ubuntu/+source/libjpeg9/+bug/1842116"
 
 setopt RM_STAR_SILENT
 
@@ -82,7 +84,7 @@ else
 fi
 
 set_prompt() {
-  hostname=$(hostname)
+  hostname=$(hostname -s)
 
   # Only set this prompt if I'm logged in as myself:
   if [[ $USER == akkana ]]; then
@@ -264,10 +266,10 @@ lsdirs() {
 # Use in other scripts that need to save the previous directory.
 pushd_maybe() {
     cwd=`pwd`
-    if [[ x$1 == x$cwd ]]; then
+    if [[ "$1" == "$cwd" ]]; then
         return
     fi
-    if [[ x$cwd == x$HOME ]]; then
+    if [[ "$cwd" == "$HOME" ]]; then
         cd $1
     else
         pushd $1
@@ -295,6 +297,9 @@ ducks() {
     du -cksx $1/* | sort -rn | head -40
 }
 
+# Click on a window and find which executable is behind it
+alias prognamee='basename $(/bin/ls -l /proc/$(xprop _NET_WM_PID | awk "{print \$NF}")/exe | awk "{print \$NF}")'
+
 ##################
 # Recursive greps
 gr() {
@@ -306,7 +311,7 @@ zgr() {
 }
 
 cgr() {
-  find . \( -name '*.[CchH]' -or -name '*.cpp' -or -name '*.cc' \) -print0 | xargs -0 grep "$@" /dev/null
+  find . \( -name '*.[CchH]' -or -name '*.cpp' -or -name '*.cc -or -name '*.ino'' \) -print0 | xargs -0 grep "$@" /dev/null
 }
 hgr() {
   find . \( -name '*.h' -or -name '*.idl' \) -print0 | xargs -0 grep "$@" /dev/null
@@ -475,6 +480,20 @@ fi
 ######################################
 # audio/video aliases
 
+movieres() {
+    foreach f ($*)
+        echo $f :
+        ffprobe -v quiet -print_format json -show_format -show_streams $f | egrep '(width|height)'
+    end
+}
+
+mov2720p() {
+    foreach infile ($*)
+        outfile=720-$infile:t:r.mkv
+        ffmpeg -i $infile -c:v libx264 -preset slow -crf 18 -c:a copy -pix_fmt yuv420p -vf scale=1280:-1 $outfile
+    end
+}
+
 # From drc on #gimp:
 mov2mpeg4() {
   # mencoder has changed its arg structure and this no longer works
@@ -496,6 +515,18 @@ moviesize() {
 # Playing DVDs with mplayer. f => fullscreen, v -> no subtitles
 alias playdvd="mplayer dvd://1 -alang en"
 
+camsetting() {
+    whichval="$1"
+    newbright="$2"
+    if [[ "$newbright" == "" ]]; then
+        v4l2-ctl -d /dev/video0 --get-ctrl $whichval
+    else
+        v4l2-ctl -d /dev/video0 --set-ctrl $whichval="$newbright"
+    fi
+}
+alias cambright="camsetting brightness"
+alias camcontrast="camsetting contrast"
+
 ######## end video aliases
 
 ######## Prettyprinting
@@ -508,18 +539,18 @@ ppjson() {
     jq . "$@"
 }
 
+# Prettyprint HTML. There's also tidy.
+pphtml() {
+    python3 -c "from bs4 import BeautifulSoup; print(BeautifulSoup(open('$1'), 'lxml').prettify())"
+}
+
 # Prettyprint XML:
 ppxml() {
      xmllint --format "$@"
 }
 
 ################################################
-# Various GPS conversions
-
-kml2gpx() {
-    # :t takes the basename, :r removes the extension
-    gpsbabel -i kml -f $1 -o gpx -F $1:t:r.gpx
-}
+# Some GPS conversions
 
 kmz2gpx() {
     # unzip the KMZ, since gpsbabel STILL doesn't know how to do that
@@ -528,31 +559,6 @@ kmz2gpx() {
     gunzip -c $1 > $kmlfile
     # :t takes the basename, :r removes the extension
     gpsbabel -i kml -f $kmlfile -o gpx -F $kmlfile:t:r.gpx
-}
-
-gpx2kml() {
-    # :t takes the basename, :r removes the extension
-    gpsbabel -i gpx -f $1 -o kml -F $1:t:r.kml
-}
-
-# gpsbabel by default turns a nice simple track file into a great big
-# KML with a waypoint added for each trackpoint. points=0 stops that.
-gpx2kmltrack() {
-    # :t takes the basename, :r removes the extension
-    gpsbabel -i gpx -f $1 -o kml,points=0 -F $1:t:r.kml
-}
-
-# Weirdly, gpsbabel can't handle geojson.
-gpx2geojson() {
-    ogr2ogr -f GeoJSON $1:t:r.geojson $1
-}
-
-# ESRI shapefiles to KML. Use the .shp and ignore the other files.
-# Converting to GPX usually doesn't work so well; stick with KML.
-shp2kml() {
-    shapefile=$1
-    kmlfile=$shapefile:t:r.kml
-    ogr2ogr -f KML $kmlfile $shapefile
 }
 
 # Convert a pair of UTM coordinates in NM to a GPX file with one waypoint.
@@ -572,16 +578,6 @@ gpx2utm() {
     gpsbabel -i gpx -f $1 -o text -F -
 }
 
-# Maybe a better way of converting to UTM, using PROJ utilities:
-# echo '123d03'\''02.97"W 38d21'\''56.98"N' | proj +proj=utm +zone=10
-# echo '-123d03'\''02.97" 38d21'\''56.98"' | proj +proj=utm +zone=10
-
-# Convert between DMS and DD:
-# DD to DMS
-# echo '-122d30'\'' 38d45'\' | cs2cs +proj=latlong +to +proj=latlong
-# DMS to DD
-# echo '-122d30'\'' 38d45'\' | cs2cs +proj=latlong +to +proj=latlong -f '%.4f'
-
 # End GPS conversions
 
 ######## end format changing commands
@@ -598,12 +594,13 @@ cleanssh() {
 # How many books have I read in recent years?
 booksread() {
     setopt extendedglob
+    printf "         All   New  Re-reads\n"
     for f in ~/Docs/Lists/books/books[0-9](#c4); do
         year=$(echo $f | sed 's/.*books//')
         let allbooks=$(egrep '^[^ ]' $f | grep -v 'Book List:' | wc -l)
         let rereads=$(egrep '^[-.@\*]' $f  | grep -v 'Book List:'| wc -l)
         # How to do numeric computations in zsh:
-        printf "%4s:   All: %3d   New: %3d   Re-reads: %3d\n" \
+        printf "%4s:   %3d   %3d   %3d\n" \
                $year $allbooks $(($allbooks - $rereads)) $rereads
     done
 }
@@ -633,7 +630,7 @@ alias projector='xrandr --output VGA-1 --mode 1024x768; screenblankoff'
 # alias projectorh='xrandr --output HDMI1 --mode 1024x768'
 alias projectorh='xrandr --output eDP-1 --auto --output HDMI-1 --mode 1024x768; screenblankoff'
 
-# Output to the HDMI port to the right of the laptop display:
+# Projector using the HDMI port, to the right of the laptop display:
 # alias projector2='xrandr --auto --output HDMI-1 --mode 1024x768 --right-of eDP-1'
 alias projector2='xrandr --output eDP-1 --auto --primary --output HDMI-1 --mode 1024x768 --right-of eDP-1; screenblankoff'
 
@@ -650,6 +647,13 @@ alias 2mon='xrandr --auto --output HDMI-1 --auto --right-of eDP-1'
 alias monlaptop='xrandr --output eDP-1 --auto --output HDMI-1 --off'
 alias monhdmi='xrandr --output HDMI-1 --auto --output eDP-1 --off'
 alias mondock='xrandr --output DP-1 --auto --output eDP-1 --off'
+
+# Use the laptop screen at a lower than normal resolution:
+# that way you can screenshare the whole desktop on Zoom without everything
+# looking tiny to the audience.
+# Keep the desktop screen on for other work; Zoom recordings will
+# use the screen the Zoom app is on.
+alias monzoomlaptop='xrandr --output eDP-1 --mode 1440x900 --output DP-1 --auto --right-of eDP-1'
 
 # Toggle mute. This doesn't work when called from an openbox key event,
 # but does work from the commandline.
@@ -712,6 +716,49 @@ df() {
     /bin/df -hTx tmpfs -x devtmpfs -x rootfs -x squashfs
 }
 
+# Mount a USB stick or SD card.
+# On the CX1, there's no predicting when a USB device will show up on
+# sda1 or sdc1. I get tired of needing to run lsblk and sudo every time
+# and I never remember all the mount options.
+musb() {
+    # zsh arrays
+    devices=(/dev/sda1 /dev/sdc1 /dev/sdd1 /dev/sde1)
+    foreach device ($devices)
+        echo Trying $device
+        # -o umask=111,uid=myuid is supposed to work, but doesn't.
+        # This gives all permissions to all users::
+        sudo mount -o rw,umask=111,dmask=000,shortname=lower $device /pix
+        # sudo mount -o uid=$uid,umask=111,dmask=000,shortname=lower $device /pix
+        if [ $? -eq 0 ]; then
+            echo "mounted $device on /pix"
+            return
+        fi
+    end
+
+    echo "Couldn't find anything to mount in" $devices
+}
+
+# Upload movies from the Sony a6100's obscure locations on the SD card:
+sonymovies() {
+    if [[ -d $1 ]]; then
+        dest=$1
+    else
+        dest=.
+    fi
+    mv /sony/private/m4root/clip/*  $dest
+    # Remove silly thumbnails
+    rm /sony/private/m4root/thmbnl/*
+}
+sonyall() {
+    if [[ -d $1 ]]; then
+        dest=$1
+    else
+        dest=.
+    fi
+    mv /sony/dcim/100msdcf/* $dest
+    sonymovies $dest
+}
+
 alias fumount="fusermount -u"
 
 # Mount encrypted SD card:
@@ -737,6 +784,15 @@ cryptunmount() {
 # For the Raspberry Pi, the serial port connections are
 # 6=black, 8=white, 10=green
 alias rpi='titlebar "Raspberry Pi"; echo "black=Gnd white=TX green=RX"; echo "Disconnect with Ctrl-backquote d"; screen /dev/ttyUSB0 115200; titlebar "local"'
+
+# Fritzing as of 0.9.3 insists on creating ~/Documents and won't let
+# that be overridden. The only workaround I've found is changing HOME.
+# Also, the Ubuntu version of Fritzing is a script that doesn't pass
+# command-line arguments, so duplicate the script here to allow args.
+fritzing() {
+    cd /usr/share/fritzing/parts
+    HOME=/home/akkana/Fritzing /usr/bin/fritzing.real $@ &
+}
 
 # Get my current network interface
 myif() {
@@ -787,12 +843,16 @@ localnet() {
 # Unfortunately this doesn't show MAC addresses; would be nice to
 # combine it with a MAC lookup.
 localport() {
-    allnet=$(mynet | sed 's_\.[0-9]*/24_.1-254_')
-    nmap $allnet -p$1 --open -oG - | grep $1/open
+    # doesn't work:
+    # allnet=$(mynet | sed 's_\.[0-9]*/24_.1-254_')
+    # nmap $allnet -p$1 --open -oG - | grep $1/open
+
+    # better
+    nmap -p $1 --open $(mynet | sed 's_255$_0/24_')
 }
 
 # A few electronics cheatsheets:
-alias pigpio='pho -P ~/src/pi-zero-w-book/images/raspi-gpio.jpg &'
+alias gpio-pi='pho -P ~/src/pi-zero-w-book/images/raspi-gpio.jpg &'
 alias gpio-official='pho -P ~/Docs/hardware/rpi/Pi-GPIO-header.png &'
 alias gpio-xyz='pho -P ~/Docs/hardware/rpi/raspberry-pi-pinout.png &'
 alias gpio-old='pho -P ~/Docs/hardware/rpi/rpi-gpio.jpg &'
@@ -944,6 +1004,9 @@ if [ -n "$_comps" ]; then
   # I hope they don't have the smart completion either.
   #compdef _files git
 
+  # Recently autocompletion for cp is broken. Override it:
+  compdef _files cp
+
   # By default (no CLASSPATH SET), autocompletion for java searches
   # recursively starting from .  Don't try it in your homedir!
   # Not sure if this really turns it off, though -- had a typo.
@@ -998,7 +1061,7 @@ bindkey '^X^D' describe-key-briefly
 ################################################
 # Build/development helpers
 
-export GIMP_PREFIX=$HOME/run/gimp-master
+# export GIMP_PREFIX=$HOME/run/gimp-master
 
 # Build a new copy of my forked hexchat.
 # This frequently fails with meson/ninja errors because those tools
@@ -1100,7 +1163,6 @@ check_holds() {
 # Some sources say you can use venv --python=/usr/bin/python3.6,
 # but it fails in some cases.
 
-
 nopythonenv() {
     if type deactivate >/dev/null ; then
         deactivate
@@ -1149,6 +1211,15 @@ switchpythonenv() {
 alias python2env='switchpythonenv 2'
 alias python3env='switchpythonenv 3'
 alias python23env='switchpythonenv 23'
+
+# Enble python3env by default, no special prompt.
+# Doing this from .zlogin or before starting X isn't recommended;
+# it makes it impossible to deactivate it since deactivate is
+# only defined in the local shell, not in environment variables.
+# But do it in all interactive shells under X.
+if [[ $(tty) =~ '/dev/pts/.*' ]]; then
+    VIRTUAL_ENV_DISABLE_PROMPT=1 source $HOME/pythonenv/3env/bin/activate
+fi
 
 # Make a temporary Python virtualenv for testing something.
 # This is separate from the virtualenvs used for everyday life.
@@ -1254,6 +1325,16 @@ pullscreenshot() {
   for f in *.png; do
     echo $f
     adb shell rm /sdcard/Pictures/Screenshots/$f
+  done
+}
+
+pullvoice() {
+  pushd_maybe ~/Docs/gps/new
+  adb pull /sdcard/SoundRecorder/. .
+  for f in *.mp4; do
+    echo $f
+    # Voice Recorder files have names with spaces like 'My Recording_5.mp4'
+    adb shell rm "\"/sdcard/SoundRecorder/$f\""
   done
 }
 
