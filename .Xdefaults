@@ -1,13 +1,6 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !    Akkana .Xdefaults
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! (what are these single quotes at the beginning of lines?
-!  They are because someone broke X defaults parsing a few years
-!  ago so that it now gets confused by apostrophes in a comment line,
-!  and treats them as single quotes
-!  This bug is evidently never going to get fixed, so adding another
-!  apostrophe is the only way to avoid error messages. Sigh.)
-!
 
 ! Xcursor.theme: Akk-cursors
 Xcursor.theme: default
@@ -174,7 +167,7 @@ monxterm*faceName: Monoid HalfTight:size=8:antialias=true
 ! But this works (thanks Mikachu):
 ! XTerm*font: -misc-fixed-bold-r-normal-*-14-*-*-*-*-*-iso10646-1
 
-! Here's what I use in emacs, probably the same as above:
+! Here is what I use in emacs, probably the same as above:
 ! XTerm*font: -misc-fixed-bold-r-normal-*-14-*-*-*-*-*-*-*
 
 ! This is pretty enough and has all the characters, but is overly antialiased:
@@ -185,7 +178,7 @@ monxterm*faceName: Monoid HalfTight:size=8:antialias=true
 ! https://www.freedesktop.org/software/fontconfig/fontconfig-user.html
 ! hinting=false autohint=false
 ! embolden=true is different from using :bold:.
-! Testing: fc-match fixed says it's using DejaVuSans.ttf: "DejaVu Sans" "Book"
+! Testing: fc-match fixed says it is using DejaVuSans.ttf: "DejaVu Sans" "Book"
 
 ! XTerm*font: -misc-fixed-medium-r-normal--13-120-75-75-c-70-
 ! Some other options:
@@ -195,7 +188,7 @@ monxterm*faceName: Monoid HalfTight:size=8:antialias=true
 ! XTerm*faceName: DejaVu Sans Mono:bold:size=9
 ! XTerm*faceName: Liberation mono:bold:size=9
 
-! This is also overly anti-aliased, but it's so compact vertically
+! This is also overly anti-aliased, but it is so compact vertically
 ! that I can use a larger font which makes it readable again:
 ! XTerm*faceName: Lucida console:bold:size=10
 
@@ -210,7 +203,7 @@ monxterm*faceName: Monoid HalfTight:size=8:antialias=true
 
 !! In Firefox, Ctrl-INSERT copies the CLIPBOARD selection,
 !! Shift-INSERT pastes it. Make urxvt do the same.
-!! But it doesn't work: insert-selection(CLIPBOARD) actually inserts PRIMARY.
+!! But it doesn''t work: insert-selection(CLIPBOARD) actually inserts PRIMARY.
 !! Make Shift-Ctrl-INSERT paste PRIMARY.
 !! Shift-Ctrl-c and v copy and paste CLIPBOARD by default.
 !! and make Ctrl-INSERT copy CLIPBOARD, like Firefox.
@@ -245,13 +238,13 @@ monxterm*faceName: Monoid HalfTight:size=8:antialias=true
 urxvt*termName: rxvt-unicode-256color
 
 ! Specify a main font,
-! plus fallback fonts for characters that aren't in the main font.
+! plus fallback fonts for characters that are not in the main font.
 ! For the main font, Noto, JetBrains and Monoid are all good.
 ! FiraCode is also good.
 ! JetBrains makes it hard to differentiate zero from eight;
-! with Monoid I'm always confusing ell and eye.
-! Noto Sans Mono Semicondensed has Y that's hard to tell from V.
-! Noto Emoji doesn't work with urxvt, alas, but Symbola at least
+! with Monoid I am always confusing ell and eye.
+! Noto Sans Mono Semicondensed has Y that is hard to tell from V.
+! Noto Emoji doesn''t work with urxvt, alas, but Symbola at least
 ! has monochrome versions of emojis,
 ! and supposedly Unifont has good general coverage.
 ! URxvt.font: xft:
@@ -261,9 +254,9 @@ URxvt.font: xft:JetBrains Mono:size=9:antialias=true, \
             xft:Unifont:pixelsize=9:antialias=true, \
             xft:Symbola
 ! Some folks say playing with letterSpace helps with wide characters,
-! but it didn't seem to make any difference for me.
+! but it did not seem to make any difference for me.
 ! URxvt.letterSpace: 1
-! Adding this to the font descriptions also didn't make any difference:
+! Adding this to the font descriptions also made no difference:
 ! :minspace=False
 
 ! URxvt*boldFont: xft:Monoid HalfTight:bold:size=8
@@ -276,10 +269,10 @@ URxvt*loginShell: true
 
 ! Extensions (comma separated):
 ! font-size: Enable font size switching on the fly
-! matcher: allow clicking on URLs, but it doesn't handle multi-line
+! matcher: allow clicking on URLs, but it does not handle multi-line
 ! URLs and makes it impossible to select a URL.
 ! selection: supposedly make selection configurable with perl defs,
-! but that didn't work for me.
+! but that didn''t work for me.
 ! URxvt.perl-ext-common: font-size,selection
 ! searchable-scrollback uses M-s to search back.
 URxvt.perl-ext-common: default,font-size,searchable-scrollback,bell-command
@@ -289,11 +282,11 @@ URxvt*foreground: black
 URxvt*background: #ecf5ff
 
 ! Font size changes: see man urxvt-font-size.
-! Ctrl-+ is bound by default, but since that's a shifted key on US keyboards,
+! Ctrl-+ is bound by default, but since that is a shifted key on US keyboards,
 ! bind it to the unshifted key as well.
 URxvt.keysym.C-equal:     font-size:increase
-! It's supposed to be possible to get all open urxvts to increase or decrease,
-! but incglobal/decglobal don't work for me, they still only change one term.
+! It is supposed to be possible to get all open urxvts to increase or decrease,
+! but incglobal/decglobal do not work for me, they still only change one term.
 ! URxvt.keysym.C-S-equal:          font-size:incglobal
 ! URxvt.keysym.C-S-minus:          font-size:decglobal
 ! URxvt.keysym.C-S-Up:   font-size:incglobal
@@ -307,20 +300,20 @@ URxvt.keysym.C-equal:     font-size:increase
 
 ! Allow copy and paste of CLIPBOARD as well as PRIMARY.
 ! This requires "default" in the list of extensions.
-! Just adding "clipboard" doesn't help, but "default" does.
+! Just adding "clipboard" doesn''t help, but "default" does.
 ! URxvt.keysym.Control-Meta-c: builtin-string:
 ! URxvt.keysym.Control-Meta-v: builtin-string:
 URxvt.keysym.Shift-Control-V: eval:paste_clipboard
 URxvt.keysym.Shift-Control-C: eval:selection_to_clipboard
 URxvt.keysym.Shift-Control-Insert: eval:paste_clipboard
 
-! Don't waste screen space on ugly scrollbars
+! Don''t waste screen space on ugly scrollbars
 URxvt*scrollBar:  false
 
 ! Fade by this percentage when focus is lost
 ! URxvt*fading: 10
 
-! Adjust colors that by default aren't visible on a light background
+! Adjust colors that by default aren''t visible on a light background
 ! Was light green
 URxvt*color2: ForestGreen
 ! URxvt*color10: ForestGreen
