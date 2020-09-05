@@ -32,14 +32,12 @@
 [push]
 	default = current
 
-# difftool needs both diff.tool and difftool.tool set to avoid prompting.
+# Git inexplicable needs both diff.tool and difftool.tool set.
 # I go back and forth between meld and tkdiff as they keep changing
 # things that makes one and then the other less usable.
-# You might think that [difftool] is the one that controls git difftool,
-# but no, you have to change both of them.
 [diff]
     tool = tkdiff
-    external = tkdiff
+
 [difftool]
     tool = tkdiff
     prompt = false
