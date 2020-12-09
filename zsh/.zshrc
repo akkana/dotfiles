@@ -190,6 +190,16 @@ alias primary2clip='xsel -p | xsel -i -b'
 # and vice versa:
 alias clip2primary='xsel -b | xsel -i -p'
 
+# Convert a selection in HTML to plaintext using xclip:
+htmlsel2text() {
+    if xclip -o -t TARGETS | grep -q text/html ; then
+        xclip -o -t text/html | sed 's/<meta [^>]*>//' | xclip -i
+        echo "HTML is now on clipboard"
+    else
+        echo "No text/html on clipboard"
+    fi
+}
+
 # What's the complement of a number, e.g. the fmask in fstab to get
 # a given file mode for vfat files? Sample usage: invert 755
 invertmask() {
@@ -310,6 +320,12 @@ zgr() {
   find . -name '*.o' -prune -or -name '*.so' -prune -or -name '*.a' -prune -or -name '*.pyc' -prune -or -name '*.jpg' -prune -or -name '*.JPG' -prune -or -name '*.png' -prune -or -name '*.xcf*' -prune -or -name '*.gmo' -prune -or -name '.intltool*' -prune -or -name '*.po' -prune -or -name 'po' -prune -or -name '*.tar*' -prune -or -name '*.zip' -or -name '.metadata' -or -name 'build' -or -name 'obj-*' -or -name '.git' -prune -or -name '.svn' -prune -or -name '.libs' -prune -or -name __pycache__ -prune -or -type f -print0 | xargs -0 zgrep "$@" /dev/null | fgrep -v .svn | fgrep -v .git
 }
 
+# Grep in an android workspace: exclude all the intermediate and
+# generated files.
+andgr() {
+    find . -name 'build' -prune -or -name '*.apk' -prune -or -type f -print0 | xargs -0 zgrep "$@" /dev/null
+}
+
 cgr() {
   find . \( -name '*.[CchH]' -or -name '*.cpp' -or -name '*.cc -or -name '*.ino'' \) -print0 | xargs -0 grep "$@" /dev/null
 }
@@ -320,7 +336,7 @@ rgr() {
   find . \( -name '*.rb' -or -name '*.rhtml' \) -print0 | xargs -0 grep "$@" /dev/null | fgrep -v .svn
 }
 htgr() {
-  find . -name '*.*htm*' -and -not -name 'webhits*' -prune -print0 | xargs -0 grep "$@" /dev/null
+  find . \( -name '*.*htm*' -or -name '*.blx' \) -and -not -name 'webhits*' -prune -print0 | xargs -0 grep "$@" /dev/null
 }
 pygr() {
   find . -name '*.py' -print0 | xargs -0 grep "$@" /dev/null
@@ -496,9 +512,12 @@ mov2720p() {
 
 # From drc on #gimp:
 mov2mpeg4() {
-  # mencoder has changed its arg structure and this no longer works
-  # mencoder $1 -oac pcm -ovc lavc -lavcopts vcodec=mpeg4:vqmin=2:vlelim=-4:vcelim=9:lumi_mask=0.05:dark_mask=0.01:vhq -o $2
-  ffmpeg -i $1 -c copy $1:t:r.mp4
+    # mencoder has changed its arg structure and this no longer works
+    # mencoder $1 -oac pcm -ovc lavc -lavcopts vcodec=mpeg4:vqmin=2:vlelim=-4:vcelim=9:lumi_mask=0.05:dark_mask=0.01:vhq -o $2
+    #ffmpeg -i $1 -c copy $1:t:r.mp4
+    # but that sometimes produces movies Firefox won't play.
+    # This seems to work better:
+    ffmpeg -i $1 -vcodec libx264 -acodec aac $1:t:r.mp4
 }
 
 # Extract audio from flash:
@@ -641,19 +660,19 @@ alias noprojector='xrandr --auto; screenblankon'
 
 # Configure an external monitor to the right of the current one,
 # at the monitor's native resolution
-alias 2mon='xrandr --auto --output HDMI-1 --auto --right-of eDP-1'
+alias monx2=' xrandr  --output eDP-1 --auto --output DP-1 --auto --right-of eDP-1'
 # alias 2mon='xrandr --auto --output HDMI-1 --auto --above eDP-1'
 
-alias monlaptop='xrandr --output eDP-1 --auto --output HDMI-1 --off'
-alias monhdmi='xrandr --output HDMI-1 --auto --output eDP-1 --off'
-alias mondock='xrandr --output DP-1 --auto --output eDP-1 --off'
+alias monlaptop='xrandr --output eDP-1 --auto --output DP-1 --off'
+alias monbig='xrandr --output HDMI-1 --auto --output eDP-1 --off'
 
 # Use the laptop screen at a lower than normal resolution:
 # that way you can screenshare the whole desktop on Zoom without everything
 # looking tiny to the audience.
 # Keep the desktop screen on for other work; Zoom recordings will
 # use the screen the Zoom app is on.
-alias monzoomlaptop='xrandr --output eDP-1 --mode 1440x900 --output DP-1 --auto --right-of eDP-1'
+alias monzoomlaptop='xrandr --output eDP-1 --mode 1024x768 --output DP-1 --auto --right-of eDP-1'
+alias monzoomlaptopdemo='xrandr --output eDP-1 --mode 1440x900 --output DP-1 --auto --right-of eDP-1'
 
 # Toggle mute. This doesn't work when called from an openbox key event,
 # but does work from the commandline.
@@ -1004,21 +1023,25 @@ if [ -n "$_comps" ]; then
   # I hope they don't have the smart completion either.
   #compdef _files git
 
+  # XXX TEMPORARILY DISABLING ALL THESE IN CASE THEY'VE BEEN FIXED
+
   # Recently autocompletion for cp is broken. Override it:
-  compdef _files cp
+  # compdef _files cp
 
   # By default (no CLASSPATH SET), autocompletion for java searches
   # recursively starting from .  Don't try it in your homedir!
   # Not sure if this really turns it off, though -- had a typo.
-  #compdef _files java
+  # #compdef _files java
 
   # loadkeys also has "smart" (* un-smart) completion.
-  compdef _files loadkeys
+  # compdef _files loadkeys
 
   # adb hangs trying to autocomplete anything -- apparently it's
   # actually trying to talk to the android even when you're trying
   # to autocomplete a local filename.
-  compdef _files adb
+  # The weird thing is, with this line uncommented, you can autocomplete
+  # adb she<tab> but with it commented out, you can't -- seems backward!
+  # compdef _files adb
 
   # Other things that have broken autocomplete, so tell it to just
   # look for filenames like a normal well-behaved shell:
@@ -1288,6 +1311,8 @@ alias unittest2='python2 -m unittest discover'
 # Under KitKat, it's at /storage/extSdCard.
 # Under Marshmallow, it's at /storage/nnnn-nnnn
 # Set androidSD in .zshrc.hostname: these aliases require it.
+# On Google devices, there's no SD card so just use /storage/emulated/0.
+androidSD=/storage/emulated/0
 
 # There seems to be no way to remove multiple or wildcarded files via adb.
 # alias delallgpx='adb shell rm /mnt/extSdCard/Android/data/net.osmand.plus/tracks/rec/*'
@@ -1300,19 +1325,23 @@ pullgpx() {
     adb shell rm $androidSD/Android/data/net.osmand.plus/files/tracks/rec/$f
   done
   ls
-  echo Maybe adb push file.gpx $androidSD/GPX/
+  # echo Maybe adb push file.gpx $androidSD/GPX/
   echo Maybe adb push file.gpx $androidSD/Android/data/net.osmand.plus/files/tracks/
+  echo Maybe adb push file.gpx /storage/emulated/0/Android/data/net.osmand.plus/files/tracks/
 }
 
 pullphotos() {
   pushd_maybe ~/Docs/gps/new
-  adb pull $androidSD/DCIM/Camera/. .
+  # If you keep photos on an SD card:
+  # cameradir=$androidSD/DCIM/Camera
+  # If they're on main storage:
+  cameradir=/storage/emulated/0/DCIM/Camera
+  adb pull $cameradir/. .
   # adb pull /storage/sdcard0/DCIM/CardboardCamera/. .
   setopt extendedglob
   setopt EXTENDED_GLOB
   for f in *.jpg~*.vr.jpg *.mp4; do
-    echo $f
-    adb shell rm $androidSD/DCIM/Camera/$f
+    echo_and_do adb shell rm $cameradir/$f
   done
   # If we start shooting a lot with CardboardCamera, can delete those too.
   echo "Pulled photos:"
@@ -1364,14 +1393,40 @@ adebug1() {
 alias debugfeed='adebug Feed'
 # alias df2='adb logcat | egrep --line-buffered "(Feed|E/AndroidRuntime)" | grep -v --line-buffered Delivering'
 
-# For building Android apps such as osmand:
-export ANDROID_HOME=$HOME/outsrc/android-sdk-linux
-export ANDROID_SDK=$HOME/outsrc/android-sdk-linux
-export ANDROID_NDK=$HOME/outsrc/android-ndk-r10d
+############## For building Android apps:
 
-# Find location of Android imports, when writing code:
-andimport() {
-    find $ANDROID_SDK -name $1.java
+# Set up needed environment variables for Android.
+androidbuild() {
+    ANDROID_BUILD_HOME=/ssd/Android
+
+    export ANDROID_HOME=$ANDROID_BUILD_HOME/android-sdk-linux
+    export ANDROID_SDK=$ANDROID_HOME
+    # export ANDROID_NDK=$HOME/outsrc/android-ndk-r10d
+    export JAVA_HOME=$ANDROID_BUILD_HOME/android-studio/jre/
+    # export PATH=$PATH:$ANDROID_BUILD_HOME/android-studio/bin:$ANDROID_BUILD_HOME/gradle/gradle-6.7.1/bin:$ANDROID_BUILD_HOME/android-sdk-linux/tools:$ANDROID_BUILD_HOME/android-sdk-linux/tools/bin:$ANDROID_BUILD_HOME/android-studio/jre/bin
+
+    # Put platform-tools at the beginning, so we get the adb that goes with
+    # the other tools. The adb from Ubuntu can't talk to the emulator.
+    PATH=$ANDROID_BUILD_HOME/android-sdk-linux/platform-tools:$PATH
+
+    # this must come before android-sdk-linux/tools for some reason.
+    # There's an emulator executable in android-sdk-linux/tools,
+    # but that one errors out with
+    #    PANIC: Missing emulator engine program for 'x86' CPU:
+    # It's actually here, so make sure this comes before tools.
+    PATH=$PATH:$ANDROID_SDK/emulator
+
+    # Can't find a nicer multi-line syntax for adding to PATH.
+    PATH=$PATH:$ANDROID_BUILD_HOME/android-studio/bin
+    PATH=$PATH:$ANDROID_BUILD_HOME/gradle/gradle-6.7.1/bin
+
+    PATH=$PATH:$ANDROID_BUILD_HOME/android-sdk-linux/tools
+    PATH=$PATH:$ANDROID_BUILD_HOME/android-sdk-linux/tools/bin
+    PATH=$PATH:$ANDROID_BUILD_HOME/android-studio/jre/bin
+
+    export PATH
+
+    alias emu="emulator @Pixel_3a_API_30_x86"
 }
 
 # End Android
@@ -1653,6 +1708,9 @@ alias tcolors='printf "\e[%dm%d dark\e[0m  \e[%d;1m%d bold\e[0m\n" {30..37}{,,,}
 
 # I can never remember nmap arguments
 alias portscan="nmap -v -sT localhost"
+
+# Use external speakers
+alias speakers='pulsehelper --sink PnP'
 
 # chroot to alternate partition /partitionname in order to update it
 chroot-update() {
