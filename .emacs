@@ -107,23 +107,6 @@
 ;(global-set-key (kbd "C-x C-0") 'zoom-frm-unzoom)
 (global-set-key (kbd "C-x C-0") 'set-frame-size-by-resolution)
 
-;; Need a way to insert the contents of the X clipboard,
-;; for cases like Udacity that block X primary.
-;; For now, this works, but it warns that it's deprecated:
-(global-set-key (kbd "C-S-v") 'x-clipboard-yank)
-(global-set-key (kbd "C-M-v") 'x-clipboard-yank)
-
-;; And likewise for copy
-(global-set-key (kbd "C-S-c") 'clipboard-kill-ring-save)
-(global-set-key (kbd "C-M-c") 'clipboard-kill-ring-save)
-
-;; Make ctrl-shift-insert paste.
-
-;; This doesn't work:
-;; (global-set-key (kbd "<C-S-Insert>") 'x-clipboard-yank)
-;; but this does:
-(global-set-key [(control shift insert)] 'x-clipboard-yank)
-
 (setq indent-tabs-mode nil)
 ) ;; end global-key-bindings
 
@@ -132,27 +115,61 @@
 (add-hook 'prog-mode-hook 'global-settings)
 (add-hook 'text-mode-hook 'global-settings)
 
-;; If it goes away, might be able to substitute something like
-;; (lambda () (interactive)
-;;     (setq x-select-enable-clipboard t)
-;;     (setq x-select-enable-primary nil)
-;;     (clipboard-yank)
-;;     (setq x-select-enable-clipboard nil)
-;;     (setq x-select-enable-primary t)
-;; )
-;; or, https://superuser.com/a/420070 :
-;; (lambda () (interactive "*P")
-;;   (let ((x-select-enable-clipboard t)
-;;         (x-select-enable-primary nil))
-;;     (yank arg)))
+;;;;;;;;;;;;; X Selection / Clipboard behavior
 
-;; When something is selected and you type, replace it.
+;; Copy to the kill ring (and primary) when you select with the mouse:
+(setq mouse-drag-copy-region t)
+
+;; Make default yank use the primary selection, not clipboard.
+(setq select-enable-clipboard nil)
+(setq select-enable-primary t)
+
+;; However, that isn't enough. yank (for PRIMARY) and clipboard-paste
+;; (for CLIPBOARD) each sometimes replaces the other's selection.
+;; Here's a more reliable way to do it, and also turn off
+;; emacs' annoying habit of pasting colors from unrelated buffers:
+(global-set-key (kbd "C-y")
+                (lambda () (interactive)
+                  (insert (x-selection 'PRIMARY))))
+(global-set-key (kbd "C-S-v")
+                (lambda () (interactive)
+                  (insert (x-selection 'CLIPBOARD))))
+;; If emacs goes back to retaining syntax highlighting colors
+;; inappropriately on paste, change both of those like this:
+;; (insert (substring-no-properties (x-selection 'PRIMARY)))
+
+;; When something is selected and you type, replace the selected text.
 (delete-selection-mode t)
+
+;; This copies whatever's selected in emacs or in the kill ring
+;; to both primary and clipboard X selections.
+(global-set-key (kbd "C-S-c") 'clipboard-kill-ring-save)
+
+;; Leaving a buffer tends to stomp the primary selection.
+;; The only way I've found to stop that is to ensure that
+;; nothing is selected when changing buffers:
+(defun deselect-then (what-then)
+  "Deselect any region in the current buffer, then call something else"
+  (deactivate-mark)
+  ;; deactivate-mark leaves us at the region's end.
+  ;; It might be nicer to end up at the region's beginning.
+  ;; This doesn't work -- sets it to the end (why?) --
+  (if (region-active-p) (push-mark (region-beginning)))
+  ;;(if (region-active-p) (push-mark (region-end)))
+  (call-interactively what-then)
+  )
+
+(global-set-key "\C-xb"
+                (lambda () (interactive) (deselect-then 'switch-to-buffer)))
+(global-set-key "\C-x\C-f"
+                (lambda () (interactive) (deselect-then 'find-file)))
+;;;;;; end selection/clipboard hackery ;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Lately exchange-point-and-mark selects everything in between the two points,
 ;; clobbering anything in the primary selection.
 ;; But you can turn that off by passing t to activate "Transient Mark mode".
-(global-set-key "\C-x\C-x" (lambda () (interactive) (exchange-point-and-mark t)))
+(global-set-key "\C-x\C-x" (lambda () (interactive)
+                             (exchange-point-and-mark t)))
 
 ;; I am forever hitting this by accident, when my finger slips off
 ;; Ctrl-z and grazes C-x at the same time. Disable it:
@@ -162,7 +179,8 @@
 ;; electric indents in emacs. And really, the only time I ever want
 ;; electric indent is for }. So maybe the answer is to turn off
 ;; electrics everywhere, then rebind } to indent the current line
-;; after inserting.
+;; after inserting. Of course this doesn't really turn off electrics
+;; everywhere, anyway.
 (setq electric-indent-mode nil)
 
 ;; Electric mode has recently taken over (newline), so we have to do this:
@@ -316,25 +334,18 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- ;;
- ;; Find face at point: C-u C-x = or M-x describe-face
- ;;
-
  '(flyspell-duplicate ((((class color)) (:foreground "red" :underline t :weight bold))))
-
  '(font-lock-comment-face ((((class color) (min-colors 88) (background light)) (:foreground "blue"))))
-
+ '(markdown-bold-face ((t (:foreground "maroon" :weight bold))))
+ '(markdown-code-face ((t (:inherit fixed-pitch :background "ivory1"))))
  '(markdown-header-face-1 ((t (:inherit markdown-header-face :height 2.0))))
  '(markdown-header-face-2 ((t (:inherit markdown-header-face :height 1.7))))
  '(markdown-header-face-3 ((t (:inherit markdown-header-face :height 1.4))))
  '(markdown-header-face-4 ((t (:inherit markdown-header-face :height 1.1))))
  '(markdown-inline-code-face ((t (:inherit font-lock-constant-face :background "gainsboro"))))
- '(markdown-link-face ((t (:inherit link))))
- '(markdown-pre-face ((t (:inherit font-lock-constant-face :background "gainsboro"))))
- '(markdown-bold-face ((t (:foreground "maroon" :weight bold))))
  '(markdown-italic-face ((t (:foreground "navy blue" :slant italic :weight bold))))
- ;; There is no markdown-underline-face, it uses markdown-italic-face.
-
+ '(markdown-link-face ((t (:inherit link))))
+ '(markdown-pre-face ((t (:background "ivory1" :family "monoid"))))
  '(whitespace-trailing ((t (:background "cyan" :foreground "yellow" :weight bold)))))
 
 (set-face-foreground 'mode-line "yellow")
@@ -430,66 +441,6 @@
 ;; Revert to old behavior:
 (setq line-move-visual nil)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;; X Selection / Clipboard behavior
-
-;; This may be helpful: http://www.emacswiki.org/emacs/Comments_on_CopyAndPaste
-
-;; ;; With these two:
-;; ;(setq x-select-enable-clipboard t)
-;; ;(setq interprogram-paste-function 'x-cut-buffer-or-selection-value)
-;; ;; text in PRIMARY can be pasted into emacs with middleclick but not with ^Y.
-
-;; ;; With these three:
-;; ;(setq x-select-enable-clipboard t)
-;; ;(setq interprogram-paste-function 'x-cut-buffer-or-selection-value)
-;; ;(setq x-select-enable-primary t)
-;; ;; C-y will also paste PRIMARY.
-
-;; ;; Copy selected text into X CLIPBOARD selection as well as PRIMARY
-;; ;; so clueless new apps (like GIMP now, sigh, bug 730315) can use it.
-;; (setq x-select-enable-clipboard t)
-;; ;; I'm not clear what this one does, but maybe it'll help emacs be less flaky:
-;; (setq interprogram-paste-function 'x-cut-buffer-or-selection-value)
-;; ;; or maybe this will -- except that would also put it in the kill ring:
-;; ;; (setq mouse-drag-copy-region t)
-
-;; ;; Non-nil means cutting and pasting uses the primary selection.
-;; ;; But unfortunately it disables x-select-enable-clipboard.
-;; (setq x-select-enable-primary t)
-
-;; ;; Save only temporarily active regions to the primary selection
-;; (setq select-active-regions 'only)
-
-;; ;; Try to tell emacs not to put killed text into the X selection
-;; ;(setq interprogram-cut-function nil)
-;; ; Unfortunately that also prevents it from selecting highlighted text!
-;; ; Need a way to turn off just killed text.
-
-;; ;; Emacs seems to have lost the ability to do middlemouse paste of
-;; ;; PRIMARY, apparently because it's sometimes (but not always) taking
-;; ;; CLIPBOARD instead.
-;; ;; See also http://www.oreillynet.com/onlamp/blog/2005/01/quick_tip_for_linux_users_havi.html
-;; ;(setq x-select-enable-clipboard nil)
-
-(if (and (boundp 'emacs-major-version) (< emacs-major-version 25))
-
-    ;; emacs24: What wgreenhouse on #emacs uses.
-    (progn
-      (setq x-select-enable-primary t)
-      (setq x-select-enable-clipboard t)
-      (setq save-interprogram-paste-before-kill t)
-    )
-
-    ;; emacs25:
-    ;; https://www.gnu.org/software/emacs/manual/html_node/emacs/Clipboard.html
-    (progn
-      (setq select-enable-clipboard nil)
-      (setq select-enable-primary t)
-      (setq mouse-drag-copy-region t)
-    )
-)
-
 ;; Around 24.5, emacs developed the annoying habit that every time I
 ;; switch into a buffer, it primary-selects whatever region is active.
 ;; Nobody seems to know how to turn this off, so instead, bind C-x b
@@ -500,23 +451,6 @@
 ;; Unfortunately we need to do this for every way of switching buffers:
 ;;     C-x b   (switch-to-buffer)
 ;;     C-x C-f (find-file)
-
-(defun deselect-then (what-then)
-  "Deselect any region in the current buffer, then call something else"
-  (deactivate-mark)
-  ;; deactivate-mark leaves us at the region's end.
-  ;; It might be nicer to end up at the region's beginning.
-  ;; This doesn't work -- sets it to the end (why?) --
-  (if (region-active-p) (push-mark (region-beginning)))
-  ;;(if (region-active-p) (push-mark (region-end)))
-  (call-interactively what-then)
-  )
-
-(global-set-key "\C-xb"
-                (lambda () (interactive) (deselect-then 'switch-to-buffer)))
-(global-set-key "\C-x\C-f"
-                (lambda () (interactive) (deselect-then 'find-file)))
-;;;;;; end selection/clipboard hackery ;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; A couple of functions to try to guess coding systems based on newlines.
@@ -583,37 +517,37 @@
 
 ;; In emacs24, yank-excluded-properties doesn't work.
 ;; However, this works for Ctrl-Y:
-(if (and (boundp 'emacs-major-version)
-         (< emacs-major-version 25))
+;; (if (and (boundp 'emacs-major-version)
+;;          (< emacs-major-version 25))
 
-    (progn
-      (defun yank-without-colors () (interactive)
-             (insert (substring-no-properties
-                      (x-selection 'PRIMARY))))
-      (global-set-key "\C-y" 'yank-without-colors)
+;;     (progn
+;;       (defun yank-without-colors () (interactive)
+;;              (insert (substring-no-properties
+;;                       (x-selection 'PRIMARY))))
+;;       (global-set-key "\C-y" 'yank-without-colors)
 
-      ;; Unfortunately there seems to be no way in emacs24 to get
-      ;; middlemouse to paste without colors.
-      ;; You can try things like this:
-      ;;
-      ;; (defun mouse-paste-without-colors (e)
-      ;;   (interactive "e")
-      ;;   (goto-char (posn-point (event-start e)))
-      ;;   (insert (substring-no-properties (x-selection 'PRIMARY)))
-      ;;   )
-      ;; (global-set-key (kbd "<mouse-2>") 'mouse-paste-without-colors)
-      ;;
-      ;; but then something happens after the paste that stomps the
-      ;; primary X selection and replaces it with a bunch of other crap.
-      ;; That happens in emacs25 too, but fortunately emacs25 does
-      ;; the right thing with yank-excluded-properties
-      ;; so we don't need these rebindings.
-      ;; Nobody seems to know why this is happening.
-      ;; There's something called <down-mouse-2> but it happens
-      ;; before <mouse-2>, not after, and binding it to 'nop doesn't help.
-      ;; There's no <up-mouse-2>.
-    )
-)
+;;       ;; Unfortunately there seems to be no way in emacs24 to get
+;;       ;; middlemouse to paste without colors.
+;;       ;; You can try things like this:
+;;       ;;
+;;       ;; (defun mouse-paste-without-colors (e)
+;;       ;;   (interactive "e")
+;;       ;;   (goto-char (posn-point (event-start e)))
+;;       ;;   (insert (substring-no-properties (x-selection 'PRIMARY)))
+;;       ;;   )
+;;       ;; (global-set-key (kbd "<mouse-2>") 'mouse-paste-without-colors)
+;;       ;;
+;;       ;; but then something happens after the paste that stomps the
+;;       ;; primary X selection and replaces it with a bunch of other crap.
+;;       ;; That happens in emacs25 too, but fortunately emacs25 does
+;;       ;; the right thing with yank-excluded-properties
+;;       ;; so we don't need these rebindings.
+;;       ;; Nobody seems to know why this is happening.
+;;       ;; There's something called <down-mouse-2> but it happens
+;;       ;; before <mouse-2>, not after, and binding it to 'nop doesn't help.
+;;       ;; There's no <up-mouse-2>.
+;;     )
+;; )
 
 ; You can use this to turn off colors on a block of text:
 (defun decolorize () (interactive)
@@ -742,7 +676,7 @@
 ))
 
 (add-to-list 'auto-insert-alist
-             '((".*\\(lwvweb\\|fairdistricts\\).*\\.html$" . "LWVNM HTML file")
+             '((".*\\(lwvweb\\|fairdistricts\\|jemezdarkskies\\).*\\.html$" . "LWVNM HTML file")
                "Title: "
                "<?php\n"
                "  $title = \"" str "\";\n"
@@ -1225,6 +1159,7 @@
     1 '(face nil display "") prepend))
  'append)
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Insert the current date into the buffer.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1595,6 +1530,7 @@
         ("\\.html$" . web-wrap-mode)
         ;("\\.xml$" . xml-mode)
         ;("\\.gpx$" . xml-mode)
+        ("\\.md$" . markdown-mode)
         ("\\.js$" . javascript-mode)
         ("\\.r$" . r-mode)
         ("\\.gpx$" . xml-mode)
