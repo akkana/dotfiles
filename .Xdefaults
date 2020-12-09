@@ -201,28 +201,34 @@ monxterm*faceName: Monoid HalfTight:size=8:antialias=true
 *XTerm*VT100*Font3:            9x15
 *XTerm*fontMenu*font3*Label:   Big
 
-!! In Firefox, Ctrl-INSERT copies the CLIPBOARD selection,
+!! In Firefox, Ctrl-INSERT copies the CLIPBOARD selection
+!! even though it should paste PRIMARY (see bugs 1070518 and 228011).
 !! Shift-INSERT pastes it. Make urxvt do the same.
-!! But it doesn''t work: insert-selection(CLIPBOARD) actually inserts PRIMARY.
 !! Make Shift-Ctrl-INSERT paste PRIMARY.
 !! Shift-Ctrl-c and v copy and paste CLIPBOARD by default.
 !! and make Ctrl-INSERT copy CLIPBOARD, like Firefox.
 !! Super is the "Windows" key, and can be used to make the font
 !! smaller or larger. Nice discussion at:
 !! http://www.futurile.net/2016/06/14/xterm-setup-and-truetype-font-configuration/
+
+! (what are these doubled apostrophes in comments?
+!  They are because someone broke X defaults parsing a few years
+!  ago so that it now gets confused by apostrophes in a comment line,
+!  and treats them as single quotes
+!  This bug is evidently never going to get fixed, so adding another
+!  apostrophe is the only way to avoid error messages. Sigh.)
+
 *XTerm*VT100.Translations: #override \n\
-    Ctrl <Key> Insert: copy-selection(CLIPBOARD)\n\
-    Shift Ctrl <Key> Insert: insert-selection(PRIMARY)\n\
-    Shift <Key> Insert: insert-selection(CLIPBOARD)\n\
+    Shift Ctrl <KeyPress> C: copy-selection(CLIPBOARD) \n\
+    Shift Ctrl <KeyPress> V: insert-selection(CLIPBOARD) \n\
+    Alt <KeyPress> V: insert-selection(PRIMARY) \n\
+    Ctrl <KeyPress> Insert: copy-selection(CLIPBOARD) \n\
+    Shift <KeyPress> Insert: insert-selection(CLIPBOARD) \n\
     Super <Key> minus: smaller-vt-font() \n\
     Super <Key> plus: larger-vt-font() \n\
     Super <Key> 0: set-vt-font(d) \n\
     <KeyPress>Prior : scroll-back(1,page)\n\
     <KeyPress>Next : scroll-forw(1,page)
-
-!! Are these really needed?
-!!    Shift <KeyPress> Insert: insert-selection(CLIPBOARD)\n\
-!!    Shift Ctrl <KeyPress> Insert: insert-selection(PRIMARY)\n\
 
 !*XmScrollBar.width: 10
 
@@ -235,6 +241,7 @@ monxterm*faceName: Monoid HalfTight:size=8:antialias=true
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 ! The term name controls what TERM is set to.
+! Warning: this messes up MacOS which doesn't have this terminal name.
 urxvt*termName: rxvt-unicode-256color
 
 ! Specify a main font,
@@ -250,14 +257,12 @@ urxvt*termName: rxvt-unicode-256color
 ! URxvt.font: xft:
 URxvt.font: xft:JetBrains Mono:size=9:antialias=true, \
             xft:Monoid HalfTight:size=8:antialias=true, \
-            xft:Noto Sans Mono:size=9:style=Semicondensed:antialias=true, \
             xft:Unifont:pixelsize=9:antialias=true, \
             xft:Symbola
-! Some folks say playing with letterSpace helps with wide characters,
-! but it did not seem to make any difference for me.
-! URxvt.letterSpace: 1
-! Adding this to the font descriptions also made no difference:
-! :minspace=False
+
+! Failed attempts at getting emojis to work -- apparently urxvt just can't.
+!            xft:Noto Sans Mono:size=9:style=Semicondensed:antialias=true, \
+!            xft:Noto Color Emoji:size=11:antialias=true, \
 
 ! URxvt*boldFont: xft:Monoid HalfTight:bold:size=8
 
@@ -306,6 +311,7 @@ URxvt.keysym.C-equal:     font-size:increase
 URxvt.keysym.Shift-Control-V: eval:paste_clipboard
 URxvt.keysym.Shift-Control-C: eval:selection_to_clipboard
 URxvt.keysym.Shift-Control-Insert: eval:paste_clipboard
+URxvt.keysym.M-v: eval:paste_primary
 
 ! Don''t waste screen space on ugly scrollbars
 URxvt*scrollBar:  false
