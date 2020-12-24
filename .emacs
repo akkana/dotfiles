@@ -22,7 +22,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; Set window size according to screen size. Adapted from
+;; Set window size and font according to screen size. Adapted from
 ;; http://stackoverflow.com/questions/92971/how-do-i-set-the-size-of-emacs-window
 (defun set-frame-size-by-resolution ()
   (interactive)
@@ -41,8 +41,8 @@
         (if (<= (x-display-pixel-height) 1080)
             ;; JetBrains doesn't display the same in emacs as in urxvt,
             ;; and ends up taking up a lot of extra vertical space.
-            (set-default-font "Monoid HalfTight-8")
-            ; (set-default-font "JetBrains Mono-10")
+            ; (set-default-font "Monoid HalfTight-8:bold")
+            (set-default-font "JetBrains Mono-10:bold")
 
             ;; full monitor
             (set-default-font "Monoid HalfTight-7.5")
@@ -53,21 +53,17 @@
     ;; from the screen height (for panels, menubars and
     ;; whatnot), then divide by the height of a char to
     ;; get the height we want
-    (add-to-list 'default-frame-alist
-                 ; was    (- (x-display-pixel-height) 100)
-                 ; That produces an int, but with * we must convert
-                 ; from float to int with floor.
-                 ; + 0 here used to be +4, but the window comes out
-                 ; too big on CX1 screen -- this frame-char-height
-                 ; stuff doesn't seem to be working quite right.
-         (cons 'height (+ 4 (floor (/ (* (x-display-pixel-height) 0.8)
-                                      (frame-char-height))))))
+    (let ((newheight  (+ 5 (floor (/ (* (x-display-pixel-height) 0.8)
+                                     (frame-char-height))))))
+      (message (format "New height: %d" newheight))
+      (set-frame-height (selected-frame) newheight)
+      )
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
     ;; Always use a width of 80.
     ;; You can't tell what the width is from xwininfo -- emacs reports 79
     ;; when it's really 80. So use the line above.
-    (add-to-list 'default-frame-alist (cons 'width 80))
+    (set-frame-width (selected-frame) 80)
     )))
 ;; To set initial window position too:
 ;; (set-frame-position (selected-frame) 10 30)
