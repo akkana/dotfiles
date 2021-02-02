@@ -257,19 +257,25 @@ ll() {
 llt() { /bin/ls -laSHFLt "$@" ; }
 llth() { /bin/ls -lFSHLt "$@" | head -20 ; }
 
-# There are lots of ways to list only directories. Here are some:
+# There are lots of ways to list only directories,
+# each with its own pitfalls. Here are some attempts:
+
+# This didn't use to work but now does. Go figure.
+lsdirs() {
+    d="$1"
+    if [[ $d == '' ]]; then d=.; fi
+    env ls -1FH "$d" | sed -n 's|/$||p' | column;
+}
 
 # Next two work except for dirs with spaces in the name:
 lsdirs1() {
-  (cd $1; /bin/ls -d `/bin/ls -1F | grep / | sed 's_/$__'`)
+  (cd $1; /bin/ls -d $(/bin/ls -1F | grep / | sed 's_/$__'))
 }
 
-lsdirs() {
+# This used to work but no longer does
+lsdirs2() {
   echo `/bin/ls -1F $@ | grep / | sed 's_/$__'`| tr -s ' ' '\n' | paste - - - | column -x -t -c3
 }
-
-# This one doesn't actually work:
-# lsdirs2() { env ls -1FH "$1" | sed -n 's|/$||p' | column; }
 
 # pushd, but not if we're already at the target directory
 # or if we're currently home.
@@ -1332,18 +1338,23 @@ pullgpx() {
 
 pullphotos() {
   pushd_maybe ~/Docs/gps/new
+
   # If you keep photos on an SD card:
   # cameradir=$androidSD/DCIM/Camera
   # If they're on main storage:
   cameradir=/storage/emulated/0/DCIM/Camera
+
   adb pull $cameradir/. .
-  # adb pull /storage/sdcard0/DCIM/CardboardCamera/. .
+
   setopt extendedglob
   setopt EXTENDED_GLOB
-  for f in *.jpg~*.vr.jpg *.mp4; do
+  # for f in *.jpg~*.vr.jpg *.mp4; do
+  for f in *.jpg *.mp4; do
     echo_and_do adb shell rm $cameradir/$f
   done
+  rmdir -f thumbnails
   # If we start shooting a lot with CardboardCamera, can delete those too.
+  echo "========"
   echo "Pulled photos:"
   ls
 }
@@ -1427,6 +1438,12 @@ androidbuild() {
     export PATH
 
     alias emu="emulator @Pixel_3a_API_30_x86"
+
+    echo "Useful commands:"
+    echo "gradlew assembleDebug, gradlew assembleRelease"
+    echo "emulator @Pixel_3a_API_30_x86"
+    echo "adb install -r app/build/outputs/apk/release/app-release.apk"
+    echo "adb shell am start -n com.shallowsky.feedviewer/.MainActivity"
 }
 
 # End Android
@@ -1461,23 +1478,26 @@ alias proctail="tail -1000f Procmail/log | egrep -v '^procmail'"
 # How do we find out from $subj which line in $patfile matched the grep?
 # Sample Usage: whichspam 'subject-line' subjectRejects
 whichspam() {
-  # to print each line before executing, for debugging purposes:
-  set -o xtrace
-  whichfile=$2
-  if [[ x$whichfile == x ]]; then
-    whichfile=subjectRejects
-  fi
-  echo Searching in ~/Procmail/spast/$whichfile for "$1"
-  cat ~/Procmail/spast/$whichfile | while read line ; do
-    #echo echo "$1" '| egrep -i --' "$line" '>/dev/null'
-    #echo "$1" | egrep -i -- "$line" >/dev/null
-    # echo "$1" PIPE egrep -i -- "$line"
-    echo "$1" | egrep -i -- "$line"
-    if [[ $? == 0 ]]; then
-      echo $line
+    # to print each line before executing, for debugging purposes:
+    # set -o xtrace
+    subj="$1"
+    dir=~/"Procmail/spast"
+    whichfile="$2"
+    if [[ -z "$whichfile" ]]; then
+        whichfile=subjectRejects
     fi
-  done
-  set +o xtrace
+    printf '%s "%s"\n' "Searching in ~/Procmail/spast/$whichfile for" "$subj"
+    whichfile="$dir/$whichfile"
+    lineno=1
+    while read -r line;do
+        if grep -E -i -q -- "$line" <<<"$subj"
+        then
+            printf 'line %d: %s\n' "$lineno" "$line"
+            # return # comment this if you want all  matching lines
+        fi
+        ((lineno++))
+    done < "$whichfile"
+    #set +o xtrace
 }
 
 # Sometimes editing one of the files accidentally produces a blank line,
@@ -1653,6 +1673,7 @@ pdfreduce() {
 # Which printers are available? lpstat -p -d also works.
 alias whichprinters='lpstat -a; echo "print with lp -d dest -n num-copies"; echo "For PDF consider adding -o fit-to-page or -o scaling=100, or using pdfpages or pdfjam"'
 
+alias vboxdrv="sudo modprobe vboxdrv"
 
 ##### dates ################
 
