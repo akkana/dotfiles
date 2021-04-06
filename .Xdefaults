@@ -7,6 +7,156 @@ Xcursor.theme: default
 Xcursor.size: 48
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!! urxvt
+!!
+!! https://git.madduck.net/etc/xsession.git/blob/HEAD:/.Xresources
+!! https://www.askapache.com/linux/rxvt-xresources/
+!! https://addy-dclxvi.github.io/post/configuring-urxvt/
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+! The term name controls what TERM is set to.
+! Warning: this messes up MacOS which doesn't have this terminal name.
+urxvt*termName: rxvt-unicode-256color
+
+! Specify a main urxvt font,
+! plus fallback fonts for characters that are not in the main font.
+! For the main font, Noto, JetBrains and Monoid are all good.
+! FiraCode is also good.
+! JetBrains makes it hard to differentiate zero from eight;
+! with Monoid I am always confusing ell and eye.
+! Noto Sans Mono Semicondensed has Y that is hard to tell from V.
+! Noto Emoji doesn''t work with urxvt, alas, but Symbola at least
+! has monochrome versions of emojis,
+! and supposedly Unifont has good general coverage.
+! To add bold, include a :bold: in the name.
+! URxvt.font: xft:
+URxvt.font: \
+            xft:Monoisome Tight:size=8:antialias=true, \
+            xft:Unifont:pixelsize=15:antialias=true, \
+            xft:JetBrains Mono:size=8:antialias=true, \
+            xft:Monoid HalfTight:size=8:antialias=true, \
+            xft:Symbola
+
+! Failed attempts at getting emojis to work -- apparently urxvt just can't.
+!            xft:Noto Sans Mono:size=9:style=Semicondensed:antialias=true, \
+!            xft:Noto Color Emoji:size=11:antialias=true, \
+
+! URxvt*boldFont: xft:Monoid HalfTight:bold:size=8
+
+! urxvt spaces fonts wider than other terminals, apparently,
+! but allows reducing it this way:
+URxvt.letterSpace: -1
+
+URxvt*loginShell: true
+
+! Extensions (comma separated):
+! font-size: Enable font size switching on the fly
+! matcher: allow clicking on URLs, but it does not handle multi-line
+! URLs and makes it impossible to select a URL.
+! selection: supposedly make selection configurable with perl defs,
+! but that didn''t work for me.
+! URxvt.perl-ext-common: font-size,selection
+! searchable-scrollback uses M-s to search back.
+URxvt.perl-ext-common: default,font-size,searchable-scrollback,bell-command
+
+! black-on-light-grey scheme:
+URxvt*foreground: black
+URxvt*background: #ecf5ff
+
+! Font size changes: see man urxvt-font-size.
+! Ctrl-+ is bound by default, but since that is a shifted key on US keyboards,
+! bind it to the unshifted key as well.
+URxvt.keysym.C-equal:     font-size:increase
+! It is supposed to be possible to get all open urxvts to increase or decrease,
+! but incglobal/decglobal do not work for me, they still only change one term.
+! URxvt.keysym.C-S-equal:          font-size:incglobal
+! URxvt.keysym.C-S-minus:          font-size:decglobal
+! URxvt.keysym.C-S-Up:   font-size:incglobal
+! URxvt.keysym.C-S-Down: font-size:decglobal
+
+! Whee, urxvt can actually map key sequences:
+! URxvt.keysym.Control-Up: HELLO WORLD
+! URxvt.keysym.Shift-Tab: HELLO WORLD
+! URxvt.keysym.S-Tab: HELLO WORLD
+! URxvt.keysym.Shift-ISO_Left_Tab: string:HELLO
+
+! Allow copy and paste of CLIPBOARD as well as PRIMARY.
+! This requires "default" in the list of extensions.
+! Just adding "clipboard" doesn''t help, but "default" does.
+! URxvt.keysym.Control-Meta-c: builtin-string:
+! URxvt.keysym.Control-Meta-v: builtin-string:
+URxvt.keysym.Shift-Control-V: eval:paste_clipboard
+URxvt.keysym.Shift-Control-C: eval:selection_to_clipboard
+URxvt.keysym.Shift-Control-Insert: eval:paste_clipboard
+URxvt.keysym.M-v: eval:paste_primary
+
+! Don''t waste screen space on ugly scrollbars
+URxvt*scrollBar:  false
+
+! Fade by this percentage when focus is lost
+! URxvt*fading: 10
+
+! Adjust colors that by default aren''t visible on a light background
+! Was light green
+URxvt*color2: ForestGreen
+! URxvt*color10: ForestGreen
+URxvt*color10: rgb:00/aa/00
+! was yellow
+URxvt*color3: dark orange
+URxvt*color11: orange
+! was cyan
+URxvt*color6: cyan4
+URxvt*color14: dark cyan
+! nominally white
+URxvt*color7: white
+URxvt*color15: white
+
+! cutchars to help with URL selection.
+! None of the fancy urxvt extensions like matcher or selection
+! seem to handle this reasonably, but cutchars is okay.
+URxvt*cutchars: \\'`"´()*;<>[]{|}
+!! extra ' for broken xrdb parsing
+
+! urxvt has these weird modes like "keycap insert mode" that pop up
+! when typing things like ctrl-shift. Nobody seems to know or document
+! what they are for -- something about typing special characters,
+! but without documentation they are not very useful.
+URxvt.iso14755: false
+URxvt.iso14755_52: false
+
+! Failed attempts at configuring fancy urxvt features:
+
+! Selection: make it easier to select URLs, among other changes.
+! Doesn't work, seems to be ignored. I think urxvt-selection is obsolete
+! even though it's included by default in the ubuntu package.
+! URxvt*selection.pattern-0: ^.*$
+
+! Ugh, this just makes things worse. It doesn't work as described in the man.
+! With this set, whether or not selection is specified as an extension,
+! clicking in the early parts of ‘757px-Mons_Rümker_Apollo_15.jpg’
+! will include the first single quote, then break before the A in Apollo.
+! Without it, without the selection extension, the single quotes are selected;
+! with the extension, sometimes single quotes are selected, sometimes not.
+! URxvt*cutchars:           BACKSLASH '"'&()*,;<=>?@[]^{|}
+
+! ! key bindings
+! URxvt.matcher.button:       1
+! URxvt.keysym.C-Delete:    matcher:last
+! URxvt.keysym.M-Delete:    matcher:list
+! ! regexps
+! ! .0 for web links
+! ! URxvt.matcher.pattern.1: \\B(/\\S+?):(\\d+)(?=:|$)               ! gcc and all
+! ! URxvt.matcher.pattern.2: (?:\\s)([\\~\\.]?\\/\{1,1\}[\\.\\w]\\S+)\\b
+! ! launchers . Need all 0..x defined
+! URxvt.matcher.launcher.0: xdg-open
+! ! URxvt.matcher.launcher.1: gvim +$2 $1
+! ! URxvt.matcher.launcher.2: emacsclient $1
+! URxvt.urlLauncher:          xdg-open
+
+! URxvt*visualBell:  true
+URxvt.bell-command: aplay -q /home/akkana/Sounds/beeps/SingleClick.wav
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! Xterm colors (includes urxvt)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Green-on-black scheme:
@@ -147,9 +297,11 @@ XTerm*cutchars: \\'`"´()*;<>[]{|}   !' extra quote for broken Xdefaults parser
 !XTerm*faceWeight: bold
 
 ! Good font for the Carbon X1 built-in screen:
-XTerm*faceName: Monoid HalfTight:size=9:antialias=true
+! XTerm*faceName: Monoid HalfTight:size=8:antialias=true
+XTerm*faceName: xft:JetBrains Mono:size=10:antialias=true
 ! but for an external display it needs to be smaller:
-monxterm*faceName: Monoid HalfTight:size=8:antialias=true
+monxterm*faceName: xft:JetBrains Mono:size=8:antialias=true
+! monxterm*faceName: xft:Monoid HalfTight:size=8:antialias=true, \
 
 ! XTerm*faceName: Fantasque Sans Mono:size=13:antialias=true:weight=bold
 ! XTerm*faceName: Fantasque Sans Mono:size=13:antialias=true
@@ -231,150 +383,6 @@ monxterm*faceName: Monoid HalfTight:size=8:antialias=true
     <KeyPress>Next : scroll-forw(1,page)
 
 !*XmScrollBar.width: 10
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!! urxvt
-!!
-!! https://git.madduck.net/etc/xsession.git/blob/HEAD:/.Xresources
-!! https://www.askapache.com/linux/rxvt-xresources/
-!! https://addy-dclxvi.github.io/post/configuring-urxvt/
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-! The term name controls what TERM is set to.
-! Warning: this messes up MacOS which doesn't have this terminal name.
-urxvt*termName: rxvt-unicode-256color
-
-! Specify a main font,
-! plus fallback fonts for characters that are not in the main font.
-! For the main font, Noto, JetBrains and Monoid are all good.
-! FiraCode is also good.
-! JetBrains makes it hard to differentiate zero from eight;
-! with Monoid I am always confusing ell and eye.
-! Noto Sans Mono Semicondensed has Y that is hard to tell from V.
-! Noto Emoji doesn''t work with urxvt, alas, but Symbola at least
-! has monochrome versions of emojis,
-! and supposedly Unifont has good general coverage.
-! URxvt.font: xft:
-URxvt.font: xft:JetBrains Mono:size=9:antialias=true, \
-            xft:Monoid HalfTight:size=8:antialias=true, \
-            xft:Unifont:pixelsize=9:antialias=true, \
-            xft:Symbola
-
-! Failed attempts at getting emojis to work -- apparently urxvt just can't.
-!            xft:Noto Sans Mono:size=9:style=Semicondensed:antialias=true, \
-!            xft:Noto Color Emoji:size=11:antialias=true, \
-
-! URxvt*boldFont: xft:Monoid HalfTight:bold:size=8
-
-! urxvt spaces fonts wider than other terminals, apparently,
-! but allows reducing it this way:
-URxvt.letterSpace: -1
-
-URxvt*loginShell: true
-
-! Extensions (comma separated):
-! font-size: Enable font size switching on the fly
-! matcher: allow clicking on URLs, but it does not handle multi-line
-! URLs and makes it impossible to select a URL.
-! selection: supposedly make selection configurable with perl defs,
-! but that didn''t work for me.
-! URxvt.perl-ext-common: font-size,selection
-! searchable-scrollback uses M-s to search back.
-URxvt.perl-ext-common: default,font-size,searchable-scrollback,bell-command
-
-! black-on-light-grey scheme:
-URxvt*foreground: black
-URxvt*background: #ecf5ff
-
-! Font size changes: see man urxvt-font-size.
-! Ctrl-+ is bound by default, but since that is a shifted key on US keyboards,
-! bind it to the unshifted key as well.
-URxvt.keysym.C-equal:     font-size:increase
-! It is supposed to be possible to get all open urxvts to increase or decrease,
-! but incglobal/decglobal do not work for me, they still only change one term.
-! URxvt.keysym.C-S-equal:          font-size:incglobal
-! URxvt.keysym.C-S-minus:          font-size:decglobal
-! URxvt.keysym.C-S-Up:   font-size:incglobal
-! URxvt.keysym.C-S-Down: font-size:decglobal
-
-! Whee, urxvt can actually map key sequences:
-! URxvt.keysym.Control-Up: HELLO WORLD
-! URxvt.keysym.Shift-Tab: HELLO WORLD
-! URxvt.keysym.S-Tab: HELLO WORLD
-! URxvt.keysym.Shift-ISO_Left_Tab: string:HELLO
-
-! Allow copy and paste of CLIPBOARD as well as PRIMARY.
-! This requires "default" in the list of extensions.
-! Just adding "clipboard" doesn''t help, but "default" does.
-! URxvt.keysym.Control-Meta-c: builtin-string:
-! URxvt.keysym.Control-Meta-v: builtin-string:
-URxvt.keysym.Shift-Control-V: eval:paste_clipboard
-URxvt.keysym.Shift-Control-C: eval:selection_to_clipboard
-URxvt.keysym.Shift-Control-Insert: eval:paste_clipboard
-URxvt.keysym.M-v: eval:paste_primary
-
-! Don''t waste screen space on ugly scrollbars
-URxvt*scrollBar:  false
-
-! Fade by this percentage when focus is lost
-! URxvt*fading: 10
-
-! Adjust colors that by default aren''t visible on a light background
-! Was light green
-URxvt*color2: ForestGreen
-! URxvt*color10: ForestGreen
-URxvt*color10: rgb:00/aa/00
-! was yellow
-URxvt*color3: dark orange
-URxvt*color11: orange
-! was cyan
-URxvt*color6: cyan4
-URxvt*color14: dark cyan
-
-! cutchars to help with URL selection.
-! None of the fancy urxvt extensions like matcher or selection
-! seem to handle this reasonably, but cutchars is okay.
-URxvt*cutchars: \\'`"´()*;<>[]{|}
-!! extra ' for broken xrdb parsing
-
-! urxvt has these weird modes like "keycap insert mode" that pop up
-! when typing things like ctrl-shift. Nobody seems to know or document
-! what they are for -- something about typing special characters,
-! but without documentation they are not very useful.
-URxvt.iso14755: false
-URxvt.iso14755_52: false
-
-! Failed attempts at configuring fancy urxvt features:
-
-! Selection: make it easier to select URLs, among other changes.
-! Doesn't work, seems to be ignored. I think urxvt-selection is obsolete
-! even though it's included by default in the ubuntu package.
-! URxvt*selection.pattern-0: ^.*$
-
-! Ugh, this just makes things worse. It doesn't work as described in the man.
-! With this set, whether or not selection is specified as an extension,
-! clicking in the early parts of ‘757px-Mons_Rümker_Apollo_15.jpg’
-! will include the first single quote, then break before the A in Apollo.
-! Without it, without the selection extension, the single quotes are selected;
-! with the extension, sometimes single quotes are selected, sometimes not.
-! URxvt*cutchars:           BACKSLASH '"'&()*,;<=>?@[]^{|}
-
-! ! key bindings
-! URxvt.matcher.button:       1
-! URxvt.keysym.C-Delete:    matcher:last
-! URxvt.keysym.M-Delete:    matcher:list
-! ! regexps
-! ! .0 for web links
-! ! URxvt.matcher.pattern.1: \\B(/\\S+?):(\\d+)(?=:|$)               ! gcc and all
-! ! URxvt.matcher.pattern.2: (?:\\s)([\\~\\.]?\\/\{1,1\}[\\.\\w]\\S+)\\b
-! ! launchers . Need all 0..x defined
-! URxvt.matcher.launcher.0: xdg-open
-! ! URxvt.matcher.launcher.1: gvim +$2 $1
-! ! URxvt.matcher.launcher.2: emacsclient $1
-! URxvt.urlLauncher:          xdg-open
-
-! URxvt*visualBell:  true
-URxvt.bell-command: aplay -q /home/akkana/Sounds/beeps/SingleClick.wav
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !    GNU emacs, epoch, and xemacs resources
