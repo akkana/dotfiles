@@ -504,6 +504,23 @@
 ;; https://www.gnu.org/software/emacs/manual/html_node/elisp/Default-Coding-Systems.html
 (set-variable 'auto-coding-functions (list 'guess-line-endings))
 
+;; Allow copy from urxvt into emacs to use UTF-8 nonascii characters.
+(set-variable 'selection-coding-system 'utf-8)
+
+;; If that proves inadequate (and it does), some other suggestions from
+;; https://stackoverflow.com/a/2903256
+;; XXX Note that these only affect mouse pasting; they don't help
+;; ctrl-Y insert from selection, which does:
+;; (insert (x-selection (quote PRIMARY)))
+  (setq utf-translate-cjk-mode nil) ; disable CJK coding/encoding (Chinese/Japanese/Korean characters)
+  (set-language-environment 'utf-8)
+  (set-keyboard-coding-system 'utf-8-mac) ; For old Carbon emacs on OS X only
+  (setq locale-coding-system 'utf-8)
+  (set-default-coding-systems 'utf-8)
+  (set-terminal-coding-system 'utf-8)
+  (set-selection-coding-system 'utf-8)
+  (prefer-coding-system 'utf-8)
+
 ;;;;;;;;;;;;; end coding system/newline guessing ;;;;;;;;;;;;;;;;;;;;;;
 
 ;; don't paste syntax highlight color into buffers where it's meaningless.
@@ -672,7 +689,7 @@
 ))
 
 (add-to-list 'auto-insert-alist
-             '((".*\\(lwvweb\\|fairdistricts\\|jemezdarkskies\\).*\\.html$" . "LWVNM HTML file")
+             '((".*\\(lwvweb\\|fairdistrictsnm\\|jemezdarkskies\\).*\\.html$" . "LWVNM HTML file")
                "Title: "
                "<?php\n"
                "  $title = \"" str "\";\n"
@@ -833,23 +850,24 @@
 ;; Want auto-fill-mode for some text and html files, but not all.
 ;; So define two derived modes for that, and we'll use auto-mode-alist
 ;; to choose them based on filename.
-(define-derived-mode html-wrap-mode html-mode "HTML wrap mode"
-  "HTML mode, plus autofill and flyspell"
+;; XXX This doesn't seem to be used any more.
+;; (define-derived-mode html-wrap-mode html-mode "HTML wrap mode"
+;;   "HTML mode, plus autofill and flyspell"
 
-  (message "HTML wrap mode")
+;;   (message "HTML wrap mode")
 
-  (auto-fill-mode)
-  (if (<= (buffer-size) 10000)
-      (progn (flyspell-mode 1)
-             (flyspell-buffer) )
-      (message "Buffer too big, not spellchecking")
-      )
+;;   (auto-fill-mode)
+;;   (if (<= (buffer-size) 10000)
+;;       (progn (flyspell-mode 1)
+;;              (flyspell-buffer) )
+;;       (message "Buffer too big, not spellchecking")
+;;       )
 
-  ;; New annoyance in emacs24: every time you save an html file,
-  ;; it calls a browser on it, replacing whatever's in your current
-  ;; browser window.
-  (html-autoview-mode -1)
-  )
+;;   ;; New annoyance in emacs24: every time you save an html file,
+;;   ;; it calls a browser on it, replacing whatever's in your current
+;;   ;; browser window.
+;;   (html-autoview-mode -1)
+;;   )
 
 ;;  (if (string-match (buffer-local-value 'major-mode (current-buffer))
 ;;                    "html-mode")
@@ -1174,6 +1192,7 @@
   )
 
 ;; Yesterday's date, from http://emacswiki.org/emacs/Journal
+;; This doesn't work on Mar 1 2021: it inserts 2/27, not 2/28
 (defun yesterday-time ()
 "Provide the date/time 24 hours before the time now in the format of current-time."
   (setq
@@ -1433,9 +1452,19 @@
   (electric-indent-local-mode -1)
   ;(font-lock-add-keywords nil bad-whitespace)
   ;(local-set-key "\C-cc" 'comment-region)
+
+  ;; Enable autocomplete using jedi
+  (jedi:setup)
   ;(message "python hook")
   )
 (add-hook 'python-mode-hook 'python-hook-fcn)
+
+;; http://tkf.github.io/emacs-jedi/latest/
+;; Not sure if these are both needed: apt install elpa-elpy elpa-jedi
+; (add-hook 'python-mode-hook 'jedi:setup)
+;; If jedi turns out not to work well, another way involves
+;; emacs-autocomplete plus yasnippet.
+(setq jedi:complete-on-dot t)                 ; optional
 
 ;; THIS DOESN"T WORK, neither javascript-mode-hook nor js2-mode-hook
 ;; gets run.
@@ -1551,6 +1580,8 @@
 
         ;; Don't wrap on LWV HTML files -- they tend to have long lines.
         ("lwvweb/" . web-mode)
+        ;; fairdistricts website is mostly adding long links,
+        ("fairdistrictsnm/" . web-mode)
 
         ;; Make sure changelogs don't use text-wrap-mode -- they're too long,
         ;; and text-mode invokes spellcheck which takes forever.
@@ -1558,7 +1589,8 @@
         ("CHANGELOG" . change-log-mode)
 
         ;; A few special settings by location or name,
-        ;; for files that may not have type-specific extensions:
+        ;; for files that may not have type-specific extensions
+        ;; or that might want to override a setting like auto-fill:
         ("Docs/Lists" . text-mode)
         ("Docs/Lists/books" . text-wrap-mode)
         ; ("blogstuff/" . web-mode)
@@ -1763,7 +1795,7 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(inhibit-startup-screen t)
- '(package-selected-packages (quote (markdown-mode elpy undo-tree)))
+ '(package-selected-packages (quote (jedi markdown-mode elpy undo-tree)))
  '(safe-local-variable-values
    (quote
     ((auto-fill)
