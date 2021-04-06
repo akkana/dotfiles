@@ -414,7 +414,10 @@ grepall() {
 
 # Not really a grep: a crazy filter to use on apache error logs
 # to read Flask output without needing a super-wide terminal.
-alias flaskfilter="sed 's/^.\{12\}\([0-9]\{2\}:[0-9]\{2\}\):[0-9]\{2\}\.[0-9]\{6\} 20[0-9][0-9]\] \[.*\] \[.*\] \[remote \(.*\)]/\1 (\2)/'"
+alias flaskfilter="sed 's/.\{12\}\([0-9]\{2\}:[0-9]\{2\}\).\{70\}\(.*$\)/\1 \2/'"
+# Apache logs start with a lot of cruft that isn't actually important.
+# But keep the date part:
+alias flaskfilter="sed 's/.\{12\}\([0-9]\{2\}:[0-9]\{2\}\).*\] /\1 /'"
 
 # End grep aliases
 
@@ -527,7 +530,16 @@ mov2mpeg4() {
 }
 
 # Extract audio from flash:
-alias tomp3='soundconverter -b -m "audio/mpeg" -s ".mp3"'
+alias flash2mp3='soundconverter -b -m "audio/mpeg" -s ".mp3"'
+
+# Convert Apple AAC .m4a to mp3:
+2mp3() {
+    foreach infile ($*)
+        outfile=$infile:t:r.mp3
+        echo $outfile
+        ffmpeg -v 5 -y -i $infile -acodec libmp3lame -ac 2 -ab 192k $outfile
+    end
+}
 
 # Get resolution of a movie file:
 moviesize() {
@@ -664,21 +676,27 @@ alias projector2='xrandr --output eDP-1 --auto --primary --output HDMI-1 --mode 
 alias noprojector='xrandr --auto; screenblankon'
 # See also my checkmonitor script.
 
+# My external monitor designation depends on whether I'm using a dock.
+# Could be DP-1 or HDMI-1
+extmonitor=HDMI-1
+
 # Configure an external monitor to the right of the current one,
 # at the monitor's native resolution
-alias monx2=' xrandr  --output eDP-1 --auto --output DP-1 --auto --right-of eDP-1'
+alias 2mon=' xrandr  --output eDP-1 --auto --output $extmonitor --auto --right-of eDP-1'
 # alias 2mon='xrandr --auto --output HDMI-1 --auto --above eDP-1'
 
-alias monlaptop='xrandr --output eDP-1 --auto --output DP-1 --off'
-alias monbig='xrandr --output HDMI-1 --auto --output eDP-1 --off'
+alias monlaptop='xrandr --output eDP-1 --auto --output $extmonitor --off'
+alias monbig='xrandr --output $extmonitor --auto --output eDP-1 --off'
 
 # Use the laptop screen at a lower than normal resolution:
 # that way you can screenshare the whole desktop on Zoom without everything
 # looking tiny to the audience.
 # Keep the desktop screen on for other work; Zoom recordings will
 # use the screen the Zoom app is on.
-alias monzoomlaptop='xrandr --output eDP-1 --mode 1024x768 --output DP-1 --auto --right-of eDP-1'
-alias monzoomlaptopdemo='xrandr --output eDP-1 --mode 1440x900 --output DP-1 --auto --right-of eDP-1'
+# This --right-of stuff doesn't work if you start with the extmonitor active.
+# so turn it off first, then back on. The sleep in between may not be needed.
+alias monzoomlaptop='xrandr --output HDMI-1 --off --output eDP-1 --auto; sleep 2; xrandr --output eDP-1 --mode 1024x768 --output $extmonitor --auto --right-of eDP-1'
+alias monzoomlaptopdemo='xrandr --output HDMI-1 --off --output eDP-1 --auto; sleep 2; xrandr --output eDP-1 --mode 1368x768 --output $extmonitor --auto --right-of eDP-1'
 
 # Toggle mute. This doesn't work when called from an openbox key event,
 # but does work from the commandline.
@@ -1121,35 +1139,6 @@ newhexchat() {
     popd_maybe
 }
 
-# Reminder for building firefox.
-# Most of the time this will probably require manual intervention.
-newfox() {
-    # Make sure this exits on errors!
-    setopt localoptions errreturn
-
-    pushd_maybe ~/outsrc/gecko-dev/
-
-    echo_and_do git pull
-    # Sadly, should do a clobber each time, since I build firefox infrequently.
-    # The build almost always has something that breaks due to missing deps.
-    echo_and_do ./mach clobber
-    echo_and_do ./mach build
-    echo_and_do ./mach package
-    echo "Tarball should be in" `pwd`/obj*/dist/firefox/
-}
-
-# Building Firefox tends to overload the CPU, sometimes causing thermal
-# shutdown. Since Linux, amazingly, seems to have no way to automatically
-# throttle back processes based on CPU temp, here's a way to keep an
-# eye on it manually:
-tempwatch() {
-    while true; do
-        echo ''
-        sensors | grep Core
-        sleep 10
-    done
-}
-
 #############################################################
 # Debian apt helpers.
 
@@ -1304,8 +1293,9 @@ alias python2help="pythonXhelp python2"
 alias python3help="pythonXhelp python3"
 
 alias unittest='python3 -m unittest discover'
-alias unittest3='python3 -m unittest discover'
-alias unittest2='python2 -m unittest discover'
+
+# Run unit tests under cProfile
+alias unitprofile='python3 -mcProfile -m unittest discover'
 
 #############################################################
 # Android-related aliases
@@ -1702,6 +1692,18 @@ dayofweek() {
     read d
     date --date=$d +%a
 }
+
+# http://linuxmafia.com/pipermail/conspire/2021-February/011464.html
+tzall () {
+    grepfor="$1"
+    find /usr/share/zoneinfo/* -type f -print \
+        | sed -r 's_/usr/share/zoneinfo/__' \
+        | grep -v -e .tab -e posixrules
+}
+
+# Also be aware of zdump, e.g. zdump America/{Los_Angeles,Phoenix,Denver,Chicago,New_York} Australia/Sydney Europe/{London,Berlin}
+# and, to check a date somewhere else (the 2 levels of quotes are needed):
+# date -d 'TZ="Europe/Berlin" 2021-09-17 7pm'
 
 # Tell aptitude not to limit descriptions to the terminal width
 alias aptitude='/usr/bin/aptitude --disable-columns'

@@ -57,6 +57,8 @@ if [[ $(tty) == /dev/tty1 ]]; then
 
     ########### End Environment
 
+    umask 22
+
     # Start networking if we have a remembered scheme
     # if [[ -f $HOME/.config/netscheme/current ]]; then
     #   netscheme -w -r > /tmp/netscheme-login.out 2>&1 &
@@ -90,11 +92,8 @@ if [[ $(tty) == /dev/tty1 ]]; then
     if [[ $(hostname) == 'charon' ]]; then
         pulsehelper --source none --sink 'Cannon Point Speaker'
         # Incantation to enable all four speakers on Carbon X1 Gen 7
-        # sudo /usr/bin/hda-verb /dev/snd/hwC0D0 0x17 SET_CONNECT_SEL 1
-
-        # Turn on all speakers
         # https://gist.github.com/hamidzr/dd81e429dc86f4327ded7a2030e7d7d9
-        # https://forums.lenovo.com/t5/Ubuntu/Guide-X1-Carbon-7th-Generation-Ubuntu-compatability/m-p/4489823?page=15
+        # https://forums.lenovo.com/t5/Ubuntu/Guide-X1-Carbon-7th-Generation-Ubuntu-compatability/m-p/4489823?page=15#5085965
         sudo /usr/bin/hda-verb /dev/snd/hwC0D0 0x17 SET_CONNECT_SEL 1
     fi
 
@@ -112,7 +111,11 @@ fi
 # Macs don't have rxvt-unicode-256color, and ssh from urxvt will
 # result in all sorts of weird problems in commandline editing,
 # like echoing spaces instead of deleting characters on backspace.
-if [[ $(uname) == Darwin && $TERM == rxvt-unicode-256color ]]; then
+# chishio (which hosts lwvnm) doesn't have it either.
+# XXX Might be better to check existence of
+# /usr/lib/terminfo/r/rxvt-unicode-256color
+# if [[ $(uname) == Darwin && $TERM == rxvt-unicode-256color ]]; then
+if [[ ! -e /usr/lib/terminfo/r/rxvt-unicode-256color ]]; then
     export TERM=rxvt
 fi
 
