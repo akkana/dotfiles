@@ -1455,6 +1455,7 @@
 
   ;; Enable autocomplete using jedi
   (jedi:setup)
+
   ;(message "python hook")
   )
 (add-hook 'python-mode-hook 'python-hook-fcn)
@@ -1464,6 +1465,17 @@
 ; (add-hook 'python-mode-hook 'jedi:setup)
 ;; If jedi turns out not to work well, another way involves
 ;; emacs-autocomplete plus yasnippet.
+
+;; How to show tooltips. '(popup) or nil uses minibuffer,
+;; '(popup) pops up a tooltip window, but it covers the current buffer
+;; and then cuts off on the right because it can't cross the toolbar
+;; https://emacs.stackexchange.com/questions/21685/jedi-popup-window-how-to-make-it-larger-than-its-parent-frame
+;; so it's pretty useless. And unfortauntely there's no way to call up
+;; this info on command, the only way to get it is after a timeout.
+(setq jedi:tooltip-method nil)
+;; Don't pop up tooltips that block the buffer content all the time.
+;; There's apparently no setting that says never pop them up.
+(setq jedi:get-in-function-call-delay 1000000000)
 (setq jedi:complete-on-dot t)                 ; optional
 
 ;; THIS DOESN"T WORK, neither javascript-mode-hook nor js2-mode-hook
