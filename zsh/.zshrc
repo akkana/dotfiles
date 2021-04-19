@@ -190,6 +190,11 @@ alias primary2clip='xsel -p | xsel -i -b'
 # and vice versa:
 alias clip2primary='xsel -b | xsel -i -p'
 
+# Escape sequence for live font changing in urxvt
+# See man 7 urxvt, "Can I switch the fonts at runtime?"
+alias boldfont="printf '\33]50;%s\007' 'xft:Monoisome Tight:size=10:bold:antialias=true'"
+alias unbold="printf '\33]50;%s\007' 'xft:Monoisome Tight:size=9:antialias=true'"
+
 # Convert a selection in HTML to plaintext using xclip:
 htmlsel2text() {
     if xclip -o -t TARGETS | grep -q text/html ; then
@@ -1235,7 +1240,7 @@ alias python23env='switchpythonenv 23'
 # it makes it impossible to deactivate it since deactivate is
 # only defined in the local shell, not in environment variables.
 # But do it in all interactive shells under X.
-if [[ $(tty) =~ '/dev/pts/.*' ]]; then
+if [[ $(tty) =~ '/dev/pts/.*' && -e $HOME/pythonenv/3env/bin/activate ]]; then
     VIRTUAL_ENV_DISABLE_PROMPT=1 source $HOME/pythonenv/3env/bin/activate
 fi
 
