@@ -7,7 +7,14 @@ syntax on
 " the terminal handle it.
 " Turns out I don't need it, but root does. Put it here in case
 " it becomes needed later.
-" set mouse=
+" set mouse= disables all mouse use.
+" set mouse=a enables the mouse sometimes, but it seems sporadic,
+" and it also changes the doubleclick selection criteria so that
+" doubleclick won't select a whole URL.
+set mouse=
+
+" F3 to toggle mouse handling, from hexnewbie
+map <F3> <ESC>:exec &mouse!=""? "set mouse=" : "set mouse=a"<CR>
 
 set background=light
 " Enable 256-bit colorscheme
@@ -67,9 +74,14 @@ set nojoinspaces
 "set modelines=0
 " Yikes -- that turns off being able to use modelines at all! Not worth it.
 set modeline
-" Supposedly this prevents executing arbitrary commands inside modelines
-" in files I don't own.
+" Prevents executing arbitrary commands in various places, but doesn't
+" help with modelines:
 set secure
+
+" This helps with modelines but isn't available until vim 8.1.1366.
+if v:version >= 8.1.1366
+  set nomodelineexpr
+endif
 
 " Highlight trailing whitespace.
 " set list shows it, set nolist un-shows it.
@@ -204,3 +216,18 @@ imap <F1> <Esc>
 
 " Use GIMP style for GIMP files -- see gimp/devel-docs/c.vim
 autocmd BufNewFile,BufRead /home/akkana/outsrc/gimp*/*.[ch] source /home/akkana/outsrc/gimp/devel-docs/c.vim
+
+" Highlight trailing whitespace, which vim sometimes adds
+:highlight ExtraWhitespace ctermbg=white guibg=white
+:match ExtraWhitespace /\s\+$/
+
+" Prevent those trailing whitespaces from being written to a file.
+" But that's not really what I want; I want vim not to add them when
+" editing normally (e.g. auto-wrapping as I type past end of line).
+" I haven't found a solution for that.
+" autocmd BufWritePre *.py :%s/\s\+$//e
+" Here are some alternate ways:
+" autocmd BufWinEnter * match ExtraWhitespace /\s\+$/
+" autocmd InsertEnter * match ExtraWhitespace /\s\+\%#\@<!$/
+" autocmd InsertLeave * match ExtraWhitespace /\s\+$/
+" autocmd BufWinLeave * call clearmatches()
