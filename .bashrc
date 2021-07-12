@@ -19,7 +19,7 @@ fi
 
 # Source global definitions
 if [[ -f /etc/bashrc ]]; then
-	. /etc/bashrc
+    . /etc/bashrc
 fi
 
 # Word erase only back to punctuation.
@@ -28,7 +28,7 @@ fi
 bind '\C-w:backward-kill-word'
 
 # Set path
-export PATH=$HOME/bin:$HOME/bin/linux:/usr/local/gimp-2.3/bin:/usr/local/gimp-2.0/bin:/u/local/j2sdk1.4.2_01/bin:/usr/local/bin:/usr/sbin:/usr/bin:/bin:/usr/bin/X11:.:/opt/kde/bin:/sbin:/usr/games
+export PATH=$HOME/bin:$HOME/bin/linux:/usr/local/bin:/usr/sbin:/usr/bin:/bin:/usr/bin/X11:.:/opt/kde/bin:/sbin:/usr/games
 
 ulimit -c unlimited
 
@@ -38,6 +38,7 @@ ulimit -c unlimited
 # against the black background:
 # rxvt lets me set bold to be a different color that contrasts better
 # than any of the ANSI colors. So use that if possible:
+
 if [[ $TERM == 'rxvt' ]]; then
   export standout="\e[1;m"
 # On a linux console, use magenta because it contrasts with the black bg:
@@ -67,9 +68,11 @@ export LS_COLORS='ex=1;31:ln=1;35'
 export RSYNC_RSH=ssh
 export PHO_ARGS=-p
 
-# aliases
+# aliases and functions
 
+unalias ls
 ls() { /bin/ls -aF --color $* ; }
+unalias ll
 ll() { /bin/ls -laF --color $* ; }
 llt() { /bin/ls -laSFHLt --color $* ; }
 llth() { /bin/ls -laFSHLt --color $* | head ; }
@@ -78,6 +81,7 @@ alias j=jobs
 alias m=mutt
 alias pd=pushd
 alias s=suspend
+
 titlebar() {
   echo ']2;$*'
 }
@@ -149,35 +153,6 @@ alias epsonclean="escputil -r /dev/usblp0 -mC86 -u -c"
 
 # blog stuff
 alias blogupdate='cd ~/web/blogfiles && ./pyblosxom.cgi --static --incremental && ~/bin/blogtopics && mv ../blog/topics.html ../blog/oldtopics.html && mv ../blog/newtopics.html ../blog/topics.html && cd'
-
-# Palm stuff
-export PILOTPORT=/dev/ttyUSB1
-treobak() {
-  rm -rf ~/Pilot/Treo.bak
-  cp -a ~/Pilot/Treo ~/Pilot/Treo.bak
-  pilot-xfer -s ~/Pilot/Treo
-  pluckmemos
-  cp ~/.plucker/html/xtraurls.html ~/web/xtraurls.html
-}
-scoop() {
-  export LANG=C
-  rm -f $HOME/.sitescooper/prc/*.pdb
-  sitescooper $* | setsid tee $HOME/scoop.out 2>&1
-  cat /u/akkana/shallowsky/xtraurls.html >> $HOME/xtraurls.html
-  rm /u/akkana/shallowsky/xtraurls.html
-  ls $HOME/.sitescooper/prc
-}
-rscoop() {
-  rm $HOME/.sitescooper/prc/*
-  nohup sitescooper >& $HOME/scoop.out &
-}
-alias piscoop='pilot-xfer -i ~/.sitescooper/prc/*.pdb'
-alias pils='echo "In ~/.sitescooper/prc : "; ls ~/.sitescooper/prc'
-getscoops() {
-  rm -rf $HOME/bakscoops
-  mv -f $HOME/scoops $HOME/bakscoops
-  scp -r shallowsky.com:.sitescooper/prc $HOME/scoops
-}
 
 # mencoder options are black magic.
 # This works for converting Minolta quicktime .mov to mpeg:
