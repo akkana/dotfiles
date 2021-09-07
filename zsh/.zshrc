@@ -3,6 +3,10 @@
 # Akkana's .zshrc
 #########################
 
+# When debugging problems:
+# echo '============================== .zshrc'
+# set -x
+
 # User specific aliases and functions
 
 # Get noninteractive shells out of here
@@ -58,7 +62,6 @@ setopt printexitvalue
 typeset -U PATH
 
 ulimit -c unlimited
-HISTSIZE=200
 
 # If EDITOR is vim, zsh will try to be "smart" and switch to vi mode.
 # This switches bindings back to emacs:
@@ -173,6 +176,14 @@ alias s=suspend
 alias beep="echo "
 alias ap="man -k"
 
+# Debian removed highlighting from cal,
+# https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=904839
+# for no good reason (their rationale is that it messes up piping
+# to other programs, which makes no sense since highlighting was
+# already disabled if it was a tty),
+# while leaving the documentation unclear. Get highlighting:
+alias cal="ncal -b"
+
 # Run netscheme with sudo -E; it must be root but it also needs access
 # to quickbrowse.
 alias netscheme='sudo -E /home/akkana/src/netutils/netscheme'
@@ -182,7 +193,7 @@ alias netscheme='sudo -E /home/akkana/src/netutils/netscheme'
 # don't set XTerm*allowSendEvents.
 titlebar() {
   # echo ']]2;"$@"'
-  echo -e "\033]0; "$@" \007"
+  echo -e "\033]0; $@ \007"
 }
 
 # Copy the primary selection into the clipboard:
@@ -192,7 +203,7 @@ alias clip2primary='xsel -b | xsel -i -p'
 
 # Escape sequence for live font changing in urxvt
 # See man 7 urxvt, "Can I switch the fonts at runtime?"
-alias boldfont="printf '\33]50;%s\007' 'xft:Monoisome Tight:size=10:bold:antialias=true'"
+alias bold="printf '\33]50;%s\007' 'xft:Monoisome Tight:size=10:bold:antialias=true'"
 alias unbold="printf '\33]50;%s\007' 'xft:Monoisome Tight:size=9:antialias=true'"
 
 # Convert a selection in HTML to plaintext using xclip:
@@ -224,6 +235,14 @@ phof () {
 
 # Simple pastebin via netcat. Pipe input into this.
 alias pastebin='nc termbin.com 9999'
+
+# Make wget use today's date, not the date on the server
+alias wget='wget --no-use-server-timestamps'
+
+# During COVID, I'm keeping meetings in ~/Meetings. Mirror them on Android.
+# Maybe some day I'll find or write a sensible way of actually mirroring
+# Android Calendar entries.
+alias pushmeetings='adb push ~/Meetings $androidSD/Documents/Meetings.txt'
 
 ##################
 # Alias related to file finding and listing:
@@ -604,6 +623,7 @@ kmz2gpx() {
 }
 
 # Convert a pair of UTM coordinates in NM to a GPX file with one waypoint.
+# Usage: utm2gpx 0353315 3954857
 # I don't know how to get the UTM zone if you don't already have it;
 # Barbara just gives me the pair of points without a zone.
 utm2gpx() {
@@ -696,12 +716,12 @@ alias monbig='xrandr --output $extmonitor --auto --output eDP-1 --off'
 # Use the laptop screen at a lower than normal resolution:
 # that way you can screenshare the whole desktop on Zoom without everything
 # looking tiny to the audience.
-# Keep the desktop screen on for other work; Zoom recordings will
+# Keep the external monitor on for other work; Zoom recordings will
 # use the screen the Zoom app is on.
 # This --right-of stuff doesn't work if you start with the extmonitor active.
 # so turn it off first, then back on. The sleep in between may not be needed.
-alias monzoomlaptop='xrandr --output HDMI-1 --off --output eDP-1 --auto; sleep 2; xrandr --output eDP-1 --mode 1024x768 --output $extmonitor --auto --right-of eDP-1'
-alias monzoomlaptopdemo='xrandr --output HDMI-1 --off --output eDP-1 --auto; sleep 2; xrandr --output eDP-1 --mode 1368x768 --output $extmonitor --auto --right-of eDP-1'
+alias monzoomlaptopslides='xrandr --output HDMI-1 --off --output eDP-1 --auto; sleep 2; xrandr --output eDP-1 --mode 1024x768 --output $extmonitor --auto --right-of eDP-1'
+alias monzoomlaptopdemo='xrandr --output HDMI-1 --off --output eDP-1 --auto; sleep 2; xrandr --output eDP-1 --mode 1280x800 --output $extmonitor --auto --right-of eDP-1'
 
 # Toggle mute. This doesn't work when called from an openbox key event,
 # but does work from the commandline.
@@ -921,16 +941,20 @@ usbtinyisp() {
 ####################################################
 # zsh-specific options:
 
-# Lines configured by zsh-newuser-install
-HISTFILE=~/.histfile
-HISTSIZE=1000
-SAVEHIST=1000
-setopt appendhistory notify
-unsetopt autocd
-# End of lines configured by zsh-newuser-install
+HISTFILE=~/.config/zsh/histfile
+# This was set at 1000, but temporarily let's boost it
+# to do some shell history analysis.
+HISTSIZE=10000
+SAVEHIST=$HISTSIZE
 
 # Someone suggested this to avoid losing history on poweroff, etc.
 setopt inc_append_history
+
+# History from past days doesn't include timestamps unless you set this:
+setopt EXTENDED_HISTORY
+
+setopt appendhistory notify
+unsetopt autocd
 
 # This is apparently Ubuntu-specific weirdness:
 #skip_global_compinit=1
@@ -1175,10 +1199,10 @@ check_holds() {
 # python3, since the packages will overwrite each other.)
 #
 # Set each one up once with:
-# virtualenv --system-site-packages ~/pythonenv/2env (python2)
-#   (requires virtualenv and python-virtualenv)
-# python3 -m venv --system-site-packages ~/pythonenv/3env (python3)
+# python3 -m venv --system-site-packages ~/pythonenv/3env   (python3)
 #   (requires python3-venv)
+# virtualenv --system-site-packages ~/pythonenv/2env        (python2)
+#   (requires virtualenv and python-virtualenv)
 #
 # If you need a specific version of Python, try e.g.:
 # sudo apt-get install python3.6 python3.6-venv
@@ -1234,6 +1258,17 @@ switchpythonenv() {
 alias python2env='switchpythonenv 2'
 alias python3env='switchpythonenv 3'
 alias python23env='switchpythonenv 23'
+
+# Create a new temporary env for testing something
+newpythonenv() {
+    nopythonenv
+
+    newenv=$(mktemp -d /tmp/pyenvXXX)
+    echo "Making new virtualenv in $newenv"
+    python3 -m venv --system-site-packages $newenv
+    . $newenv/bin/activate
+    titlebar "Python $newenv"
+}
 
 # Enble python3env by default, no special prompt.
 # Doing this from .zlogin or before starting X isn't recommended;
@@ -1327,8 +1362,9 @@ pullgpx() {
   done
   ls
   # echo Maybe adb push file.gpx $androidSD/GPX/
-  echo Maybe adb push file.gpx $androidSD/Android/data/net.osmand.plus/files/tracks/
+  # echo Maybe adb push file.gpx $androidSD/Android/data/net.osmand.plus/files/tracks/
   echo Maybe adb push file.gpx /storage/emulated/0/Android/data/net.osmand.plus/files/tracks/
+  echo or androidfiles file.gpx android:Android/data/net.osmand.plus/files/tracks/somedir
 }
 
 pullphotos() {
@@ -1563,8 +1599,10 @@ cleanspam() {
             cp /dev/null $folder
         fi
     done
-    tail -7000 $HOME/Procmail/log >$HOME/Procmail/olog
-    rm -f $HOME/Procmail/log
+    if [[ -f $HOME/Procmail/log ]]; then
+      tail -7000 $HOME/Procmail/log >$HOME/Procmail/olog
+      rm -f $HOME/Procmail/log
+    fi
 }
 ############ End spam-related aliases
 

@@ -1,6 +1,10 @@
 # .zlogin happens *after* .zshrc.
 # Use .zprofile for anything that should happen first.
 
+# When debugging problems:
+# echo '============================== .zlogin'
+# set -x
+
 if [[ -f /etc/motd ]]; then
   cat /etc/motd
 fi
@@ -23,7 +27,7 @@ if [[ $(tty) == /dev/tty1 ]]; then
 
     # Set path
     arch=$(uname -m)
-    export PATH=$HOME/bin:$HOME/bin/linux-$arch:/usr/local/bin:$PATH:.:/usr/sbin:/sbin:$HOME/.local/bin
+    export PATH=$HOME/bin:$HOME/bin/linux-$arch:/usr/local/bin:$PATH:/usr/sbin:/sbin:$HOME/.local/bin
 
     if (( ! ${+PYTHONPATH} )); then
         export PYTHONPATH=$HOME/bin/pythonlibs
@@ -72,6 +76,7 @@ if [[ $(tty) == /dev/tty1 ]]; then
     # even if you've specifically set the download directory otherwise.
     echo "Cleaning up bogus directories"
     rm -rf .cache/chromium .cache/google-chrome .macromedia .vlc Downloads Desktop Videos ~/Templates
+    # rm -rf snap/chromium/common/.cache/
 
     # check-spam-blanks
 
