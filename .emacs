@@ -229,9 +229,6 @@
 (define-key global-keys-minor-mode-map (kbd "C-;") 'insert-today-date)
 (define-key global-keys-minor-mode-map (kbd "C-:") 'insert-yesterday-date)
 
-;; Try to disable electric mode in python, but this doesn't work:
-;(define-key global-keys-minor-mode-map (kbd "C-:") 'self-insert)
-
 (define-minor-mode global-keys-minor-mode
   "A minor mode so that global key settings override annoying major modes."
   t "" 'global-keys-minor-mode-map)
@@ -341,23 +338,38 @@
 (set-background-color "#e9fffa")
 
 (custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
+ ;; The emacs init file should contain only one instance of custom-set-faces.
  ;; If there is more than one, they won't work right.
- '(flyspell-duplicate ((((class color)) (:foreground "red" :underline t :weight bold))))
- '(font-lock-comment-face ((((class color) (min-colors 88) (background light)) (:foreground "blue"))))
- '(markdown-bold-face ((t (:foreground "maroon" :weight bold))))
+
+ '(whitespace-trailing
+   ((t (:background "cyan" :foreground "yellow" :weight bold))))
+
+ '(flyspell-duplicate
+   ((((class color)) (:foreground "red" :underline t :weight bold))))
+
+ '(font-lock-comment-face
+   ((((class color) (min-colors 88) (background light)) (:foreground "blue"))))
+
+ '(markdown-bold-face
+   ((t (:family "Monoid HalfTight-7.5" :foreground "dark orchid"
+                :weight bold :height 1.1))))
+ '(markdown-italic-face
+   ((t (:foreground "dark green" :slant italic  :height 1.1))))
+
  '(markdown-code-face ((t (:inherit fixed-pitch :background "ivory1"))))
+
+ '(markdown-header-face
+   ((t (:foreground "maroon" :family "Liberation Serif"
+                    :weight bold :height 1.5))))
  '(markdown-header-face-1 ((t (:inherit markdown-header-face :height 2.0))))
  '(markdown-header-face-2 ((t (:inherit markdown-header-face :height 1.7))))
  '(markdown-header-face-3 ((t (:inherit markdown-header-face :height 1.4))))
  '(markdown-header-face-4 ((t (:inherit markdown-header-face :height 1.1))))
- '(markdown-inline-code-face ((t (:inherit font-lock-constant-face :background "gainsboro"))))
- '(markdown-italic-face ((t (:foreground "navy blue" :slant italic :weight bold))))
+ '(markdown-inline-code-face
+   ((t (:inherit font-lock-constant-face :background "gainsboro"))))
  '(markdown-link-face ((t (:inherit link))))
  '(markdown-pre-face ((t (:background "ivory1" :family "monoid"))))
- '(whitespace-trailing ((t (:background "cyan" :foreground "yellow" :weight bold)))))
+)
 
 (set-face-foreground 'mode-line "yellow")
 (set-face-background 'mode-line "purple")
@@ -1066,7 +1078,7 @@
 
 
 ;; Key bindings and such can be done in the mode hook.
-(defun html-hook ()
+(defun html-hook-fcn ()
   ;; Define keys for inserting tags in HTML and web modes:
   (local-set-key "\C-cb" (lambda () (interactive) (add-html-tag "b")))
   (local-set-key "\C-ci" (lambda () (interactive) (add-html-tag "i")))
@@ -1077,7 +1089,10 @@
   (local-set-key "\C-c4" (lambda () (interactive) (add-html-tag "h4")))
 
   (local-set-key "\C-cp" (lambda () (interactive) (add-html-block "pre")))
+  (local-set-key "\C-cB" (lambda () (interactive) (add-html-block "blockquote")))
 
+  ;; I can never remember if links are on C-c a or C-c l, so use both.
+  (local-set-key "\C-ca" 'add-html-link)
   (local-set-key "\C-cl" 'add-html-link)
 
   ;(local-set-key "\C-m" (lambda () (interactive) (insert "\n")))
@@ -1108,7 +1123,14 @@
 
   ;; Web mode is super aggressive about indenting everything, all the time.
   ;; Try to disable it entirely.
-  ;(setq web-mode-enable-auto-indentation nil)
+  ;; Setting electric-indent-mode to nilhas no effect;
+  ;; The help for c-electric-slash says that setting c-electric-flag
+  ;; to bil will disable it, and describe-variable knows it,
+  ;; but it doesn't show up in autocomplete for set-variable.
+  (setq web-mode-enable-auto-indentation nil)
+
+  (setq c-electric-flag nil)
+  (electric-indent-mode nil)
 
   ;; Indent for web-mode
   (setq web-mode-markup-indent-offset 0)
@@ -1130,8 +1152,8 @@
   ;; Turn off flyspell; we'll turn it on only in html-wrap mode.
   ;(flyspell-mode 0)
 
-  ;(message "Ran html-hook")
-  ;(sleep-for 3)
+  ;; (message "Ran html-hook")
+  ;; (sleep-for 2)
 
   (if (<= (buffer-size) 10000)
       (progn (flyspell-mode 1)
@@ -1142,7 +1164,7 @@
   (dubcaps-mode t)
 
   )
-(add-hook 'sgml-mode-hook 'html-hook)
+(add-hook 'sgml-mode-hook 'html-hook-fcn)
 
 ;; Previous attempts to prevent -- dashed sections -- from screwing up
 ;; auto-fill mode in sgml-mode.
@@ -1176,10 +1198,16 @@ word or non-word."
     (let* ((orig-point              (point))
            (orig-line               (line-number-at-pos))
            (backward-word-point     (progn (backward-word) (point)))
-           (backward-non-word-point (progn (goto-char orig-point) (backward-non-word) (point)))
-           (min-point               (max backward-word-point backward-non-word-point)))
+           (backward-non-word-point (progn (goto-char orig-point)
+                                           (backward-non-word) (point)))
+           (min-point               (max backward-word-point
+                                         backward-non-word-point)))
 
-      (if (< (line-number-at-pos min-point) orig-line) (progn (goto-char min-point) (end-of-line) (delete-horizontal-space))
+      (if (< (line-number-at-pos min-point) orig-line)
+          (progn
+            (goto-char min-point)
+            (end-of-line)
+            (delete-horizontal-space))
         (delete-region min-point orig-point)
         (goto-char min-point))
       )))
@@ -1193,10 +1221,13 @@ word or non-word."
   (forward-char))
 
 (defun web-mode-hook-fcn ()
-  "Hooks for Web mode."
+  "Hooks for Web mode, which also calls html-hook-fcn."
 
   ;; Start with everything that's in the html-mode hook:
-  (html-hook)
+  (html-hook-fcn)
+
+  ;; (message "web-mode hook")
+  ;; (sleep-for 2)
 
   ;; Disable indentation for HTML and CSS, while keeping it for PHP and JS.
   ;; Unfortunately web-mode often ignores this.
@@ -1221,7 +1252,19 @@ word or non-word."
   ;; css-indent-offset             ; css-mode
 
 )
+
 (add-hook 'web-mode-hook 'web-mode-hook-fcn)
+
+(defun php-mode-hook-fcn ()
+  "Hooks for PHP mode, which also calls web-mode-hook-fcn and html-hook-fcn."
+  (web-mode-hook-fcn)
+
+  (no-electric php-mode-map)
+  ;; (message "php-mode hook")
+  ;; (sleep-for 2)
+  )
+
+(add-hook 'php-mode-hook 'php-mode-hook-fcn)
 
 ;; Turn off auto-indentation in web mode: it does all kinds of crazy
 ;; things and makes HTML difficult to edit:
