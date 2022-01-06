@@ -35,26 +35,27 @@
 
     ;; Small laptops
     (if (<= (x-display-pixel-height) 768)
-        (set-default-font "-misc-fixed-bold-r-normal-*-14-*-*-*-*-*-*-*")
+        (set-frame-font "-misc-fixed-bold-r-normal-*-14-*-*-*-*-*-*-*")
 
         ;; X1C display
         (if (<= (x-display-pixel-height) 1080)
             ;; JetBrains doesn't display the same in emacs as in urxvt,
             ;; and ends up taking up a lot of extra vertical space.
-            ; (set-default-font "Monoid HalfTight-8:bold")
-            (set-default-font "JetBrains Mono-10:bold")
+            ; (set-frame-font "Monoid HalfTight-8:bold")
+            (set-frame-font "JetBrains Mono-11:bold")
 
             ;; full monitor
-            (set-default-font "Monoid HalfTight-7.5")
-            ; (set-default-font "JetBrains Mono-9")
+            (set-frame-font "Monoid HalfTight-7.5")
+            ; (set-frame-font "JetBrains Mono-9")
         ))
 
     ;; for the height, subtract a couple hundred pixels
     ;; from the screen height (for panels, menubars and
     ;; whatnot), then divide by the height of a char to
     ;; get the height we want
-    (let ((newheight  (+ 5 (floor (/ (* (x-display-pixel-height) 0.8)
-                                     (frame-char-height))))))
+    (let ((newheight  (+ (floor (/ (* (x-display-pixel-height) 0.55)
+                                   (frame-char-height)))
+                         22)))
       (message (format "New height: %d" newheight))
       (set-frame-height (selected-frame) newheight)
       )
@@ -84,26 +85,26 @@
 ;; However, general.el might be worth investigating,
 ;; https://github.com/noctuid/general.el
 (defun global-settings ()
-  (interactive)
 
-(global-set-key "\C-h" 'delete-backward-char)
-(global-set-key "\C-w" 'backward-kill-word)
-(global-set-key "\C-x\C-c" 'save-buffers-kill-emacs)
-(global-set-key "\C-x\C-v" 'find-file-other-window)
-(global-set-key "\C-xs" 'save-buffer)
-(global-set-key "\M-w" 'kill-region)
-;(global-set-key "\C-m" 'newline-and-indent)
-(global-set-key (kbd "RET") 'newline-and-indent)
-(global-set-key "\C-cc" 'comment-region)
-(global-set-key "\C-cC" 'uncomment-region)
+  (global-set-key "\C-h" 'delete-backward-char)
+  (global-set-key "\C-w" 'backward-kill-word)
+  (global-set-key "\C-x\C-c" 'save-buffers-kill-emacs)
+  (global-set-key "\C-x\C-v" 'find-file-other-window)
+  (global-set-key "\C-xs" 'save-buffer)
+  (global-set-key "\M-w" 'kill-region)
+  (global-set-key "\C-m" 'newline-and-indent)
+  (global-set-key (kbd "RET") 'newline-and-indent)
+  (global-set-key "\C-cc" 'comment-region)
+  (global-set-key "\C-cC" 'uncomment-region)
 
-;; Zooming
-(global-set-key (kbd "C-x C-=") 'zoom-in)
-(global-set-key (kbd "C-x C--") 'zoom-out)
-;(global-set-key (kbd "C-x C-0") 'zoom-frm-unzoom)
-(global-set-key (kbd "C-x C-0") 'set-frame-size-by-resolution)
+  ;; Zooming
+  (global-set-key (kbd "C-x C-=") 'zoom-in)
+  (global-set-key (kbd "C-x C--") 'zoom-out)
+  ;(global-set-key (kbd "C-x C-0") 'zoom-frm-unzoom)
+  (global-set-key (kbd "C-x C-0") 'set-frame-size-by-resolution)
 
-(setq indent-tabs-mode nil)
+  (setq indent-tabs-mode nil)
+
 ) ;; end global-key-bindings
 
 (global-settings)
@@ -123,13 +124,19 @@
 ;; However, that isn't enough. yank (for PRIMARY) and clipboard-paste
 ;; (for CLIPBOARD) each sometimes replaces the other's selection.
 ;; Here's a more reliable way to do it, and also turn off
-;; emacs' annoying habit of pasting colors from unrelated buffers:
-(global-set-key (kbd "C-y")
-                (lambda () (interactive)
-                  (insert (x-selection 'PRIMARY))))
+;; emacs' annoying habit of pasting colors from unrelated buffers.
+;; HOWEVER: x-selection and gui-get-selection both ignore the
+;; current charset, e.g. they paste 326 instead of Ö.
+;; (global-set-key (kbd "C-y")
+;;                 (lambda () (interactive)
+;;                   ;; (insert (x-selection 'PRIMARY))))
+;;                   (insert (gui-get-selection 'PRIMARY))))
+;; But this doesn't handle any nonascii characters that might be
+;; in the selection.
+;; mouse-yank-primary does the right thing.
 (global-set-key (kbd "C-S-v")
                 (lambda () (interactive)
-                  (insert (x-selection 'CLIPBOARD))))
+                  (insert (gui-get-selection 'CLIPBOARD))))
 ;; If emacs goes back to retaining syntax highlighting colors
 ;; inappropriately on paste, change both of those like this:
 ;; (insert (substring-no-properties (x-selection 'PRIMARY)))
@@ -177,7 +184,15 @@
 ;; electrics everywhere, then rebind } to indent the current line
 ;; after inserting. Of course this doesn't really turn off electrics
 ;; everywhere, anyway.
-(setq electric-indent-mode nil)
+;(setq electric-indent-mode nil)
+;; Someone on #emacs suggests that this works better:
+;(electric-indent-mode nil)
+
+;; Despite the previous two lines, electric mode always ends up on anyway.
+;; https://emacs.stackexchange.com/a/20899 claims this will tame
+;; the worst part of electric indent, the re-indentation of the
+;; current line, which I never ever want under any circumstances:
+(setq-default electric-indent-inhibit t)
 
 ;; Electric mode has recently taken over (newline), so we have to do this:
 (if (fboundp 'electric-indent-just-newline)
@@ -211,7 +226,7 @@
   "global-keys-minor-mode keymap.")
 
 (define-key global-keys-minor-mode-map "\C-c\C-r" 'revert-buffer)
-(define-key global-keys-minor-mode-map (kbd "C-;") 'insert-date)
+(define-key global-keys-minor-mode-map (kbd "C-;") 'insert-today-date)
 (define-key global-keys-minor-mode-map (kbd "C-:") 'insert-yesterday-date)
 
 ;; Try to disable electric mode in python, but this doesn't work:
@@ -471,55 +486,76 @@
       patcount
       )))
 
-;; XXX size argument is currently ignored, and shouldn't be!
-(defun guess-line-endings (size)
+(defun guess-line-endings ()
   "Guess whether a file has Unix, Mac or Windows line endings. If the file ends with a newline/cr, Emacs can handle this on its own; but on files with no final newline, Emacs gets confused."
   (interactive)
-  ;(message "Trying to guess line endings on %S" (buffer-name))
-  ;(sleep-for 1)
-  ;(message "")
+  ;; (message "Trying to guess line endings on %S" (buffer-name))
+  ;; (sleep-for 1)
+  ;; (message "")
   (save-excursion
     (goto-char (point-max))
-    (let ((lastchar (char-before)))
-      (if (or (char-equal lastchar ?\n) (char-equal lastchar ?\r))
-          (progn
-            ;(message "the file ends with a newline")
-            ;(sleep-for 1)
-            nil)
+    ;; (let ((lastchar (char-before)))
+    ;;   (if (or (char-equal lastchar ?\n) (char-equal lastchar ?\r))
+    ;;       (progn
+    ;;         (message "the file ends with a newline")
+    ;;         (sleep-for 1)
+    ;;         nil)
           (let* ((win (count-pat "\r\n"))
                  (unix (- (count-pat "\n") win))
                  (mac  (- (count-pat "\r") win))
                  (few 5)
                  )
-            ;(message "unix %d mac %d win %d" unix mac win)
-            ;(sleep-for 4)
+            (message "unix %d mac %d win %d" unix mac win)
+            (sleep-for 4)
             (cond
              ((and (> unix few) (< mac few)  (< win few)) 'utf-8-unix)
              ((and (> mac few)  (< unix few) (< win few)) 'utf-8-mac)
              ((and (> win few)  (< unix few) (< mac few)) 'utf-8-dos)
              (t nil))
-)))))
+))) ;;)
 
 ;; Run on every file to as a pre-check for newlines/coding system:
 ;; https://www.gnu.org/software/emacs/manual/html_node/elisp/Default-Coding-Systems.html
-(set-variable 'auto-coding-functions (list 'guess-line-endings))
+;; but this doesn't actually help, e.g. Spektrum SPM files
+;; and this doesn't make it automatically run, anyway.
+;;(set-variable 'auto-coding-functions (list 'guess-line-endings))
+
+;; The preceding sounds nice, but doesn't actually do anything.
+;; Force mac line break interpretation for SPM files.
+(modify-coding-system-alist 'file "\\.SPM\\'" 'utf-8-mac)
+
 
 ;; Allow copy from urxvt into emacs to use UTF-8 nonascii characters.
+;; But apparently this is for things copied IN emacs,
+;; not things copied in other apps and pasted into emacs.
 (set-variable 'selection-coding-system 'utf-8)
 
 ;; If that proves inadequate (and it does), some other suggestions from
 ;; https://stackoverflow.com/a/2903256
 ;; XXX Note that these only affect mouse pasting; they don't help
 ;; ctrl-Y insert from selection, which does:
-;; (insert (x-selection (quote PRIMARY)))
-  (setq utf-translate-cjk-mode nil) ; disable CJK coding/encoding (Chinese/Japanese/Korean characters)
-  (set-language-environment 'utf-8)
-  (set-keyboard-coding-system 'utf-8-mac) ; For old Carbon emacs on OS X only
-  (setq locale-coding-system 'utf-8)
-  (set-default-coding-systems 'utf-8)
-  (set-terminal-coding-system 'utf-8)
-  (set-selection-coding-system 'utf-8)
-  (prefer-coding-system 'utf-8)
+;; (insert (gui-get-selection (quote PRIMARY)))
+(setq utf-translate-cjk-mode nil) ; disable CJK coding/encoding (Chinese/Japanese/Korean characters)
+(set-language-environment 'utf-8)
+; (set-keyboard-coding-system 'utf-8-mac) ; For old Carbon emacs on OS X only
+(set-keyboard-coding-system 'utf-8)
+(setq locale-coding-system 'utf-8)
+(set-default-coding-systems 'utf-8)
+(set-terminal-coding-system 'utf-8)
+(set-selection-coding-system 'utf-8)
+(prefer-coding-system 'utf-8)
+
+;; XXX How can I get (x-selection 'PRIMARY) to use utf-8?
+;; F1 C RET (or M-x describe-coding-system RET) lists coding systems in use:
+;; they're all utf-8 except
+;; Coding system for keyboard input:
+;;   U -- utf-8-unix (alias: mule-utf-8-unix cp65001-unix)
+;; https://ftp.gnu.org/old-gnu/Manuals/emacs-20.7/html_node/emacs_197.html
+;; says I can change that with
+;; C-x RET k utf-8 RET
+;; but it doesn't work: after that sequence, F1 C RET still
+;; lists they keyboard input coding system as utf-8-unix.
+
 
 ;;;;;;;;;;;;; end coding system/newline guessing ;;;;;;;;;;;;;;;;;;;;;;
 
@@ -715,8 +751,8 @@
   "Go to the matching paren if on a paren; otherwise insert %."
   (interactive "p")
   (cond ((looking-at "\\s\(") (forward-list 1) (backward-char 1))
-	((looking-at "\\s\)") (forward-char 1) (backward-list 1))
-	(t (self-insert-command (or arg 1)))))
+        ((looking-at "\\s\)") (forward-char 1) (backward-list 1))
+        (t (self-insert-command (or arg 1)))))
 
 (defun fixm ()
   "Change line breaks to Unix style. This no longer works because emacs tries to figure out line encodings on its own now, often gets it wrong but that overrides attempts to change things."
@@ -921,8 +957,8 @@
   ;; So, only use it when we really need it.
   ;(flyspell-mode 1)
   ;(flyspell-buffer)
-  (local-set-key (kbd "C-;") 'insert-date)
-  (global-set-key (kbd "C-;") 'insert-date)
+  (local-set-key (kbd "C-;") 'insert-today-date)
+  (global-set-key (kbd "C-;") 'insert-today-date)
   (local-set-key (kbd "C-:") 'insert-yesterday-date)
   (global-set-key (kbd "C-:") 'insert-yesterday-date)
   (dubcaps-mode t)
@@ -944,43 +980,94 @@
 ;; And anyway, whatever smarts (sgml-tag) offers beyond just inserting the
 ;; tag is stuff I don't use. So let's just write something simple that
 ;; works without prompting or inserting a bunch of extra crap.
-(defun add-html-tag (tag) (interactive)
+
+;; Add an inline HTML tag:
+(defun add-html-tag (tag) (interactive "sHTML Tag")
   (let (
         (rstart (if (region-active-p) (region-beginning) (point)))
         (rend   (if (region-active-p) (region-end)       (point))))
+
     ;; Insert the close tag first, because inserting the open tag
     ;; will mess up the rend position.
     (goto-char rend)
-    (insert "</")
-    (insert tag)
-    (insert ">")
+    (insert "</" tag ">")
+
     ;; Now the open tag:
     (goto-char rstart)
-    (insert "<")
-    (insert tag)
-    (insert ">")
+    (insert "<" tag ">")
 ))
+
 ;; Plus one that *does* add newlines:
-(defun add-html-block (tag) (interactive)
+(defun add-html-block (tag) (interactive "sHTML Block")
   (let (
         (rstart (if (region-active-p) (region-beginning) (point)))
         (rend   (if (region-active-p) (region-end)       (point))))
+
     ;; Insert the close tag first, because inserting the open tag
     ;; will mess up the rend position.
     (goto-char rend)
-    (insert "\n</")
-    (insert tag)
-    (insert ">\n")
+    (insert "</" tag ">\n")
+
     ;; Now the open tag:
     (goto-char rstart)
-    (insert "<")
-    (insert tag)
-    (insert ">\n")
+    (insert "<" tag ">\n")
 ))
+
+;; and a special function for <a href= that tries to be smart about
+;; whether the current selection is a URL or link text.
+
+;; First we need a way of checking whether the region contains a URL:
+;; (interactive "r") means the function will have two arguments,
+;; the current region's start and end. If no region is selected,
+;; this will usually give an error, "the mark is not set now".
+(defun url-in-region (start end) (interactive "r")
+  (save-excursion
+    (goto-char start)
+    (re-search-forward "://" end t)
+    ))
+
+;; And, given that, here's the link-adding function:
+(defun add-html-link () (interactive)
+  (let ((href     "")
+        (linktext "")
+        (start    (point))
+        (end      (point))
+        )
+
+    (if (region-active-p)
+      (progn
+        (setq start (region-beginning))
+        (setq end   (region-end))
+
+        (if (url-in-region start end)
+          (setq href     (buffer-substring-no-properties start end))
+          (setq linktext (buffer-substring-no-properties start end))
+          )
+
+        (kill-region start end)
+      )
+    )
+
+    (insert "<a href=\"" href "\">" linktext "</a>")
+
+    ;; Move the cursor to a useful place. By default it's at the end
+    ;; of the inserted text.
+    (if (string-empty-p href)
+        ;; No href, put the cursor there
+        (progn
+          (goto-char start)
+          (forward-char 9))
+        (if (string-empty-p linktext)
+          ;; href but no link text, put the cursor there
+          ;; Already at end, no need to (goto-char end)
+          (backward-char 4))
+    )
+))
+
 
 ;; Key bindings and such can be done in the mode hook.
 (defun html-hook ()
-  ;; Define keys for inserting tags in HTML mode:
+  ;; Define keys for inserting tags in HTML and web modes:
   (local-set-key "\C-cb" (lambda () (interactive) (add-html-tag "b")))
   (local-set-key "\C-ci" (lambda () (interactive) (add-html-tag "i")))
   (local-set-key "\C-cc" (lambda () (interactive) (add-html-tag "code")))
@@ -990,6 +1077,8 @@
   (local-set-key "\C-c4" (lambda () (interactive) (add-html-tag "h4")))
 
   (local-set-key "\C-cp" (lambda () (interactive) (add-html-block "pre")))
+
+  (local-set-key "\C-cl" 'add-html-link)
 
   ;(local-set-key "\C-m" (lambda () (interactive) (insert "\n")))
 
@@ -1019,7 +1108,7 @@
 
   ;; Web mode is super aggressive about indenting everything, all the time.
   ;; Try to disable it entirely.
-  (setq web-mode-enable-auto-indentation nil)
+  ;(setq web-mode-enable-auto-indentation nil)
 
   ;; Indent for web-mode
   (setq web-mode-markup-indent-offset 0)
@@ -1074,6 +1163,35 @@
 ;; and it also handles PHP and JS (sort of).
 (autoload 'web-mode "web-mode" "Web Mode")
 
+;; backward-kill-word is from Mars on PHP files. It kills whole clauses.
+;; This improves its behavior.
+;; https://emacs.stackexchange.com/a/13063
+;; Unfortunately it loses the nice property of backward-kill-word
+;; that consecutive word kills can all be restored with a single yank.
+(defun dwim-backward-kill-word ()
+  "DWIM kill characters backward until encountering the beginning of a
+word or non-word."
+  (interactive)
+  (if (thing-at-point 'word) (backward-kill-word 1)
+    (let* ((orig-point              (point))
+           (orig-line               (line-number-at-pos))
+           (backward-word-point     (progn (backward-word) (point)))
+           (backward-non-word-point (progn (goto-char orig-point) (backward-non-word) (point)))
+           (min-point               (max backward-word-point backward-non-word-point)))
+
+      (if (< (line-number-at-pos min-point) orig-line) (progn (goto-char min-point) (end-of-line) (delete-horizontal-space))
+        (delete-region min-point orig-point)
+        (goto-char min-point))
+      )))
+
+(defun backward-non-word ()
+  "Move backward until encountering the beginning of a non-word."
+  (interactive)
+  (search-backward-regexp "[^a-zA-Z0-9\s\n]")
+  (while (looking-at "[^a-zA-Z0-9\s\n]")
+    (backward-char))
+  (forward-char))
+
 (defun web-mode-hook-fcn ()
   "Hooks for Web mode."
 
@@ -1087,7 +1205,11 @@
 
   ;; Since that doesn't work and there's apparently no way to turn off
   ;; indentation in web-mode, at least don't do it on newline.
-  (local-set-key (kbd "RET") 'newline)
+  ;(local-set-key (kbd "RET") 'newline)
+
+  ;; web-mode's backward-kill-word is terrible on PHP files;
+  ;; but now that I found a PHP mode, maybe it doesn't matter so much.
+  ;; (local-set-key "\C-w" 'dwim-backward-kill-word)
 
   ;; The possible indent variables:
   ;; coffee-tab-width              ; coffeescript
@@ -1109,7 +1231,7 @@
 
 ;; Run this on a region inside a <pre> to convert chars like < into entities.
 (defun unhtml (start end)
-  (interactive "r")
+  (interactive "rStart" "rEnd")
   (save-excursion
     (save-restriction
       (narrow-to-region start end)
@@ -1181,7 +1303,7 @@
 ;; http://ergoemacs.org/emacs/elisp_datetime.html
 (defun insert-date (&optional time)
   "Insert current date yyyy-mm-dd."
-  (interactive)
+  (interactive "sDate")
   (when (region-active-p)
     (delete-region (region-beginning) (region-end) )
     )
@@ -1190,6 +1312,11 @@
   ; (insert (format "%s" time))
   (insert (format-time-string "%Y-%m-%d" time))
   )
+
+(defun insert-today-date ()
+  "Insert today's date yyyy-mm-dd."
+  (interactive)
+  (insert-date))
 
 ;; Yesterday's date, from http://emacswiki.org/emacs/Journal
 ;; This doesn't work on Mar 1 2021: it inserts 2/27, not 2/28
@@ -1228,7 +1355,7 @@
 ;;   (facemenu-set-foreground COLOR &optional START END)
 ;; or nil, in which case style will be removed.
 (defun rich-style (style) "Set a style in rich-text-mode"
-  (interactive)
+  (interactive "sStyle (e.g. bold)")
   (let* ((start (if (use-region-p)
                     (region-beginning) (line-beginning-position)))
          (end   (if (use-region-p)
@@ -1286,14 +1413,14 @@
 
 (defun get-and-insert-image (progname imgdir flags)
   "Prompt for a filename, prepend img/ and append .jpg if needed, then insert a URL for it into the buffer and run a program"
-  (interactive)
+  (interactive "sProgram name" "sImage Dir" "sFlags")
   (let* ((imgfile (read-string "Filename? " imgdir 'my-history))
          (imgfile (if (string-match "\\." imgfile)
                       imgfile
                       ;; (mapconcat 'identity '(imgfile "jpg") ".")
                       (concat imgfile ".jpg")
                       ))
-         (excpath (concat "/usr/bin/" progname))
+         (excpath (concat "/usr/bin/" progname " " flags))
          )
     ; (message (format "filename: %s, progname: %s" imgfile progname))
     ; (sleep-for 3)
@@ -1454,7 +1581,8 @@
   ;(local-set-key "\C-cc" 'comment-region)
 
   ;; Enable autocomplete using jedi
-  (jedi:setup)
+  ;; Commented out for now, until I figure out how to prevent annoying popups.
+  ;(jedi:setup)
 
   ;(message "python hook")
   )
@@ -1509,6 +1637,8 @@
 (setq c-brace-imaginary-offset 0)
 (setq c-argdecl-indent 0)
 (setq c-label-offset -2)
+;; Indent case labels relative to the case statement:
+(c-set-offset 'case-label '+)
 
 ;; C++-mode variables for Netscape and cc-mode.el:
 ;; see /tools/ns/share/emacs/19.33/lisp/cc-mode.el for more details.
@@ -1534,6 +1664,23 @@
   (c-set-style "linux"))
 (define-derived-mode web-wrap-mode web-mode "Web Wrap Mode"
   (auto-fill-mode))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; change-log-mode should allow tabs
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun change-log-hook ()
+  (electric-indent-local-mode)
+  (setq indent-tabs-mode t)
+  ; These didn't work:
+  ; (local-set-key (kbd "<S-return>") 'newline)
+  ; (define-key change-log-mode-map (kbd "<S-return>") 'newline)
+  ; (define-key change-log-mode-map (kbd "<S-return>") 'self-insert-command)
+  ; This one did, but it turns out it isn't needed:
+  ; with electric-indent-local-mode
+  ; (define-key change-log-mode-map (kbd "<S-return>")
+  ;   (lambda () (interactive) (insert "\n")))
+)
+(add-hook 'change-log-mode-hook 'change-log-hook)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; auto-mode-alist: Modes to use on specific files.
@@ -1567,7 +1714,6 @@
         ("\\.html$" . web-wrap-mode)
         ;("\\.xml$" . xml-mode)
         ;("\\.gpx$" . xml-mode)
-        ("\\.md$" . markdown-mode)
         ("\\.js$" . javascript-mode)
         ("\\.r$" . r-mode)
         ("\\.gpx$" . xml-mode)
@@ -1575,15 +1721,10 @@
         ("\\.img$" . text-img-mode)
         ("\\.zsh\\'" . sh-mode)
 
-        ;; Spektrum transmitter model definition files
-        ;;("\\.SPM$" . spektrum-mode)
-
-        ;; Use web-mode by default for PEEC files:
-        ("web/peec" . web-mode)
-        ;; If there's a PHP mode installed, use it instead:
-        ;; ("\\.php" . php-mode)
-        ;; Otherwise use web mode:
-        ("\\.php" . web-mode)
+        ;; Spektrum transmitter model definition files:
+        ;; line endings are screwy, don't try to change them
+        ;; or wrap long lines or otherwise add line endings.
+        ;; ("\\.SPM$" . hexl-mode)
 
         ; STS are Nightshade "strato scripts", with no particular syntax
         ; except that they do have a comment syntax defined.
@@ -1608,6 +1749,9 @@
         ; ("blogstuff/" . web-mode)
         ("Docs/gimp/book/notes" . text-wrap-mode)
         ("README" . text-wrap-mode)
+        ;; Markdown mode rule should follow README rule, so that
+        ;; README.md gets the right mode.
+        ("\\.md$" . markdown-mode)
         ;; Book used to be longlines mode, but that was too flaky.
         ("Docs/gimp/book/" . text-wrap-mode)
 
@@ -1623,6 +1767,15 @@
         ("Docs/classes/welding/" . text-wrap-mode)
 
         ))
+
+
+;; If there's a PHP mode installed, use it instead:
+(if (condition-case nil (require 'php-mode) (error nil))
+    (add-to-list 'auto-mode-alist '("\\.php" . php-mode))
+
+    ;; Otherwise use web mode:
+    (add-to-list 'auto-mode-alist '("\\.php" . web-mode))
+    )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Autocomplete stuff
