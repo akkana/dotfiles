@@ -1076,6 +1076,16 @@
     )
 ))
 
+;; In HTML modes, turn ' -- ' to &mdash;
+(defun dashes-to-mdash ()
+  "Convert ' -- ' to &mdash;"
+  (interactive)
+  (if (looking-back " -- ")
+      (progn
+       (backward-delete-char 4)
+       (insert " &mdash; ")
+       )))
+
 
 ;; Key bindings and such can be done in the mode hook.
 (defun html-hook-fcn ()
@@ -1112,6 +1122,9 @@
   ;; And finally, a generic shorthand to use with other tags:
   ;; Consider changing this to use add-html-tag instead.
   (local-set-key "\C-ct"  (lambda () (interactive) (sgml-tag)))
+
+  ;; Convert " -- " to &mdash;
+  (add-hook 'post-self-insert-hook #'dashes-to-mdash nil 'local)
 
   ;; Contents of <pre> tags get reindented, destroying their formatting.
   ;; You can avoid that by not inserting a newline, same as with <code>,
