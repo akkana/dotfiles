@@ -10,8 +10,9 @@ if [[ -f /etc/motd ]]; then
 fi
 
 # Things to do only when logged on to the console, so only once
-# per session:
-if [[ $(tty) == /dev/tty1 ]]; then
+# per session. Under X, that will happen on tty1.
+# But if SSH_TTY is set then we're ssh'ed and can't rely on tty1.
+if [[ $(tty) == /dev/tty1 || ! -z "$SSH_TTY" ]]; then
     # GTK needs this to pay attention to .XCompose bindings.
     # Except maybe it doesn't anyway.
 #    export GTK_IM_MODULE=xim
@@ -75,7 +76,7 @@ if [[ $(tty) == /dev/tty1 ]]; then
     # Firefox in particular loves to create Downloads and Desktop
     # even if you've specifically set the download directory otherwise.
     echo "Cleaning up bogus directories"
-    rm -rf .cache/chromium .cache/google-chrome .macromedia .vlc Downloads Desktop Videos ~/Templates
+    rm -rf .cache/chromium .cache/google-chrome .macromedia .vlc Downloads Desktop Videos ~/Templates "~/Calibre Library"
     # rm -rf snap/chromium/common/.cache/
 
     # check-spam-blanks
@@ -95,11 +96,13 @@ if [[ $(tty) == /dev/tty1 ]]; then
     alias xx='startx >~/.Xout 2>&1'
 
     if [[ $(hostname) == 'charon' ]]; then
-        pulsehelper --source none --sink 'Cannon Point Speaker'
+        # mute the microphone, set the builtin speakers as default output:
+        # pulsehelper --source none --sink builtin
+
         # Incantation to enable all four speakers on Carbon X1 Gen 7
         # https://gist.github.com/hamidzr/dd81e429dc86f4327ded7a2030e7d7d9
         # https://forums.lenovo.com/t5/Ubuntu/Guide-X1-Carbon-7th-Generation-Ubuntu-compatability/m-p/4489823?page=15#5085965
-        sudo /usr/bin/hda-verb /dev/snd/hwC0D0 0x17 SET_CONNECT_SEL 1
+        # sudo /usr/bin/hda-verb /dev/snd/hwC0D0 0x17 SET_CONNECT_SEL 1
     fi
 
     # End things to do only on tty1
@@ -126,15 +129,21 @@ fi
 
 export XDG_UTILS_DEBUG_LEVEL=99
 
+if [[ -s ~/.reminders ]]; then
+    echo "==================================================="
+    cat ~/.reminders
+fi
+
 if [[ $(hostname) == 'charon' ]]; then
     echo "==================================================="
-    rancmd() {
-        echo "Random command of the day:"
-        ranman=$(ls -1 /usr/share/man/man1/ /usr/share/man/man8 | shuf -n 1)
-        echo "(from $ranman)"
-        man -f $(echo $ranman | sed 's_\.[0-9].*__')
-    }
-    rancmd
+
+    # rancmd() {
+    #     echo "Random command of the day:"
+    #     ranman=$(ls -1 /usr/share/man/man1/ /usr/share/man/man8 | shuf -n 1)
+    #     echo "(from $ranman)"
+    #     man -f $(echo $ranman | sed 's_\.[0-9].*__')
+    # }
+    # rancmd
 
     if [[ -x /usr/bin/remind && -e ~/Docs/Lists/remind ]]; then
         echo "==================================================="
@@ -144,7 +153,12 @@ if [[ $(hostname) == 'charon' ]]; then
     acpi
 fi
 
-if [[ -s ~/.reminders ]]; then
-    echo "==================================================="
-    cat ~/.reminders
+# Check whether a system update started clearing the console again
+if grep TTYVTDisallocate=yes /etc/systemd/system/getty.target.wants/getty@tty1.service >&/dev/null
+then
+    echo
+    echo "*****************"
+    echo '/etc/systemd/system/getty.target.wants/getty@tty1.service"
+    echo "had TTYVTDisallocate set back to yes!'
+    echo "*****************"
 fi
