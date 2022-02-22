@@ -226,8 +226,14 @@
   "global-keys-minor-mode keymap.")
 
 (define-key global-keys-minor-mode-map "\C-c\C-r" 'revert-buffer)
+
+;; Insert the date
 (define-key global-keys-minor-mode-map (kbd "C-;") 'insert-today-date)
 (define-key global-keys-minor-mode-map (kbd "C-:") 'insert-yesterday-date)
+
+;; Allow date insertion in the minibuffer too
+(define-key minibuffer-local-map (kbd "C-;") 'insert-today-date)
+(define-key minibuffer-local-map (kbd "C-:") 'insert-yesterday-date)
 
 (define-minor-mode global-keys-minor-mode
   "A minor mode so that global key settings override annoying major modes."
@@ -358,13 +364,32 @@
 
  '(markdown-code-face ((t (:inherit fixed-pitch :background "ivory1"))))
 
- '(markdown-header-face
-   ((t (:foreground "maroon" :family "Liberation Serif"
-                    :weight bold :height 1.5))))
- '(markdown-header-face-1 ((t (:inherit markdown-header-face :height 2.0))))
- '(markdown-header-face-2 ((t (:inherit markdown-header-face :height 1.7))))
- '(markdown-header-face-3 ((t (:inherit markdown-header-face :height 1.4))))
- '(markdown-header-face-4 ((t (:inherit markdown-header-face :height 1.1))))
+;; '(markdown-header-face
+;;    ((t (:family "Liberation Serif" :weight bold))))
+ '(markdown-header-face ((t (
+                             :family "Liberation Serif"
+                             :height 1.5
+                             :weight bold))))
+ ;; Should be able to do something like:
+ ;; '(markdown-header-face-2 ((t (:inherit markdown-header-face-1
+ ;;                               :foreground "purple"
+ ;;                               :height 1.6))))
+ ;; '(markdown-header-face-3 ((t (:inherit markdown-header-face-1 :height 1.4))))
+ ;; '(markdown-header-face-4 ((t (:inherit markdown-header-face-2 :height 1.2))))
+ ;; but for some reason those don't work, so spell it out in laborious detail:
+ '(markdown-header-face-1 ((t (:inherit markdown-header-face
+                                        :height 1.8
+                                        :foreground "navy blue"))))
+ '(markdown-header-face-2 ((t (:inherit markdown-header-face
+                                        :height 1.6
+                                        :foreground "medium violet red"))))
+ '(markdown-header-face-3 ((t (:inherit markdown-header-face
+                                        :height 1.4
+                                        :foreground "dark red"))))
+ '(markdown-header-face-4 ((t (:inherit markdown-header-face
+                                        :height 1.2
+                                        :foreground "indian red"))))
+
  '(markdown-inline-code-face
    ((t (:inherit font-lock-constant-face :background "gainsboro"))))
  '(markdown-link-face ((t (:inherit link))))
@@ -375,7 +400,7 @@
 (set-face-background 'mode-line "purple")
 (set-face-background 'mode-line-inactive "light blue")
 
-(set-face-background 'trailing-whitespace "yellow")
+(set-face-background 'trailing-whitespace "cornsilk")
 
 (set-face-attribute 'region nil :background "#8df" :foreground "black")
 
@@ -1110,6 +1135,7 @@
   ;; browse-url-of-buffer is on C-c C-v. Set it to quickbrowse:
   ;; (setq browse-url-browser-function 'browse-url-generic
   ;;       browse-url-generic-program "quickbrowse")
+  ;; default is xdg-open, set with xdg-settings get|set default-web-browser
   ;; If that ever starts getting called when saving,
   ;; it's probably because html-autoview-mode got mistakenly toggled on;
   ;; toggle it back off with C-c C-s.
@@ -1770,6 +1796,7 @@ word or non-word."
         ("\\.html$" . web-wrap-mode)
         ;("\\.xml$" . xml-mode)
         ;("\\.gpx$" . xml-mode)
+        ("\\.org$" . org-mode)
         ("\\.js$" . javascript-mode)
         ("\\.r$" . r-mode)
         ("\\.gpx$" . xml-mode)
@@ -1933,28 +1960,104 @@ word or non-word."
                (let ((save-silently t))
                  (recentf-save-list))))
 
+;; source: http://steve.yegge.googlepages.com/my-dot-emacs-file
+(defun rename-file-and-buffer (new-name)
+  "Renames both current buffer and file it's visiting to NEW-NAME."
+  (interactive "sNew name: ")
+  (let ((name (buffer-name))
+        (filename (buffer-file-name)))
+    (if (not filename)
+        (message "Buffer '%s' is not visiting a file!" name)
+      (if (get-buffer new-name)
+          (message "A buffer named '%s' already exists!" new-name)
+        (progn
+          (rename-file filename new-name 1)
+          (rename-buffer new-name)
+          (set-visited-file-name new-name)
+          (set-buffer-modified-p nil))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Org mode stuff.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; Don't collapse document structure by default.
-;; I don't use org mode for organizing things, just for richtext
-;; (it seems like the wrong solution for that, but other solutions,
-;; like enriched-mode, aren't supported and randomly stop working).
+;; Don't collapse document structure by default,
+;; in case of using org-mode for richtext rather than organizing.
 (setq org-startup-folded nil)
+
+;; Hide things like the slashes in /italic/
+(setq org-hide-emphasis-markers t)
 
 ;; Use colors for *bold*, *italic* etc.
 (setq org-emphasis-alist
-  '(("*" (bold :foreground "purple" ))
-    ("/" (italic :foreground "maroon"))
-    ("_" (underline :foreground "medium blue"))
-    ;; ("=" (:background "maroon" :foreground "white"))
-    ;; ("~" (:background "deep sky blue" :foreground "MidnightBlue"))
-    ;; ("+" (:strike-through t))
+  '(("*" (bold :foreground "medium blue"
+               :family "Noto Mono"
+               ;; if the base font is already bold, bolding it here won't
+               ;; be visible, so also make it a little bigger
+               :height 1.3))
+    ("/" (italic :foreground "web purple"))
+    ("_" (underline :foreground "navy blue"))
+    ;; = is "verbatim"
+    ("=" (:background "white" :foreground "MidnightBlue"))
+    ;; ~ is code
+    ("~" (:background "beige" :foreground "black"))
+    ("+" (:strike-through t))
     ))
+
+(custom-set-faces
+ '(org-level-1 ((t (:family "Liberation Serif"
+                            :height 2.1
+                            :foreground "navy blue"
+                            :weight bold))))
+ '(org-level-2 ((t (:family "Liberation Serif"
+                            :height 2.0
+                            :foreground "medium violet red"
+                            :weight bold))))
+ '(org-level-3 ((t (:family "Liberation Serif"
+                            :height 1.7
+                            :foreground "dark red"
+                            :weight bold))))
+ '(org-level-4 ((t (:family "Liberation Serif"
+                            :height 1.3
+                            :foreground "indian red"
+                            :weight bold))))
+)
 
 ;; and then given that, there's no more need to show the *, / etc.
 (setq org-hide-emphasis-markers t)
+
+;; Show bullets for lists
+;; http://www.howardism.org/Technical/Emacs/orgmode-wordprocessor.html
+;; but it doesn't work
+;; (font-lock-add-keywords 'org-mode
+;;     '(("^ +\\([-*]\\) "
+;;        (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
+
+(defun emphasisify (tag) (interactive "sAdd emphasis around region or point")
+  (let (
+        (rstart (if (region-active-p) (region-beginning) (point)))
+        (rend   (if (region-active-p) (region-end)       (point))))
+
+    ;; Insert the close tag first, because inserting the open tag
+    ;; will mess up the rend position.
+    (goto-char rend)
+    (insert tag)
+
+    ;; Now the open tag:
+    (goto-char rstart)
+    (insert tag)
+))
+
+(defun org-hook-fcn ()
+  (setq truncate-lines nil)
+
+  (local-set-key "\C-cb" (lambda () (interactive) (emphasisify "*")))
+  (local-set-key "\C-c*" (lambda () (interactive) (emphasisify "*")))
+  (local-set-key "\C-ci" (lambda () (interactive) (emphasisify "/")))
+  (local-set-key "\C-c/" (lambda () (interactive) (emphasisify "/")))
+  (local-set-key "\C-cc" (lambda () (interactive) (emphasisify "~")))
+)
+(add-hook 'org-mode-hook 'org-hook-fcn)
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Turn debugging back off.  Put any questionable code after these lines!
