@@ -57,7 +57,9 @@ URxvt*loginShell: true
 ! but that didn''t work for me.
 ! URxvt.perl-ext-common: font-size,selection
 ! searchable-scrollback uses M-s to search back.
-URxvt.perl-ext-common: default,font-size,searchable-scrollback,bell-command
+! This used to start with "defaults,", but in v9.30 this
+! brings in the super-annoying confirm-paste.
+URxvt.perl-ext-common: font-size,searchable-scrollback,eval,bell-command
 
 ! black-on-light-grey scheme:
 URxvt*foreground: black
@@ -167,6 +169,11 @@ XTerm*pointerColor: blue
 !XTerm*colorBD: yellow
 !XTerm*cursorColor: yellow
 !XTerm*colorUL: magenta
+
+! Testing sixel support, but none of these work:
+! XTerm*decTerminalID: vt382
+! XTerm*decTerminalID: vt340
+! XTerm*numColorRegisters: 256
 
 Firefox*Xcursor.size: 16
 Emacs*Xcursor.size: 16
@@ -432,14 +439,6 @@ xconsole*background: grey75
 xconsole*geometry: 566x173+0-0
 ! This is documented to work, but does not:
 !xconsole*scrollHorizontal: XawtextScrollAlways
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!! gmemusage
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-Gmemusage*geometry: 550x600
-Gmemusage*color1: yellow
-Gmemusage*color2: magenta
-Gmemusage*color3: lightblue
 
 !! Linux Motif has removed the longstanding editing bindings from text controls
 !! -- put them back!
