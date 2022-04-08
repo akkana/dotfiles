@@ -63,10 +63,6 @@ typeset -U PATH
 
 ulimit -c unlimited
 
-# If EDITOR is vim, zsh will try to be "smart" and switch to vi mode.
-# This switches bindings back to emacs:
-bindkey -e
-
 # Allow pasting functions with comments
 # However, this interferes with being able to use # on the commandline.
 setopt interactivecomments
@@ -145,13 +141,28 @@ systemctl() {
 }
 
 export EDITOR=vim
-# Be sure to set bindkey -e -- done above with the other bindkey stuff.
+
+# If EDITOR is vim, zsh will try to be "smart" and switch to vi mode.
+# This switches bindings back to emacs:
+bindkey -e
 
 # See http://www.linux-sxs.org/housekeeping/lscolors.html
 export LS_COLORS='ex=1;31:ln=1;35'
 
 export RSYNC_RSH=ssh
 export PHO_ARGS=-p
+
+#
+# General key bindings:
+#
+
+# Search for the previous/next line that contains everything from
+# beginning to point. So as not to need to ^U^R and retype it.
+# See "Prefix searching" on https://zsh.sourceforge.io/Guide/zshguide04.html
+bindkey '^xp' history-beginning-search-backward
+bindkey '^xn' history-beginning-search-forward
+
+
 
 #
 # Aliases and functions.
@@ -357,7 +368,7 @@ andgr() {
 }
 
 cgr() {
-  find . \( -name '*.[CchH]' -or -name '*.cpp' -or -name '*.cc -or -name '*.ino'' \) -print0 | xargs -0 grep "$@" /dev/null
+  find . \( -name '*.[CchH]' -or -name '*.cpp' -or -name '*.cc' -or -name '*.ino' \) -print0 | xargs -0 grep "$@" /dev/null
 }
 hgr() {
   find . \( -name '*.h' -or -name '*.idl' \) -print0 | xargs -0 grep "$@" /dev/null
@@ -576,17 +587,19 @@ moviesize() {
 # Playing DVDs with mplayer. f => fullscreen, v -> no subtitles
 alias playdvd="mplayer dvd://1 -alang en"
 
-camsetting() {
-    whichval="$1"
-    newbright="$2"
-    if [[ "$newbright" == "" ]]; then
-        v4l2-ctl -d /dev/video0 --get-ctrl $whichval
-    else
-        v4l2-ctl -d /dev/video0 --set-ctrl $whichval="$newbright"
-    fi
-}
-alias cambright="camsetting brightness"
-alias camcontrast="camsetting contrast"
+# camsetting() {
+#     whichval="$1"
+#     newbright="$2"
+#     if [[ "$newbright" == "" ]]; then
+#         v4l2-ctl -d /dev/video0 --get-ctrl $whichval
+#     else
+#         v4l2-ctl -d /dev/video0 --set-ctrl $whichval="$newbright"
+#     fi
+# }
+# alias cambright="camsetting brightness"
+# alias camcontrast="camsetting contrast"
+# alias camexposure="camsetting exposure_absolute"
+# alias camnight="v4l2-ctl -d /dev/video2 --set-ctrl white_balance_automatic=0; v4l2-ctl -d /dev/video2 --set-ctrl white_balance_temperature=2700"
 
 ######## end video aliases
 
@@ -720,8 +733,8 @@ alias monbig='xrandr --output $extmonitor --auto --output eDP-1 --off'
 # use the screen the Zoom app is on.
 # This --right-of stuff doesn't work if you start with the extmonitor active.
 # so turn it off first, then back on. The sleep in between may not be needed.
-alias monzoomlaptopslides='xrandr --output HDMI-1 --off --output eDP-1 --auto; sleep 2; xrandr --output eDP-1 --mode 1024x768 --output $extmonitor --auto --right-of eDP-1'
-alias monzoomlaptopdemo='xrandr --output HDMI-1 --off --output eDP-1 --auto; sleep 2; xrandr --output eDP-1 --mode 1280x800 --output $extmonitor --auto --right-of eDP-1'
+alias monzoomlaptopslides='xrandr --output $extmonitor --off --output eDP-1 --auto; sleep 2; xrandr --output eDP-1 --mode 1024x768 --output $extmonitor --auto --right-of eDP-1'
+alias monzoomlaptopdemo='xrandr --output $extmonitor --off --output eDP-1 --auto; sleep 2; xrandr --output eDP-1 --mode 1280x800 --output $extmonitor --auto --right-of eDP-1'
 
 # Toggle mute. This doesn't work when called from an openbox key event,
 # but does work from the commandline.
@@ -1187,6 +1200,15 @@ check_holds() {
 }
 
 #############################################################
+# Python
+
+if [[ -f ~/.config/pythonrc ]]; then
+    export PYTHONSTARTUP=~/.config/pythonrc
+else
+    echo "~/.config/pythonrc doesn't exist, no PYTHONSTARTUP"
+fi
+
+######
 # Python virtualenv and path helpers.
 
 # Python virtualenvs for everyday use.
@@ -1383,8 +1405,10 @@ pullphotos() {
   for f in *.jpg *.mp4; do
     echo_and_do adb shell rm $cameradir/$f
   done
-  rmdir -f thumbnails
-  # If we start shooting a lot with CardboardCamera, can delete those too.
+
+  # This always also pulls an empty thumbnails directory
+  rm -f thumbnails
+
   echo "========"
   echo "Pulled photos:"
   ls
@@ -1503,7 +1527,7 @@ localurl() {
 # Spam and email-related aliases
 
 # Tail the procmail log file, for when I'm expecting mail:
-alias proctail="tail -1000f Procmail/log | egrep -v '^procmail'"
+alias proctail="tail -1000f ~/Procmail/log | egrep -v '^procmail'"
 
 # Spast checks spam with e.g. echo $subj | grep -i -f $patfile
 # How do we find out from $subj which line in $patfile matched the grep?
@@ -1554,30 +1578,46 @@ check-spam-blanks() {
 # Note: this is one of the few cases in zsh where there's a significant
 # difference between "$@" and "$*", and "$*" is needed here.
 #
-spams() {
-    #grep Subject ~/Spam/saved ~/Spam/trained/saved | egrep -i "$*"
+# Argument is header, e.g. Subject:
+spamcheck() {
+    header=$1
+    shift
+    args=$*
+    echo looking for $header in $args
     echo "============ Recent =============="
-    decodemail -a Subject: ~/Spam/saved | egrep -a -i "$*"
+    decodemail -a "$header" ~/Spam/saved | egrep -a -i "$args"
     if [ -d ~/Spam/oldheaders ]; then
         echo
         echo "============ Older =============="
-        decodemail -a Subject: ~/Spam/oldheaders/saved | egrep -a -i "$*"
+        decodemail -a "$header" ~/Spam/oldheaders/saved | egrep -a -i "$args"
     fi
 }
-spamf() {
-    #grep -a -h '^From:' ~/Spam/trained/saved ~/Spam/saved | egrep -a -i "$*"
-    echo "============ Recent =============="
-    decodemail -a From: ~/Spam/saved | egrep -a -i "$*"
-    if [ -d ~/Spam/oldheaders ]; then
-        echo
-        echo "============ Older =============="
-        decodemail -a From: ~/Spam/oldheaders/saved | egrep -a -i "$*"
-    fi
-}
-spamff() {
-    #grep -a -h '^From' ~/Spam/trained/saved ~/Spam/saved | egrep -a -i "$*"
-    decodemail -a From ~/Spam/saved ~/Spam/oldheaders/saved | egrep -a -i "$*"
-}
+
+alias spams='spamcheck Subject:'
+alias spamf='spamcheck From:'
+
+# XXX The old, well tested definitions:
+# Hopefully they can be removed if the above works.
+# spams() {
+#     #grep Subject ~/Spam/saved ~/Spam/trained/saved | egrep -i "$*"
+#     echo "============ Recent =============="
+#     decodemail -a Subject: ~/Spam/saved | egrep -a -i "$*"
+#     if [ -d ~/Spam/oldheaders ]; then
+#         echo
+#         echo "============ Older =============="
+#         decodemail -a Subject: ~/Spam/oldheaders/saved | egrep -a -i "$*"
+#     fi
+# }
+# spamf() {
+#     #grep -a -h '^From:' ~/Spam/trained/saved ~/Spam/saved | egrep -a -i "$*"
+#     echo "============ Recent =============="
+#     decodemail -a From: ~/Spam/saved | egrep -a -i "$*"
+#     if [ -d ~/Spam/oldheaders ]; then
+#         echo
+#         echo "============ Older =============="
+#         decodemail -a From: ~/Spam/oldheaders/saved | egrep -a -i "$*"
+#     fi
+# }
 
 cleanspam() {
     # Spam is saved in ~/Spam. (Outside my regular mail hierarchy,
