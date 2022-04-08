@@ -234,6 +234,12 @@
 ;; Allow date insertion in the minibuffer too
 (define-key minibuffer-local-map (kbd "C-;") 'insert-today-date)
 (define-key minibuffer-local-map (kbd "C-:") 'insert-yesterday-date)
+;; I'm always forgetting that I'm in the minibuffer and doing a ^Xb
+;; to change buffers, which visits the file in a new window and doesn't
+;; put the focus back in the minibuffer.
+;; Ignoring it might help; otherwise, maybe make something that beeps
+;; or otherwise alerts me.
+(define-key minibuffer-local-map "\C-xb" 'ignore)
 
 (define-minor-mode global-keys-minor-mode
   "A minor mode so that global key settings override annoying major modes."
@@ -344,57 +350,33 @@
 (set-background-color "#e9fffa")
 
 (custom-set-faces
- ;; The emacs init file should contain only one instance of custom-set-faces.
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(flyspell-duplicate ((((class color)) (:foreground "red" :underline t :weight bold))))
+ '(font-lock-comment-face ((((class color) (min-colors 88) (background light)) (:foreground "blue"))))
 
- '(whitespace-trailing
-   ((t (:background "cyan" :foreground "yellow" :weight bold))))
-
- '(flyspell-duplicate
-   ((((class color)) (:foreground "red" :underline t :weight bold))))
-
- '(font-lock-comment-face
-   ((((class color) (min-colors 88) (background light)) (:foreground "blue"))))
-
- '(markdown-bold-face
-   ((t (:family "Monoid HalfTight-7.5" :foreground "dark orchid"
-                :weight bold :height 1.1))))
- '(markdown-italic-face
-   ((t (:foreground "dark green" :slant italic  :height 1.1))))
-
+ ;; Markdown faces
+ '(markdown-bold-face ((t (:family "Monoid HalfTight-7.5" :foreground "dark orchid" :weight bold :height 1.1))))
  '(markdown-code-face ((t (:inherit fixed-pitch :background "ivory1"))))
-
-;; '(markdown-header-face
-;;    ((t (:family "Liberation Serif" :weight bold))))
- '(markdown-header-face ((t (
-                             :family "Liberation Serif"
-                             :height 1.5
-                             :weight bold))))
- ;; Should be able to do something like:
- ;; '(markdown-header-face-2 ((t (:inherit markdown-header-face-1
- ;;                               :foreground "purple"
- ;;                               :height 1.6))))
- ;; '(markdown-header-face-3 ((t (:inherit markdown-header-face-1 :height 1.4))))
- ;; '(markdown-header-face-4 ((t (:inherit markdown-header-face-2 :height 1.2))))
- ;; but for some reason those don't work, so spell it out in laborious detail:
- '(markdown-header-face-1 ((t (:inherit markdown-header-face
-                                        :height 1.8
-                                        :foreground "navy blue"))))
- '(markdown-header-face-2 ((t (:inherit markdown-header-face
-                                        :height 1.6
-                                        :foreground "medium violet red"))))
- '(markdown-header-face-3 ((t (:inherit markdown-header-face
-                                        :height 1.4
-                                        :foreground "dark red"))))
- '(markdown-header-face-4 ((t (:inherit markdown-header-face
-                                        :height 1.2
-                                        :foreground "indian red"))))
-
- '(markdown-inline-code-face
-   ((t (:inherit font-lock-constant-face :background "gainsboro"))))
+ '(markdown-header-face ((t (:family "Liberation Serif" :height 1.5 :weight bold))))
+ '(markdown-header-face-1 ((t (:inherit markdown-header-face :height 1.8 :foreground "navy blue"))))
+ '(markdown-header-face-2 ((t (:inherit markdown-header-face :height 1.6 :foreground "medium violet red"))))
+ '(markdown-header-face-3 ((t (:inherit markdown-header-face :height 1.4 :foreground "dark red"))))
+ '(markdown-header-face-4 ((t (:inherit markdown-header-face :height 1.2 :foreground "indian red"))))
+ '(markdown-inline-code-face ((t (:inherit font-lock-constant-face :background "gainsboro"))))
+ '(markdown-italic-face ((t (:foreground "dark green" :slant italic :height 1.1))))
  '(markdown-link-face ((t (:inherit link))))
  '(markdown-pre-face ((t (:background "ivory1" :family "monoid"))))
-)
+
+ ;; org mode fonts and colors
+ '(org-level-1 ((t (:family "Liberation Serif" :height 2.3 :foreground "navy blue" :weight bold))))
+ '(org-level-2 ((t (:family "Liberation Serif" :height 2.0 :foreground "dark magenta" :weight bold))))
+ '(org-level-3 ((t (:family "Liberation Serif" :height 1.7 :foreground "dark red" :weight bold))))
+ '(org-level-4 ((t (:family "Liberation Serif" :height 1.3 :foreground "indian red" :weight bold))))
+ '(org-link ((t (:underline t :slant italic :background "white" :foreground "blue"))))
+ '(whitespace-trailing ((t (:background "cyan" :foreground "yellow" :weight bold)))))
 
 (set-face-foreground 'mode-line "yellow")
 (set-face-background 'mode-line "purple")
@@ -403,6 +385,7 @@
 (set-face-background 'trailing-whitespace "cornsilk")
 
 (set-face-attribute 'region nil :background "#8df" :foreground "black")
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; turning off annoyances
@@ -705,7 +688,8 @@
                > "\n\n"
 ))
 
-(autoload 'sgml-mode "my-sgml-mode" "Load custom sgml-mode")
+;; Is this still needed?
+;; (autoload 'sgml-mode "my-sgml-mode" "Load custom sgml-mode")
 
 ;;
 ;; auto-insert for HTML: check for a blank.html in the directory
@@ -999,6 +983,7 @@
   (local-set-key (kbd "C-:") 'insert-yesterday-date)
   (global-set-key (kbd "C-:") 'insert-yesterday-date)
   (dubcaps-mode t)
+  (toggle-word-wrap)
   )
 
 (add-hook 'text-mode-hook 'text-hook)
@@ -1141,6 +1126,53 @@
   ;; toggle it back off with C-c C-s.
   ;; For debugging such things: F1 m shows which minor modes are active,
   ;; and also shows key bindings related to those modes.
+
+  ;; (setq browse-url-browser-function 'browse-url-generic
+  ;;             browse-url-generic-program "web-browser")
+
+    ;; (defun my-browse-url-firefox-new-tab (url &optional new-window)
+    ;;   "Open URL in a new tab in Mozilla."
+    ;;   (interactive (browse-url-interactive-arg "URL: "))
+    ;;   (unless
+    ;;       (string= ""
+    ;;                (shell-command-to-string
+    ;;                 (concat "mozilla-firefox -a firefox -new-tab 'openURL("
+    ;;                         url ",new-tab)'")))
+    ;;     (message "Starting Mozilla Firefox...")))
+    ;; (setq browse-url-browser-function 'my-browse-url-firefox-new-tab)
+
+  ;; https://www.emacswiki.org/emacs/BrowseUrl
+  (setq browse-url-new-window-flag t)
+  (defun browse-url-firefox (url &optional new-window)
+    "Ask the Firefox WWW browser to load URL.
+  Default to the URL around or before point.  The strings in
+  variable `browse-url-firefox-arguments' are also passed to
+  Firefox.
+
+  When called interactively, if variable
+  `browse-url-new-window-flag' is non-nil, load the document in a
+  new Firefox window, otherwise use a random existing one.  A
+  non-nil interactive prefix argument reverses the effect of
+  `browse-url-new-window-flag'.
+
+  If `browse-url-firefox-new-window-is-tab' is non-nil, then
+  whenever a document would otherwise be loaded in a new window, it
+  is loaded in a new tab in an existing window instead.
+
+  When called non-interactively, optional second argument
+  NEW-WINDOW is used instead of `browse-url-new-window-flag'."
+    (interactive (browse-url-interactive-arg "URL: "))
+    (setq url (browse-url-encode-url url))
+    (let* ((process-environment (browse-url-process-environment))
+           (window-args (if (browse-url-maybe-new-window new-window)
+                            (if browse-url-firefox-new-window-is-tab
+                                '("-new-tab")
+                              '("-new-window"))))
+           (ff-args (append browse-url-firefox-arguments window-args (list url)))
+           (process-name (concat "firefox " url))
+           (process (apply 'start-process process-name nil
+                           browse-url-firefox-program ff-args) )) ))
+    (setq browse-url-browser-function 'my-browse-url-firefox-new-tab)
 
   ;; More info, like how to write functions to do tabs or reload:
   ;; https://www.emacswiki.org/emacs/BrowseUrl#toc5
@@ -1342,7 +1374,7 @@ word or non-word."
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Markdown
+;; Markdown mode
 ;; https://github.com/jrblevin/markdown-mode
 ;; https://leanpub.com/markdown-mode/read
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1354,7 +1386,6 @@ word or non-word."
   (auto-fill-mode)
   )
 (add-hook 'markdown-mode-hook 'markdown-hook)
-
 
 
 ;; Customize lists
@@ -1376,6 +1407,108 @@ word or non-word."
    (endless/markdown-link-regexp
     1 '(face nil display "") prepend))
  'append)
+
+;;;;;;;;;;;;;;;;;;;;;
+;; Org mode
+;;;;;;;;;;;;;;;;;;;;;
+
+;; Run M-x org-mode-restart to reload changes
+
+;; https://emacs.stackexchange.com/a/35632 has a very complicated solution
+;; to adding new emphasis characters, but it's dependent on org-habit
+;; whatever that is.
+
+;; Don't collapse document structure by default,
+;; in case of using org-mode for richtext rather than organizing.
+(setq org-startup-folded nil)
+
+;; Hide things like the slashes in /italic/
+(setq org-hide-emphasis-markers t)
+
+;; Use colors for *bold*, *italic* etc.
+;; *** See also the org-mode section higher up in this file
+;; under "custom-set-faces", which sets colors and fonts
+;; for org mode headers and links.
+(setq org-emphasis-alist
+  '(("*" (bold :foreground "maroon"
+               :weight bold
+               :family "Noto Mono"
+               ;; was "Noto Mono", some fonts that work:
+               ;; If the base font is already bold, bolding it here
+               ;; is less visible. Some fonts that help:
+               ;; "Overload" "Joshs Font" "Hot Pizza"
+               ;; "Snappy Service" "Funny Pages"
+               ;; but none of them look good smaller, on a large screen
+               ;; and besides, they're not monospaced.
+               ;; Probably the solution is to re-set this alist
+               ;; when changing resolutions
+
+               ;; also make it a little bigger
+               :height 1.3))
+    ("/" (italic :foreground "purple"))
+    ("_" (underline :foreground "navy blue"))
+
+    ;; = is "verbatim"
+    ("=" (:background "white" :foreground "MidnightBlue"))
+
+    ;; ~ is code
+    ("~" (:background "beige" :foreground "black"
+                      :family "Noto Mono" :height 1.2))
+    ("+" (:strike-through t))
+
+    ;; Try a user-defined style (doesn't work)
+    ;;("!" (:background "beige" :foreground "black"))
+    ))
+
+;; no need to show the *, / etc.
+(setq org-hide-emphasis-markers t)
+
+;; Show bullets for lists
+;; http://www.howardism.org/Technical/Emacs/orgmode-wordprocessor.html
+;; but it doesn't work
+;; (font-lock-add-keywords 'org-mode
+;;     '(("^ +\\([-*]\\) "
+;;        (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
+
+(defun org-emphasisify (tag)
+  (interactive "sAdd emphasis around region or point")
+  (let (
+        (rstart (if (region-active-p) (region-beginning) (point)))
+        (rend   (if (region-active-p) (region-end)       (point))))
+
+    ;; Insert the close tag first, because inserting the open tag
+    ;; will mess up the rend position.
+    (goto-char rend)
+    (insert tag)
+
+    ;; Now the open tag:
+    (goto-char rstart)
+    (insert tag)
+))
+
+(defun org-hook-fcn ()
+  (setq truncate-lines nil)
+
+  ;; wrap long lines at word boundaries
+  ;; A simple way that shows continuation lines:
+  (toggle-word-wrap)
+  ;; some people prefer visual-line-mode, which doesn't show the
+  ;; continuation. I'm not clear what difference org-indent-mode makes.
+  ;(visual-line-mode)
+  ;; which usually also includes
+  ;(org-indent-mode)
+  ;; but I find that too annoying
+
+  (local-set-key "\C-cb" (lambda () (interactive) (org-emphasisify "*")))
+  (local-set-key "\C-c*" (lambda () (interactive) (org-emphasisify "*")))
+  (local-set-key "\C-ci" (lambda () (interactive) (org-emphasisify "/")))
+  (local-set-key "\C-c/" (lambda () (interactive) (org-emphasisify "/")))
+  (local-set-key "\C-cc" (lambda () (interactive) (org-emphasisify "~")))
+  (local-set-key "\C-c_" (lambda () (interactive) (org-emphasisify "_")))
+  (local-set-key "\C-cu" (lambda () (interactive) (org-emphasisify "_")))
+  (local-set-key "\C-c-" (lambda () (interactive) (org-emphasisify "-")))
+)
+(add-hook 'org-mode-hook 'org-hook-fcn)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1767,6 +1900,12 @@ word or non-word."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; auto-mode-alist: Modes to use on specific files.
 ;; Kinda weird that programming modes can't sort this out themselves.
+;;
+;; In auto-mode-alist, the first match wins. However, the way this
+;; list is built up ends up adding everything in reverse order:
+;; so in the below list, the *last* match wins.
+;;
+;; https://www.emacswiki.org/emacs/AutoModeAlist
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Opening any file with a name ending in "browse" opens in
@@ -1796,13 +1935,15 @@ word or non-word."
         ("\\.html$" . web-wrap-mode)
         ;("\\.xml$" . xml-mode)
         ;("\\.gpx$" . xml-mode)
-        ("\\.org$" . org-mode)
         ("\\.js$" . javascript-mode)
         ("\\.r$" . r-mode)
         ("\\.gpx$" . xml-mode)
         ("\\.kml$" . xml-mode)
         ("\\.img$" . text-img-mode)
         ("\\.zsh\\'" . sh-mode)
+
+        ("\\.md$" . markdown-mode)
+        ("\\.org$" . org-mode)
 
         ;; Spektrum transmitter model definition files:
         ;; line endings are screwy, don't try to change them
@@ -1831,10 +1972,8 @@ word or non-word."
         ("Docs/Lists/books" . text-wrap-mode)
         ; ("blogstuff/" . web-mode)
         ("Docs/gimp/book/notes" . text-wrap-mode)
-        ("README" . text-wrap-mode)
-        ;; Markdown mode rule should follow README rule, so that
-        ;; README.md gets the right mode.
-        ("\\.md$" . markdown-mode)
+        ("README$" . text-wrap-mode)
+
         ;; Book used to be longlines mode, but that was too flaky.
         ("Docs/gimp/book/" . text-wrap-mode)
 
@@ -1848,7 +1987,6 @@ word or non-word."
         ("Docs/Notes/househunt/sold" . text-img-mode)
 
         ("Docs/classes/welding/" . text-wrap-mode)
-
         ))
 
 
@@ -1977,89 +2115,6 @@ word or non-word."
           (set-buffer-modified-p nil))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Org mode stuff.
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; Don't collapse document structure by default,
-;; in case of using org-mode for richtext rather than organizing.
-(setq org-startup-folded nil)
-
-;; Hide things like the slashes in /italic/
-(setq org-hide-emphasis-markers t)
-
-;; Use colors for *bold*, *italic* etc.
-(setq org-emphasis-alist
-  '(("*" (bold :foreground "medium blue"
-               :family "Noto Mono"
-               ;; if the base font is already bold, bolding it here won't
-               ;; be visible, so also make it a little bigger
-               :height 1.3))
-    ("/" (italic :foreground "web purple"))
-    ("_" (underline :foreground "navy blue"))
-    ;; = is "verbatim"
-    ("=" (:background "white" :foreground "MidnightBlue"))
-    ;; ~ is code
-    ("~" (:background "beige" :foreground "black"))
-    ("+" (:strike-through t))
-    ))
-
-(custom-set-faces
- '(org-level-1 ((t (:family "Liberation Serif"
-                            :height 2.1
-                            :foreground "navy blue"
-                            :weight bold))))
- '(org-level-2 ((t (:family "Liberation Serif"
-                            :height 2.0
-                            :foreground "medium violet red"
-                            :weight bold))))
- '(org-level-3 ((t (:family "Liberation Serif"
-                            :height 1.7
-                            :foreground "dark red"
-                            :weight bold))))
- '(org-level-4 ((t (:family "Liberation Serif"
-                            :height 1.3
-                            :foreground "indian red"
-                            :weight bold))))
-)
-
-;; and then given that, there's no more need to show the *, / etc.
-(setq org-hide-emphasis-markers t)
-
-;; Show bullets for lists
-;; http://www.howardism.org/Technical/Emacs/orgmode-wordprocessor.html
-;; but it doesn't work
-;; (font-lock-add-keywords 'org-mode
-;;     '(("^ +\\([-*]\\) "
-;;        (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
-
-(defun emphasisify (tag) (interactive "sAdd emphasis around region or point")
-  (let (
-        (rstart (if (region-active-p) (region-beginning) (point)))
-        (rend   (if (region-active-p) (region-end)       (point))))
-
-    ;; Insert the close tag first, because inserting the open tag
-    ;; will mess up the rend position.
-    (goto-char rend)
-    (insert tag)
-
-    ;; Now the open tag:
-    (goto-char rstart)
-    (insert tag)
-))
-
-(defun org-hook-fcn ()
-  (setq truncate-lines nil)
-
-  (local-set-key "\C-cb" (lambda () (interactive) (emphasisify "*")))
-  (local-set-key "\C-c*" (lambda () (interactive) (emphasisify "*")))
-  (local-set-key "\C-ci" (lambda () (interactive) (emphasisify "/")))
-  (local-set-key "\C-c/" (lambda () (interactive) (emphasisify "/")))
-  (local-set-key "\C-cc" (lambda () (interactive) (emphasisify "~")))
-)
-(add-hook 'org-mode-hook 'org-hook-fcn)
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Turn debugging back off.  Put any questionable code after these lines!
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -2119,14 +2174,16 @@ word or non-word."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(inhibit-startup-screen t)
- '(package-selected-packages (quote (jedi markdown-mode elpy undo-tree)))
+ '(package-selected-packages '(jedi markdown-mode elpy undo-tree))
  '(safe-local-variable-values
-   (quote
-    ((auto-fill)
+   '((\#+STARTUP . Content)
+     (\#+STARTUP . overview)
+     (org-startup-folded . t)
+     (auto-fill)
      (not-flyspell-mode)
      (encoding . utf-8)
      (auto-fill-mode)
-     (wrap-mode))))
+     (wrap-mode)))
  '(web-mode-code-indent-offset 4)
  '(web-mode-markup-indent-offset 0))
 (put 'upcase-region 'disabled nil)
