@@ -50,10 +50,10 @@ setopt cshnullglob
 
 # Don't autocomplete non-executable files in PATH (slower but less confusing):
 # setopt hashexecutablesonly
-# But here's a better solution that lets us know when there's a problem.
+# But here's a better solution that lets me know when there's a problem.
 # It needs to always return false except in the -e case.
 # command_not_found_handler() { echo $? && return 1 };
-# This also works but is more verbose:
+# This also works to print exit codes but is more verbose:
 setopt printexitvalue
 # Or this much more elaborate solution:
 # . $HOME/.zsh.printexit
@@ -146,11 +146,13 @@ export EDITOR=vim
 # This switches bindings back to emacs:
 bindkey -e
 
-# See http://www.linux-sxs.org/housekeeping/lscolors.html
-export LS_COLORS='ex=1;31:ln=1;35'
-
 export RSYNC_RSH=ssh
 export PHO_ARGS=-p
+
+# virt-manager by default makes sessions that are only for root,
+# while virsh looks for a QEMU/KVM user session.
+# Tell virsh to use the root session:
+export LIBVIRT_DEFAULT_URI="qemu:///system"
 
 #
 # General key bindings:
@@ -161,8 +163,6 @@ export PHO_ARGS=-p
 # See "Prefix searching" on https://zsh.sourceforge.io/Guide/zshguide04.html
 bindkey '^xp' history-beginning-search-backward
 bindkey '^xn' history-beginning-search-forward
-
-
 
 #
 # Aliases and functions.
@@ -284,7 +284,13 @@ show_symlinks() {
         fi
     done
 }
-ls() { /bin/ls -FH "$@" ; }
+# ls colors, see:
+# https://gist.github.com/jmoz/280005/3dca508fb193b6ae5d1f4a3f21efc7d90ecb0bde
+# http://www.bigsoft.co.uk/blog/index.php/2008/04/11/configuring-ls_colors
+# https://web.archive.org/web/20201129214825/http://www.linux-sxs.org/housekeeping/lscolors.html
+export LS_COLORS='ex=1;31:ln=1;35:ow=47;1:or=0;103;1'
+
+ls() { /bin/ls -FH --color "$@" ; }
 ll() {
     /bin/ls -laFH "$@"
     show_symlinks "$@"
@@ -1020,17 +1026,25 @@ setopt noautomenu
 # When showing menu help, include descriptions:
 zstyle ":completion:*:descriptions" format "%B%d%b"
 
+# Don't complete parameters in the command position
+# IE don't complete termc<TAB> to "termcap="
+# '! parameters' - in tag-order tells compsys to ignore that tag, but use the others
+zstyle ':completion::complete:-command-::' tag-order '! parameters' -
+
+# Some tuts on writing custom completions:
+# http://askql.wordpress.com/2011/01/11/zsh-writing-own-completion/
+# https://web.archive.org/web/20190411104837/http://www.linux-mag.com/id/1106/
+
 # Much more verbose info (while learning/debugging compdefs).
-# But these don't actually work, no matches found: ‘:completion:*’
 zstyle ":completion:*" verbose yes
 zstyle ":completion:*:descriptions" format '%B%d%b'
 zstyle ":completion:*:messages" format '%d'
 zstyle ":completion:*:warnings" format 'No matches for: %d'
 zstyle ":completion:*" group-name
 
-# Some tuts on writing custom completions:
-# http://askql.wordpress.com/2011/01/11/zsh-writing-own-completion/
-# http://www.linux-mag.com/id/1106/
+# _mutt uses _mailboxes, which figures the default mail folder is ~/Msgs
+# but allows changing it:
+set mail-directory='~/Msgs'
 
 WORDCHARS=$WORDCHARS:s,/,,
 # See also http://mika.l3ib.org/s/dot-delete-to
@@ -1137,12 +1151,12 @@ bindkey '^Z' undo
 bindkey '^X^R' redo
 
 # Two other useful bindings suggested by Mikachu:
-# the latter lets you press a key and see what's bound to it,
-# the former finds all keys that are bound to the specified widget
+# the former lets you press a key and see what's bound to it,
+# the latter finds all keys that are bound to the specified widget
 # since you can also tabcomplete, you can also usually find
 # something useful by typing a prefix and tabbing
-bindkey '^X^W' where-is
 bindkey '^X^D' describe-key-briefly
+bindkey '^X^W' where-is
 
 ######## end zsh completion #######################
 ######## end zsh-specific options #################
@@ -1406,8 +1420,8 @@ pullphotos() {
     echo_and_do adb shell rm $cameradir/$f
   done
 
-  # This always also pulls an empty thumbnails directory
-  rm -f thumbnails
+  # This usually also pulls an empty thumbnails directory
+  rm -rf thumbnails
 
   echo "========"
   echo "Pulled photos:"
