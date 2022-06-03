@@ -904,32 +904,6 @@
 
 (setq sentence-end-double-space nil)
 
-;; Want auto-fill-mode for some text and html files, but not all.
-;; So define two derived modes for that, and we'll use auto-mode-alist
-;; to choose them based on filename.
-;; XXX This doesn't seem to be used any more.
-;; (define-derived-mode html-wrap-mode html-mode "HTML wrap mode"
-;;   "HTML mode, plus autofill and flyspell"
-
-;;   (message "HTML wrap mode")
-
-;;   (auto-fill-mode)
-;;   (if (<= (buffer-size) 10000)
-;;       (progn (flyspell-mode 1)
-;;              (flyspell-buffer) )
-;;       (message "Buffer too big, not spellchecking")
-;;       )
-
-;;   ;; New annoyance in emacs24: every time you save an html file,
-;;   ;; it calls a browser on it, replacing whatever's in your current
-;;   ;; browser window.
-;;   (html-autoview-mode -1)
-;;   )
-
-;;  (if (string-match (buffer-local-value 'major-mode (current-buffer))
-;;                    "html-mode")
-;;  (if (eq (buffer-local-value 'major-mode (current-buffer)) 'html-mode)
-
 (define-derived-mode text-wrap-mode text-mode "Text wrap mode"
   "Text mode, plus autofill and flyspell"
   (auto-fill-mode)
@@ -987,6 +961,72 @@
   )
 
 (add-hook 'text-mode-hook 'text-hook)
+
+;;
+;; Browsing to URLs -- used in html and org modes
+;; (maybe some day I'll find a way to do it from markdown-mode).
+;;
+
+  ;; browse-url-of-buffer is on C-c C-v. Set it to quickbrowse:
+  ;; (setq browse-url-browser-function 'browse-url-generic
+  ;;       browse-url-generic-program "quickbrowse")
+  ;; default is xdg-open, set with xdg-settings get|set default-web-browser
+  ;; If that ever starts getting called when saving,
+  ;; it's probably because html-autoview-mode got mistakenly toggled on;
+  ;; toggle it back off with C-c C-s.
+  ;; For debugging such things: F1 m shows which minor modes are active,
+  ;; and also shows key bindings related to those modes.
+
+  ;; (setq browse-url-browser-function 'browse-url-generic
+  ;;             browse-url-generic-program "web-browser")
+
+    ;; (defun my-browse-url-firefox-new-tab (url &optional new-window)
+    ;;   "Open URL in a new tab in Mozilla."
+    ;;   (interactive (browse-url-interactive-arg "URL: "))
+    ;;   (unless
+    ;;       (string= ""
+    ;;                (shell-command-to-string
+    ;;                 (concat "mozilla-firefox -a firefox -new-tab 'openURL("
+    ;;                         url ",new-tab)'")))
+    ;;     (message "Starting Mozilla Firefox...")))
+    ;; (setq browse-url-browser-function 'my-browse-url-firefox-new-tab)
+
+  ;; https://www.emacswiki.org/emacs/BrowseUrl
+  (setq browse-url-new-window-flag nil)
+  (defun my-browse-url (url &optional new-window)
+    "Ask the Firefox WWW browser to load URL.
+  Default to the URL around or before point.  The strings in
+  variable `browse-url-firefox-arguments' are also passed to
+  Firefox.
+
+  When called interactively, if variable
+  `browse-url-new-window-flag' is non-nil, load the document in a
+  new Firefox window, otherwise use a random existing one.  A
+  non-nil interactive prefix argument reverses the effect of
+  `browse-url-new-window-flag'.
+
+  If `browse-url-firefox-new-window-is-tab' is non-nil, then
+  whenever a document would otherwise be loaded in a new window, it
+  is loaded in a new tab in an existing window instead.
+
+  When called non-interactively, optional second argument
+  NEW-WINDOW is used instead of `browse-url-new-window-flag'."
+    (interactive (browse-url-interactive-arg "URL: "))
+    (setq url (browse-url-encode-url url))
+    (let* ((process-environment (browse-url-process-environment))
+           (window-args (if (browse-url-maybe-new-window new-window)
+                            (if browse-url-firefox-new-window-is-tab
+                                '("-new-tab")
+                              '("-new-window"))))
+           (ff-args (append browse-url-firefox-arguments window-args (list url)))
+           (process-name (concat "firefox " url))
+           (process (apply 'start-process process-name nil
+                           browse-url-firefox-program ff-args) )) ))
+
+(setq browse-url-browser-function 'my-browse-url)
+
+  ;; More info, like how to write functions to do tabs or reload:
+  ;; https://www.emacswiki.org/emacs/BrowseUrl#toc5
 
 ;;
 ;; html-mode definitions:
@@ -1116,66 +1156,6 @@
   (local-set-key "\C-cl" 'add-html-link)
 
   ;(local-set-key "\C-m" (lambda () (interactive) (insert "\n")))
-
-  ;; browse-url-of-buffer is on C-c C-v. Set it to quickbrowse:
-  ;; (setq browse-url-browser-function 'browse-url-generic
-  ;;       browse-url-generic-program "quickbrowse")
-  ;; default is xdg-open, set with xdg-settings get|set default-web-browser
-  ;; If that ever starts getting called when saving,
-  ;; it's probably because html-autoview-mode got mistakenly toggled on;
-  ;; toggle it back off with C-c C-s.
-  ;; For debugging such things: F1 m shows which minor modes are active,
-  ;; and also shows key bindings related to those modes.
-
-  ;; (setq browse-url-browser-function 'browse-url-generic
-  ;;             browse-url-generic-program "web-browser")
-
-    ;; (defun my-browse-url-firefox-new-tab (url &optional new-window)
-    ;;   "Open URL in a new tab in Mozilla."
-    ;;   (interactive (browse-url-interactive-arg "URL: "))
-    ;;   (unless
-    ;;       (string= ""
-    ;;                (shell-command-to-string
-    ;;                 (concat "mozilla-firefox -a firefox -new-tab 'openURL("
-    ;;                         url ",new-tab)'")))
-    ;;     (message "Starting Mozilla Firefox...")))
-    ;; (setq browse-url-browser-function 'my-browse-url-firefox-new-tab)
-
-  ;; https://www.emacswiki.org/emacs/BrowseUrl
-  (setq browse-url-new-window-flag t)
-  (defun browse-url-firefox (url &optional new-window)
-    "Ask the Firefox WWW browser to load URL.
-  Default to the URL around or before point.  The strings in
-  variable `browse-url-firefox-arguments' are also passed to
-  Firefox.
-
-  When called interactively, if variable
-  `browse-url-new-window-flag' is non-nil, load the document in a
-  new Firefox window, otherwise use a random existing one.  A
-  non-nil interactive prefix argument reverses the effect of
-  `browse-url-new-window-flag'.
-
-  If `browse-url-firefox-new-window-is-tab' is non-nil, then
-  whenever a document would otherwise be loaded in a new window, it
-  is loaded in a new tab in an existing window instead.
-
-  When called non-interactively, optional second argument
-  NEW-WINDOW is used instead of `browse-url-new-window-flag'."
-    (interactive (browse-url-interactive-arg "URL: "))
-    (setq url (browse-url-encode-url url))
-    (let* ((process-environment (browse-url-process-environment))
-           (window-args (if (browse-url-maybe-new-window new-window)
-                            (if browse-url-firefox-new-window-is-tab
-                                '("-new-tab")
-                              '("-new-window"))))
-           (ff-args (append browse-url-firefox-arguments window-args (list url)))
-           (process-name (concat "firefox " url))
-           (process (apply 'start-process process-name nil
-                           browse-url-firefox-program ff-args) )) ))
-    (setq browse-url-browser-function 'my-browse-url-firefox-new-tab)
-
-  ;; More info, like how to write functions to do tabs or reload:
-  ;; https://www.emacswiki.org/emacs/BrowseUrl#toc5
 
   ;; And finally, a generic shorthand to use with other tags:
   ;; Consider changing this to use add-html-tag instead.
@@ -1486,6 +1466,14 @@ word or non-word."
     (insert tag)
 ))
 
+
+;; (defvar org-mouse-map (make-sparse-keymap) "Mouse map for org mode")
+;;   (keymap
+;;    (follow-link . mouse-face)
+;;    (mouse-3 . org-find-file-at-mouse)
+;;    (mouse-2 . org-open-at-mouse)
+;; ))
+
 (defun org-hook-fcn ()
   (setq truncate-lines nil)
 
@@ -1499,6 +1487,18 @@ word or non-word."
   ;(org-indent-mode)
   ;; but I find that too annoying
 
+  ;; Default font for literal blocks is too small and grey
+  (set-face-attribute 'org-block nil
+                      :foreground "red"
+                      :background nil
+                      :inherit 'fixed-pitch
+                      :height 85)
+  ;; but I don't really want to read the #+BEGIN_EXAMPLE flanking it
+  (set-face-attribute 'org-block-begin-line nil
+                      :foreground "#888"
+                      :background nil
+                      )
+
   (local-set-key "\C-cb" (lambda () (interactive) (org-emphasisify "*")))
   (local-set-key "\C-c*" (lambda () (interactive) (org-emphasisify "*")))
   (local-set-key "\C-ci" (lambda () (interactive) (org-emphasisify "/")))
@@ -1507,6 +1507,8 @@ word or non-word."
   (local-set-key "\C-c_" (lambda () (interactive) (org-emphasisify "_")))
   (local-set-key "\C-cu" (lambda () (interactive) (org-emphasisify "_")))
   (local-set-key "\C-c-" (lambda () (interactive) (org-emphasisify "-")))
+
+  ; (local-set-key "mouse-2" (lambda () (interactive) XXX)
 )
 (add-hook 'org-mode-hook 'org-hook-fcn)
 
