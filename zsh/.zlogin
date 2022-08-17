@@ -60,6 +60,11 @@ if [[ $(tty) == /dev/tty1 || ! -z "$SSH_TTY" ]]; then
         export PYTHONSTARTUP=~/.pystartup
     fi
 
+    if [[ -e /usr/lib/x86_64-linux-gnu/libgtk3-nocsd.so.0 ]]; then
+        export GTK_CSD=0
+        export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libgtk3-nocsd.so.0
+    fi
+
     ########### End Environment
 
     umask 22
@@ -76,7 +81,9 @@ if [[ $(tty) == /dev/tty1 || ! -z "$SSH_TTY" ]]; then
     # Firefox in particular loves to create Downloads and Desktop
     # even if you've specifically set the download directory otherwise.
     echo "Cleaning up bogus directories"
-    rm -rf .cache/chromium .cache/google-chrome .macromedia .vlc Downloads Desktop Videos ~/Templates "~/Calibre Library"
+    rm -rf .cache/chromium .cache/google-chrome .macromedia .vlc Downloads Desktop Videos ~/Templates "~/Calibre Library" ~/.local/share/calibre-ebook.com
+    # Might want to add lots more directories in ~/.local/share
+    # as well as chromium directories scattered all over the filesystem
     # rm -rf snap/chromium/common/.cache/
 
     # check-spam-blanks
@@ -97,7 +104,7 @@ if [[ $(tty) == /dev/tty1 || ! -z "$SSH_TTY" ]]; then
 
     if [[ $(hostname) == 'charon' ]]; then
         # mute the microphone, set the builtin speakers as default output:
-        # pulsehelper --source none --sink builtin
+        pulsehelper --source none --sink spkr > /tmp/pulsehelper.login 2>&1
 
         # Incantation to enable all four speakers on Carbon X1 Gen 7
         # https://gist.github.com/hamidzr/dd81e429dc86f4327ded7a2030e7d7d9
@@ -153,12 +160,15 @@ if [[ $(hostname) == 'charon' ]]; then
     acpi
 fi
 
-# Check whether a system update started clearing the console again
-if grep TTYVTDisallocate=yes /etc/systemd/system/getty.target.wants/getty@tty1.service >&/dev/null
-then
-    echo
-    echo "*****************"
-    echo '/etc/systemd/system/getty.target.wants/getty@tty1.service"
-    echo "had TTYVTDisallocate set back to yes!'
-    echo "*****************"
+# Check whether a package tried to overwrite the TTYVTDisallocate setting:
+# the file has now been diverted by
+# dpkg-divert --divert /lib/systemd/system/getty@.service.new --rename /lib/systemd/system/getty@.service
+# Remove the diversion with
+# dpkg-divert --remove /lib/systemd/system/getty@.service
+if [[ -e /lib/systemd/system/getty@.service.new ]]; then
+    echo '*****************'
+    echo "Systemd tried to install a new /lib/systemd/system/getty@.service"
+    echo "diff /lib/systemd/system/getty@.service /lib/systemd/system/getty@.service.new"
+    echo '*****************'
 fi
+
