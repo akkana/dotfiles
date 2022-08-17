@@ -19,6 +19,8 @@
 
 ;; Don't prompt all the time for y e s \n
 (fset 'yes-or-no-p 'y-or-n-p)
+;; In emacs 28, this will work:
+(setq use-short-answers t)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -96,6 +98,7 @@
   (global-set-key (kbd "RET") 'newline-and-indent)
   (global-set-key "\C-cc" 'comment-region)
   (global-set-key "\C-cC" 'uncomment-region)
+  (global-set-key (kbd "C-c a") 'org-agenda)
 
   ;; Zooming
   (global-set-key (kbd "C-x C-=") 'zoom-in)
@@ -125,6 +128,7 @@
 ;; (for CLIPBOARD) each sometimes replaces the other's selection.
 ;; Here's a more reliable way to do it, and also turn off
 ;; emacs' annoying habit of pasting colors from unrelated buffers.
+;; (For a solution to that, see yank-excluded-properties, later.)
 ;; HOWEVER: x-selection and gui-get-selection both ignore the
 ;; current charset, e.g. they paste 326 instead of Ö.
 ;; (global-set-key (kbd "C-y")
@@ -349,6 +353,11 @@
 ;(set-background-color "mint cream")
 (set-background-color "#e9fffa")
 
+;; XXX Colors and fonts don't apply to new windows created with make-frame.
+;; Apparently it would need to set default-frame properties or define
+;; a theme in order to apply to new frames.
+;; In the meantime, C-x C-0 should usually set things right.
+
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -358,7 +367,7 @@
  '(font-lock-comment-face ((((class color) (min-colors 88) (background light)) (:foreground "blue"))))
 
  ;; Markdown faces
- '(markdown-bold-face ((t (:family "Monoid HalfTight-7.5" :foreground "dark orchid" :weight bold :height 1.1))))
+ '(markdown-bold-face ((t (:family "Monoid HalfTight-7.5" :foreground "dark magenta" :weight bold :height 1.1))))
  '(markdown-code-face ((t (:inherit fixed-pitch :background "ivory1"))))
  '(markdown-header-face ((t (:family "Liberation Serif" :height 1.5 :weight bold))))
  '(markdown-header-face-1 ((t (:inherit markdown-header-face :height 1.8 :foreground "navy blue"))))
@@ -390,8 +399,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; turning off annoyances
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(setq mouse-wheel-progressive-speed nil)
 
 ;; I'd rather not force this, since I occasionally edit binary files,
 ;; but it's just too annoying how emacs asks, then doesn't actually
@@ -582,7 +589,9 @@
 ;; don't paste syntax highlight color into buffers where it's meaningless.
 ;; In emacs 25 this seems to work, but it doesn't work in emacs 24.
 (add-to-list 'yank-excluded-properties 'font)
+(add-to-list 'yank-excluded-properties 'face)
 (add-to-list 'yank-excluded-properties 'font-lock-face)
+(add-to-list 'yank-excluded-properties 'mouse-face)
 
 ;; In emacs24, yank-excluded-properties doesn't work.
 ;; However, this works for Ctrl-Y:
@@ -710,6 +719,7 @@
         (let ((str (read-string "Title: ")))
           (message "Inserting standard HTML")
           (insert
+           ;; "<!DOCTYPE html>\n"
            "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">\n"
            "<html>\n"
            "<head>\n"
@@ -1140,8 +1150,8 @@
 ;; Key bindings and such can be done in the mode hook.
 (defun html-hook-fcn ()
   ;; Define keys for inserting tags in HTML and web modes:
-  (local-set-key "\C-cb" (lambda () (interactive) (add-html-tag "b")))
-  (local-set-key "\C-ci" (lambda () (interactive) (add-html-tag "i")))
+  (local-set-key "\C-cb" (lambda () (interactive) (add-html-tag "strong")))
+  (local-set-key "\C-ci" (lambda () (interactive) (add-html-tag "em")))
   (local-set-key "\C-cc" (lambda () (interactive) (add-html-tag "code")))
   (local-set-key "\C-c1" (lambda () (interactive) (add-html-tag "h1")))
   (local-set-key "\C-c2" (lambda () (interactive) (add-html-tag "h2")))
@@ -1393,6 +1403,7 @@ word or non-word."
 ;;;;;;;;;;;;;;;;;;;;;
 
 ;; Run M-x org-mode-restart to reload changes
+;; See also "org-mode fonts and colors", above.
 
 ;; https://emacs.stackexchange.com/a/35632 has a very complicated solution
 ;; to adding new emphasis characters, but it's dependent on org-habit
@@ -1466,6 +1477,13 @@ word or non-word."
     (insert tag)
 ))
 
+;; org-agenda
+(setq org-agenda-files '("~/.emacs.d/agenda/"))
+;; For calendar export, see:
+;; https://200ok.ch/posts/2022-02-13_integrating_org_mode_agenda_into_other_calendar_apps.html
+;; org-agenda-list org-agenda-month-view org-agenda-phases-of-moon org-agenda-schedule (schedule the item at point) org-agenda-sunrise-sunset org-agenda-week-view
+
+
 
 ;; (defvar org-mouse-map (make-sparse-keymap) "Mouse map for org mode")
 ;;   (keymap
@@ -1498,6 +1516,12 @@ word or non-word."
                       :foreground "#888"
                       :background nil
                       )
+
+  ;; Try to find sane bindings for the Enter key in org mode.
+  ;; (local-set-key (kbd "<S-return>") 'org-meta-return)
+  (if (fboundp 'electric-indent-just-newline)
+      (local-set-key (kbd "<S-return>") 'electric-indent-just-newline))
+  (local-set-key (kbd "<C-return>") 'org-meta-return)
 
   (local-set-key "\C-cb" (lambda () (interactive) (org-emphasisify "*")))
   (local-set-key "\C-c*" (lambda () (interactive) (org-emphasisify "*")))
@@ -1946,6 +1970,7 @@ word or non-word."
 
         ("\\.md$" . markdown-mode)
         ("\\.org$" . org-mode)
+        ("\\.emacs.d/agenda/$" . org-mode)
 
         ;; Spektrum transmitter model definition files:
         ;; line endings are screwy, don't try to change them
