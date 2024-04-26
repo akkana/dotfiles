@@ -1,4 +1,5 @@
 #! /usr/bin/zsh
+
 #########################
 # Akkana's .zshrc
 #########################
@@ -84,9 +85,10 @@ fi
 
 set_prompt() {
   hostname=$(hostname -s)
+  whoami=$(whoami)
 
   # Only set this prompt if I'm logged in as myself:
-  if [[ $USER == akkana ]]; then
+  if [[ $whoami == akkana ]]; then
     # PS1=$'%{\e[1m%}<'$(hostname)$primes$'>-%{\e[0m%} '
     #PS1='%K{white}%F{blue}<'$(hostname)$primes$'>- %f%k'
 
@@ -99,7 +101,7 @@ set_prompt() {
     fi
 
   # But root should have a helpful colorized prompt too:
-  elif [[ $USER == root ]]; then
+  elif [[ $whoami == root ]]; then
     #PS1=$'%{\e[1m%}#['$(hostname)$primes$']#%{\e[0m%} '
     PS1='%K{white}%F{red}%B['$hostname$primes$'#]- %b%f%k'
 
@@ -140,20 +142,6 @@ systemctl() {
   /bin/systemctl -l --no-pager "$@"
 }
 
-export EDITOR=vim
-
-# If EDITOR is vim, zsh will try to be "smart" and switch to vi mode.
-# This switches bindings back to emacs:
-bindkey -e
-
-export RSYNC_RSH=ssh
-export PHO_ARGS=-p
-
-# virt-manager by default makes sessions that are only for root,
-# while virsh looks for a QEMU/KVM user session.
-# Tell virsh to use the root session:
-export LIBVIRT_DEFAULT_URI="qemu:///system"
-
 #
 # General key bindings:
 #
@@ -163,6 +151,10 @@ export LIBVIRT_DEFAULT_URI="qemu:///system"
 # See "Prefix searching" on https://zsh.sourceforge.io/Guide/zshguide04.html
 bindkey '^xp' history-beginning-search-backward
 bindkey '^xn' history-beginning-search-forward
+
+# 2023-07-20: emacs/readline bindings stopped working by default, so force them:
+bindkey -e
+# bindkey "^P" up-line-or-search
 
 #
 # Aliases and functions.
@@ -194,6 +186,9 @@ alias ap="man -k"
 # already disabled if it was a tty),
 # while leaving the documentation unclear. Get highlighting:
 alias cal="ncal -b"
+
+# remindcgi expects its reminders.txt in the same directory as the binary
+alias reminders="~/web/cal/index.cgi"
 
 # Run netscheme with sudo -E; it must be root but it also needs access
 # to quickbrowse.
@@ -242,6 +237,17 @@ phof () {
         return
     fi
     pho $imglist
+}
+
+# at jobs that can pop up a dialog
+atnotify() {
+    attime=$1
+    shift
+    at $attime <<EOF
+XAUTHORITY=~/.Xauthority DISPLAY=:0 WINDOWID= zenity --width 700 \
+    --title "at $attime" --info \
+    --text="<span color='blue' font='15'>at $attime</span>\n\n<span color='red' font='14'>$*</span>"
+EOF
 }
 
 # Simple pastebin via netcat. Pipe input into this.
@@ -360,64 +366,64 @@ alias prognamee='basename $(/bin/ls -l /proc/$(xprop _NET_WM_PID | awk "{print \
 ##################
 # Recursive greps
 gr() {
-  find . -name '*.o' -prune -or -name '*.so' -prune -or -name '*.a' -prune -or -name '*.pyc' -prune -or -name '*.jpg' -prune -or -name '*.JPG' -prune -or -name '*.png' -prune -or -name '*.xcf*' -prune -or -name '*.gmo' -prune -or -name '.intltool*' -prune -or -name '*.po' -prune -or -name 'po' -prune -or -name '*.tar*' -prune -or -name '*.zip' -or -name '.metadata' -or -name 'build' -or -name 'obj-*' -or -name '.git' -prune -or -name '.svn' -prune -or -name '.libs' -prune -or -name __pycache__ -prune -or -type f -print0 | xargs -0 grep "$@" /dev/null
+  find . -name '*.o' -prune -or -name '*.so' -prune -or -name '*.a' -prune -or -name '*.pyc' -prune -or -name '*.jpg' -prune -or -name '*.JPG' -prune -or -name '*.png' -prune -or -name '*.xcf*' -prune -or -name '*.gmo' -prune -or -name '.intltool*' -prune -or -name '*.po' -prune -or -name 'po' -prune -or -name '*.tar*' -prune -or -name '*.zip' -or -name '.metadata' -or -name 'build' -prune -or -name 'obj-*' -or -name '.git' -prune -or -name '.svn' -prune -or -name '.libs' -prune -or -name __pycache__ -prune -or -type f -print0 | xargs -0 grep "$@" /dev/null
 }
 
 zgr() {
-  find . -name '*.o' -prune -or -name '*.so' -prune -or -name '*.a' -prune -or -name '*.pyc' -prune -or -name '*.jpg' -prune -or -name '*.JPG' -prune -or -name '*.png' -prune -or -name '*.xcf*' -prune -or -name '*.gmo' -prune -or -name '.intltool*' -prune -or -name '*.po' -prune -or -name 'po' -prune -or -name '*.tar*' -prune -or -name '*.zip' -or -name '.metadata' -or -name 'build' -or -name 'obj-*' -or -name '.git' -prune -or -name '.svn' -prune -or -name '.libs' -prune -or -name __pycache__ -prune -or -type f -print0 | xargs -0 zgrep "$@" /dev/null | fgrep -v .svn | fgrep -v .git
+  find . -name '*.o' -prune -or -name '*.so' -prune -or -name '*.a' -prune -or -name '*.pyc' -prune -or -name '*.jpg' -prune -or -name '*.JPG' -prune -or -name '*.png' -prune -or -name '*.xcf*' -prune -or -name '*.gmo' -prune -or -name '.intltool*' -prune -or -name '*.po' -prune -or -name 'po' -prune -or -name '*.tar*' -prune -or -name '*.zip' -or -name '.metadata' -or -name 'build' -prune -or -name 'obj-*' -or -name '.git' -prune -or -name '.svn' -prune -or -name '.libs' -prune -or -name __pycache__ -prune -or -type f -print0 | xargs -0 zgrep "$@" /dev/null | fgrep -v .svn | fgrep -v .git
 }
 
 # Grep in an android workspace: exclude all the intermediate and
 # generated files.
 andgr() {
-    find . -name 'build' -prune -or -name '*.apk' -prune -or -type f -print0 | xargs -0 zgrep "$@" /dev/null
+    find . -name 'build' -prune -or -name '*.apk' -prune -or -type f -print0 | xargs -0 zgrep -H "$@"
 }
 
 cgr() {
-  find . \( -name '*.[CchH]' -or -name '*.cpp' -or -name '*.cc' -or -name '*.ino' \) -print0 | xargs -0 grep "$@" /dev/null
+  find . \( -name '*.[CchH]' -or -name '*.cpp' -or -name '*.cc' -or -name '*.ino' \) -print0 | xargs -0 grep -H "$@"
 }
 hgr() {
-  find . \( -name '*.h' -or -name '*.idl' \) -print0 | xargs -0 grep "$@" /dev/null
+  find . \( -name '*.h' -or -name '*.idl' \) -print0 | xargs -0 grep -H "$@"
 }
 rgr() {
-  find . \( -name '*.rb' -or -name '*.rhtml' \) -print0 | xargs -0 grep "$@" /dev/null | fgrep -v .svn
+  find . \( -name '*.rb' -or -name '*.rhtml' \) -print0 | xargs -0 grep -H "$@" | fgrep -v .svn
 }
 htgr() {
-  find . \( -name '*.*htm*' -or -name '*.blx' \) -and -not -name 'webhits*' -prune -print0 | xargs -0 grep "$@" /dev/null
+  find . \( -name '*.*htm*' -or -name '*.blx' \) -and -not -name 'webhits*' -prune -print0 | xargs -0 grep -H "$@"
 }
 pygr() {
-  find . -name '*.py' -print0 | xargs -0 grep "$@" /dev/null
+  find . -name '*.py' -print0 | xargs -0 grep -H "$@"
 }
 jgr() {
-  find . -name '*.js' -print0 | xargs -0 grep "$@" /dev/null
+  find . -name '*.js' -print0 | xargs -0 grep -H "$@"
 }
 xgr() {
-  find . \( -name '*.cChH' -or -name '*.cpp' -or -name '*.xul' -or -name '*.html' -or -name '*.js' -or -name '*.css' \) -print0 | xargs -0 grep "$@" /dev/null
+  find . \( -name '*.cChH' -or -name '*.cpp' -or -name '*.xul' -or -name '*.html' -or -name '*.js' -or -name '*.css' \) -print0 | xargs -0 grep -H "$@"
 }
 cssgr() {
-  find . -name '*.css' -print0 | xargs -0 grep "$@" /dev/null
+  find . -name '*.css' -print0 | xargs -0 grep -H "$@"
 }
 mgr() {
-  find . -name '*akefile*' -print0 | xargs -0 grep "$@" /dev/null
+  find . -name '*akefile*' -print0 | xargs -0 grep -H "$@"
 }
 agr() {
-  find . -type f -print0 | xargs -0 grep "$@" /dev/null
+  find . -type f -print0 | xargs -0 grep -H "$@"
 }
 javagr() {
-  find . -name '*.java' -print0 | xargs -0 grep "$@" /dev/null
+  find . -name '*.java' -print0 | xargs -0 grep -H "$@"
 }
 # zgr() {
-#  find . \( -type f -and -not -name '*.o' -and -not -name '*.so' -and -not -name '*.a' \) -print0 | xargs -0 zgrep "$@" /dev/null
+#  find . \( -type f -and -not -name '*.o' -and -not -name '*.so' -and -not -name '*.a' \) -print0 | xargs -0 zgrep -H "$@"
 #}
 # Next doesn't work. How do we use -prune?
 idagr() {
-  find . \( -name OBJ -prune -or -name external -prune -or -name '*scons*' -prune -or -name google_appengine -prune -o -type f -and -not -name '*.o' -and -not -name '*.so' -and -not -name '*.a' -and -not -name '*.pyc' \) -print0 | xargs -0 grep "$@" /dev/null | fgrep -v .svn | fgrep -v .git
+  find . \( -name OBJ -prune -or -name external -prune -or -name '*scons*' -prune -or -name google_appengine -prune -o -type f -and -not -name '*.o' -and -not -name '*.so' -and -not -name '*.a' -and -not -name '*.pyc' \) -print0 | xargs -0 grep -H "$@" | fgrep -v .svn | fgrep -v .git
 }
 
 # For some reason, with Tags/Keywords this fails with -print0/-0
 # but works without it.
 taggr() {
-  find . -name 'Tags' -or -name 'Keywords' | xargs grep "$@" /dev/null
+  find . -name 'Tags' -or -name 'Keywords' | xargs grep -H "$@"
 }
 
 alias pygrep="langgrep python"
@@ -983,8 +989,8 @@ unsetopt autocd
 
 # End of lines added by compinstall
 
-# When typing a |, don't eat the space before it.
-ZLE_REMOVE_SUFFIX_CHARS=$' \t\n;&'
+# When completing/history saving a | or &, don't eat the space before it.
+ZLE_REMOVE_SUFFIX_CHARS=$' \t\n;'
 
 # Older zsh, like on squeeze, don't have compdef.
 
@@ -1141,6 +1147,10 @@ bindkey '\e\t' menu-complete
 
 # If you need to know what rules zsh is using for a completion.
 # This only works if you've run compinit.
+# (But in 2023, even with compinit it doesn't do anything.
+# https://zsh.sourceforge.io/Guide/zshguide06.html says that
+# it's bound by default to ^Xh', but that doesn't do anything either.)
+
 #bindkey '\e\d' _complete_help
 bindkey '\e\e' _complete_help
 
@@ -1218,8 +1228,8 @@ check_holds() {
 
 if [[ -f ~/.config/pythonrc ]]; then
     export PYTHONSTARTUP=~/.config/pythonrc
-else
-    echo "~/.config/pythonrc doesn't exist, no PYTHONSTARTUP"
+# else
+#     echo "~/.config/pythonrc doesn't exist, no PYTHONSTARTUP"
 fi
 
 ######
@@ -1368,7 +1378,9 @@ alias pythonhelp="pythonXhelp python"
 alias python2help="pythonXhelp python2"
 alias python3help="pythonXhelp python3"
 
-alias unittest='python3 -m unittest discover'
+# Commented out because accidentally typing this in billtracker
+# can stomp the local database.
+# alias unittest='python3 -m unittest discover'
 
 # Run unit tests under cProfile
 alias unitprofile='python3 -mcProfile -m unittest discover'
@@ -1376,7 +1388,7 @@ alias unitprofile='python3 -mcProfile -m unittest discover'
 #############################################################
 # Android-related aliases
 
-# Some aliases for getting files from Android KitKat via adb,
+# Some aliases for getting files from Android via adb,
 # since the lack of usb-storage and autocomplete is such a pain.
 
 # Where is the SD card on my phone?
@@ -1386,68 +1398,77 @@ alias unitprofile='python3 -mcProfile -m unittest discover'
 # On Google devices, there's no SD card so just use /storage/emulated/0.
 androidSD=/storage/emulated/0
 
-# There seems to be no way to remove multiple or wildcarded files via adb.
-# alias delallgpx='adb shell rm /mnt/extSdCard/Android/data/net.osmand.plus/tracks/rec/*'
+pulladb() {
+    # Pull files from a particular directory on an android device,
+    # then optionally remove the files thus transfered.
+    # Usage: pulladb from-dir-on-device [-k]
+    # -k means keep: don't delete afterward
+    pullfromdir=$1
+    flags=$2
+
+    # adb always fails the first few times, timing out while connecting
+    adb shell echo initializing adb ...
+    sleep 1
+    adb shell echo initialized adb
+
+    adb pull $pullfromdir/. .
+
+    # This always pulls an empty dir named thumbnails.
+    # Remove it in case it's ever not empty.
+    rm -rf thumbnails
+
+    if [[ "$flags" == '-k' ]]; then
+        echo "Keep mode: NOT deleting photos on phone"
+    else
+        # Find all files under this dir changed in the last 5 minutes
+        # Note, man find says -mmin n matches files modified in the last n min,
+        # but it's actually -mmin -n.
+        pulledfiles=$( find . -type f -mmin -5 -print0 )
+
+        # With xargs -n 1 This prints "rm: Needs 1 argument (see "rm --help")"
+        # but seems to work anyway. But without -n 1 removes them all in one
+        # command, which should be better anyway.
+        echo $pulledfiles | sed "s_\./_$pullfromdir/_g" | xargs -0 adb shell rm
+    fi
+
+    echo "========"
+    echo "Pulled:"
+    ls
+}
 
 pullgpx() {
-  pushd_maybe ~/Docs/gps/new
-  adb pull $androidSD/Android/data/net.osmand.plus/files/tracks/rec/. .
-  for f in *.gpx; do
-    echo $f
-    adb shell rm $androidSD/Android/data/net.osmand.plus/files/tracks/rec/$f
-  done
-  ls
-  # echo Maybe adb push file.gpx $androidSD/GPX/
-  # echo Maybe adb push file.gpx $androidSD/Android/data/net.osmand.plus/files/tracks/
-  echo Maybe adb push file.gpx /storage/emulated/0/Android/data/net.osmand.plus/files/tracks/
-  echo or androidfiles file.gpx android:Android/data/net.osmand.plus/files/tracks/somedir
+    # Pull recorded GPX tracks from OsmAnd.
+    pushd_maybe ~/Docs/gps/new
+
+    # If osmand is on an SD card:
+    # pulladb $androidSD/Android/data/net.osmand.plus/files/tracks/rec
+    # If on main storage:
+    pulladb /storage/emulated/0/Android/data/net.osmand.plus/files/tracks/rec $*
 }
 
 pullphotos() {
-  pushd_maybe ~/Docs/gps/new
+    # If you keep photos on an SD card, use $androidSD/DCIM/Camera
+    # If they're on main storage:
+    pulladb /storage/emulated/0/DCIM/Camera $*
 
-  # If you keep photos on an SD card:
-  # cameradir=$androidSD/DCIM/Camera
-  # If they're on main storage:
-  cameradir=/storage/emulated/0/DCIM/Camera
-
-  adb pull $cameradir/. .
-
-  setopt extendedglob
-  setopt EXTENDED_GLOB
-  # for f in *.jpg~*.vr.jpg *.mp4; do
-  for f in *.jpg *.mp4; do
-    echo_and_do adb shell rm $cameradir/$f
-  done
-
-  # This usually also pulls an empty thumbnails directory
-  rm -rf thumbnails
-
-  echo "========"
-  echo "Pulled photos:"
-  ls
+    # Deleting photos on android just renames them to .trashed-*
+    # Remove the local copy (having just removed the copy on the device).
+    # This gives an annoying "No match" error.
+    # rm -f .trashed*
+    # { rm .trashed*; } 2>/dev/null
+    # This is an obscure zsh incantation that avoids the error:
+    rm -rf .trashed*(N)
 }
 
-pullscreenshot() {
-  pushd_maybe ~/Docs/gps/new
-  adb pull /sdcard/Pictures/Screenshots/. .
-  for f in *.png; do
-    echo $f
-    adb shell rm /sdcard/Pictures/Screenshots/$f
-  done
+pullscreenshots() {
+    pulladb /storage/emulated/0/Pictures/Screenshots $*
 }
 
-pullvoice() {
-  pushd_maybe ~/Docs/gps/new
-  adb pull /sdcard/SoundRecorder/. .
-  for f in *.mp4; do
-    echo $f
-    # Voice Recorder files have names with spaces like 'My Recording_5.mp4'
-    adb shell rm "\"/sdcard/SoundRecorder/$f\""
-  done
-}
+# pullvoice() {
+#     pulladb /storage/emulated/0/SoundRecorder $*
+# }
 
-# But what if we don't have adb installed? Here's how to do it using gphoto2.
+# But what if adb isn't installed? Here's how to do it using gphoto2.
 # Set androidDCIM in .zshrc.hostname to something like /store_00020002
 # but unfortunately I don't know how to get the magic number.
 alias pullphotosg='gphoto2 --folder $androidDCIM/DCIM/Camera -P'
@@ -1597,7 +1618,7 @@ spamcheck() {
     header=$1
     shift
     args=$*
-    echo looking for $header in $args
+    echo looking for $args in $header
     echo "============ Recent =============="
     decodemail -a "$header" ~/Spam/saved | egrep -a -i "$args"
     if [ -d ~/Spam/oldheaders ]; then
@@ -1609,29 +1630,6 @@ spamcheck() {
 
 alias spams='spamcheck Subject:'
 alias spamf='spamcheck From:'
-
-# XXX The old, well tested definitions:
-# Hopefully they can be removed if the above works.
-# spams() {
-#     #grep Subject ~/Spam/saved ~/Spam/trained/saved | egrep -i "$*"
-#     echo "============ Recent =============="
-#     decodemail -a Subject: ~/Spam/saved | egrep -a -i "$*"
-#     if [ -d ~/Spam/oldheaders ]; then
-#         echo
-#         echo "============ Older =============="
-#         decodemail -a Subject: ~/Spam/oldheaders/saved | egrep -a -i "$*"
-#     fi
-# }
-# spamf() {
-#     #grep -a -h '^From:' ~/Spam/trained/saved ~/Spam/saved | egrep -a -i "$*"
-#     echo "============ Recent =============="
-#     decodemail -a From: ~/Spam/saved | egrep -a -i "$*"
-#     if [ -d ~/Spam/oldheaders ]; then
-#         echo
-#         echo "============ Older =============="
-#         decodemail -a From: ~/Spam/oldheaders/saved | egrep -a -i "$*"
-#     fi
-# }
 
 cleanspam() {
     # Spam is saved in ~/Spam. (Outside my regular mail hierarchy,
@@ -1732,7 +1730,7 @@ composekey() {
   grep -i $1 /usr/share/X11/locale/en_US.UTF-8/Compose ~/.XCompose
 }
 
-alias remindme='remind -g ~/Docs/Lists/remind'
+alias remindme='remind -g ~/web/cal/remind.txt | sed -e "s/||/\n/g" -e "s/\bon //"'
 
 alias screenshot="scrot -b -s screenshot.jpg"
 alias thes="dict -h localhost -d moby-thesaurus"
@@ -1758,7 +1756,7 @@ pdfreduce() {
 # Nice overview of lp options: https://www.computerhope.com/unix/ulp.htm
 
 # Which printers are available? lpstat -p -d also works.
-alias whichprinters='lpstat -a; echo "print with lp -d dest -n num-copies"; echo "For PDF consider adding -o fit-to-page or -o scaling=100, or using pdfpages or pdfjam"'
+alias whichprinters='lpstat -a; echo "print with lp -d dest -n num-copies"; echo "for duplex,  -o sides=two-sided-long-edge -o collate=true -d dest"; echo "For PDF consider adding -o fit-to-page or -o scaling=100, or using pdfpages or pdfjam"'
 
 alias vboxdrv="sudo modprobe vboxdrv"
 
@@ -1820,8 +1818,9 @@ f2c() {
     units "tempF($1)" tempC
 }
 
-# Always run sqlite inside rlwrap to get better commandline editing:
-alias sqlite3="rlwrap -a -z pipeto -i /usr/bin/sqlite3"
+# Always run sqlite inside rlwrap to get better commandline editing.
+# This used to be wonderful, but now it messes up the input line.
+# alias sqlite3="rlwrap -a -z pipeto -i /usr/bin/sqlite3"
 
 # Which numbers correspond to which colors on this terminal?
 alias tcolors='printf "\e[%dm%d dark\e[0m  \e[%d;1m%d bold\e[0m\n" {30..37}{,,,}'
@@ -1829,8 +1828,28 @@ alias tcolors='printf "\e[%dm%d dark\e[0m  \e[%d;1m%d bold\e[0m\n" {30..37}{,,,}
 # I can never remember nmap arguments
 alias portscan="nmap -v -sT localhost"
 
-# Use external speakers
-alias speakers='pulsehelper --sink PnP'
+# Cute command-line metronome using sox play
+# Usage: metronome bpm [minutes [volume]]
+# -c1  one channel
+metronome() {
+    bpm=$1
+    if [[ $bpm == '-h' || $bpm == '--help' || $bpm == '' ]]; then
+        echo 'Usage: metronome bpm [minutes [volume]]'
+        return
+    fi
+    minutes=$2
+    volume=$3
+    if [[ $minutes != '' ]]; then
+        beats=$(awk "BEGIN { print $bpm * $minutes }")
+    else
+        beats='-'
+    fi
+    if [[ $volume == '' ]]; then
+        volume=1
+    fi
+    echo "BPM $bpm minutes $minutes Volume $volume"
+    play -n -c1 synth 0.004 sine 2000 pad $(awk "BEGIN { print 60/$bpm -.004 }") repeat $beats vol $volume
+}
 
 # chroot to alternate partition /partitionname in order to update it
 chroot-update() {
