@@ -1,0 +1,39 @@
+# To use this, set PYTHONSTARTUP=/path/to/.config/pythonrc
+
+try:
+    from rich import print
+    from rich import pretty
+    pretty.install()
+    # from rich import inspect
+
+    print("Imported print and pretty from rich, but not inspect")
+except ModuleNotFoundError:
+    pass
+
+import readline
+import rlcompleter
+import atexit
+import os
+
+# Tab completion
+# http://www.rasadacrea.com/en/web-training-courses/using-the-python-interpreter
+readline.parse_and_bind('tab: complete')
+
+# history file
+histfile = os.path.join(os.environ['HOME'], '.pythonhistory')
+try:
+    readline.read_history_file(histfile)
+except IOError:
+    pass
+atexit.register(readline.write_history_file, histfile)
+
+# This gets more sensible word boundaries though I'm not clear why:
+# it seems like it's taking precedence over the shell, but the result
+# is that with this code, word boundaries are the same as in shells,
+# whereas without it, only spaces count as word boundaries.
+# https://stackoverflow.com/a/33059556
+readline.parse_and_bind('"\\C-w": backward-kill-word')
+import subprocess
+subprocess.call(['stty', 'werase', 'undef'])
+
+del os, histfile, readline, rlcompleter, subprocess
