@@ -230,13 +230,35 @@ invertmask() {
     # python -c "print '0%o' % (~(0777 & 0$1) & 0777)"
 }
 
-phof () {
+# View in pho every image matching the given fotogr args
+phof() {
     imglist=(`fotogr "$@"`)
     if [[ -z $imglist ]]; then
         echo no match
         return
     fi
     pho $imglist
+}
+
+# Same thing, but in random order
+phofr() {
+    imglist=(`fotogr "$@"`)
+    if [[ -z $imglist ]]; then
+        echo no match
+        return
+    fi
+    pho -R $imglist
+}
+
+# View with pho all images tagged photoshare says haven't been shared yet
+phoshare() {
+    imglist=( $( photoshare -q "$@" | grep -v 'shared on' ) )
+
+    if [[ -z $imglist ]]; then
+        echo no match
+        return
+    fi
+    pho -R $imglist
 }
 
 # at jobs that can pop up a dialog
@@ -1864,6 +1886,7 @@ chroot-update() {
     sudo chroot /$partitionname
 }
 
+
 ###################################################
 # Quick-jump to deeply nested directories
 # http://jeroenjanssens.com/2013/08/16/quickly-navigate-your-filesystem-from-the-command-line.html
@@ -1920,3 +1943,4 @@ gitprompt() {
 if [[ -f $HOME/.config/zsh/.zshrc.$hostname ]]; then
   . $HOME/.config/zsh/.zshrc.$hostname
 fi
+
