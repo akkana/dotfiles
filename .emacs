@@ -22,29 +22,52 @@
 ;; In emacs 28, this will work:
 (setq use-short-answers t)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;; Initial size ;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Starting with 29.1, set-frame-size-by-resolution doesn't work reliably
+;; at the beginning, maybe because it needs the initial frame rather
+;; than (selected-frame), though (selected-frame) works fine for height.
+;;(setq initial-frame-alist '((width . 80)))
+
+(setq startup-log-file "~/.emacs.d/LOG")
+(defun log-to-file (logmsg)
+  (write-region (concat (format-time-string "%Y-%m-%d %H:%M") ": "
+                        logmsg "\n") nil startup-log-file t))
 
 ;; Set window size and font according to screen size. Adapted from
 ;; http://stackoverflow.com/questions/92971/how-do-i-set-the-size-of-emacs-window
 (defun set-frame-size-by-resolution ()
   (interactive)
   (if (display-graphic-p)    ; older: (if window-system
-  (progn
+
+    (let ((dpyheight (car (cdr (cdr (cdr (cdr (car (cdr (car (display-monitor-attributes-list))))))))) )
+         ;;(((name . "eDP-1") (geometry 0 0 1920 1080) (workarea 0 0 1920 1080) (mm-size 309 174) (frames #<frame  *Minibuf-1* - GNU Emacs at charon 0x55de50bd59a8>) (source . "Gdk")))
+         ;; so height is car cdr cdr cdr cdr car cdr car
+
+         ;; Used to use x-display-pixel-height, but that's not reliable:
+         ;; after disconnecting from a display it sometimes retains the old
+         ;; size, even when xrandr has reset.
+         ;; (dpyheight (x-display-pixel-height))
+         )
+      (log-to-file "--------")
+      (log-to-file (format "display-monitor-attributes-list: %s" (display-monitor-attributes-list)))
+      (log-to-file (format "dpyheight is %d" dpyheight))
+
     ;; Emacs can't accept some fonts via Xdefaults. Here's how to set them here,
     ;; and we'd want to do it differently based on screen size:
     ;(message (number-to-string (x-display-pixel-height)))
     ;(sleep-for 2)
 
-    ;; Small laptops
-    (if (<= (x-display-pixel-height) 768)
+    ;; Choose a different font for small laptops
+    (if (<= dpyheight 768)
         (set-frame-font "-misc-fixed-bold-r-normal-*-14-*-*-*-*-*-*-*")
 
-        ;; X1C display
-        (if (<= (x-display-pixel-height) 1080)
+        ;; X1C built-in display
+        (if (<= dpyheight 1080)
             ;; JetBrains doesn't display the same in emacs as in urxvt,
             ;; and ends up taking up a lot of extra vertical space.
             ; (set-frame-font "Monoid HalfTight-8:bold")
-            (set-frame-font "JetBrains Mono-11:bold")
+            (set-frame-font "JetBrains Mono-10:bold")
 
             ;; full monitor
             (set-frame-font "Monoid HalfTight-7.5")
@@ -55,19 +78,26 @@
     ;; from the screen height (for panels, menubars and
     ;; whatnot), then divide by the height of a char to
     ;; get the height we want
-    (let ((newheight  (+ (floor (/ (* (x-display-pixel-height) 0.55)
+    (let ((newheight  (+ (floor (/ (* dpyheight 0.55)
                                    (frame-char-height)))
                          22)))
-      (message (format "New height: %d" newheight))
       (set-frame-height (selected-frame) newheight)
+      (log-to-file (format "Resizing to height %d" newheight))
       )
-
 
     ;; Always use a width of 80.
     ;; You can't tell what the width is from xwininfo -- emacs reports 79
-    ;; when it's really 80. So use the line above.
+    ;; when it's really 80.
+    ;; This doesn't work reliably the initial frame, see above.
     (set-frame-width (selected-frame) 80)
+    (log-to-file (format "selected frame width is %s"
+                         (frame-width (selected-frame))))
+    (log-to-file (format "set-frame-width 80, now it's %s" (frame-width)))
     )))
+
+;; Testing startup problems:
+;; emacs -q -l .emacs.d/start80.el .emacs.d/80col.txt
+
 ;; To set initial window position too:
 ;; (set-frame-position (selected-frame) 10 30)
 
@@ -151,6 +181,7 @@
 ;; This copies whatever's selected in emacs or in the kill ring
 ;; to both primary and clipboard X selections.
 (global-set-key (kbd "C-S-c") 'clipboard-kill-ring-save)
+(global-set-key (kbd "C-M-c") 'clipboard-kill-ring-save)
 
 ;; Leaving a buffer tends to stomp the primary selection.
 ;; The only way I've found to stop that is to ensure that
@@ -188,9 +219,11 @@
 ;; electrics everywhere, then rebind } to indent the current line
 ;; after inserting. Of course this doesn't really turn off electrics
 ;; everywhere, anyway.
-;(setq electric-indent-mode nil)
-;; Someone on #emacs suggests that this works better:
-;(electric-indent-mode nil)
+(setq electric-indent-mode nil)
+;; Someone on #emacs suggests that this works better (but it doesn't):
+;;(electric-indent-mode nil)
+;; but another page suggests this
+(electric-indent-mode -1)
 
 ;; Despite the previous two lines, electric mode always ends up on anyway.
 ;; https://emacs.stackexchange.com/a/20899 claims this will tame
@@ -247,10 +280,12 @@
 
 (define-minor-mode global-keys-minor-mode
   "A minor mode so that global key settings override annoying major modes."
-  t "" 'global-keys-minor-mode-map)
+  :init-value t      ;; try to be on by default
+  :lighter ""        ;; No modeline display
+  'global-keys-minor-mode-map)
 ;; name is set to "" since it gets shoved into the modeline for everything.
 
-(global-keys-minor-mode 1)
+(global-keys-minor-mode t)
 
 ;; A keymap that's supposed to be consulted before the first
 ;; minor-mode-map-alist.
@@ -301,7 +336,9 @@
 ;; with emacs-installed packages. Then you have to read the comments
 ;; at the beginning of undo-tree.el to figure out how to use it since
 ;; there's no online documentation. *eyeroll*
-(if (>= emacs-major-version 24)
+;; But in emacs 28, undo-tree from debian leads to a huge slew of
+;; warnings, and then undo-tree-undo ends up undefined.
+(if (and nil (>= emacs-major-version 24) (< emacs-major-version 28))
     (progn
         ; (package-initialize)  ; Already done earlier
         (undo-tree-mode 1)
@@ -309,7 +346,8 @@
         (global-set-key "\M-z" 'undo-tree-redo)
         )
     (progn
-        (load "redo.el")
+        ;; redo.el is no longer available under emacs 28
+        ;;(load "redo.el")
         (global-set-key "\C-z" 'undo)
         (global-set-key "\M-z" 'redo)
         ) )
@@ -365,9 +403,8 @@
  ;; If there is more than one, they won't work right.
  '(flyspell-duplicate ((((class color)) (:foreground "red" :underline t :weight bold))))
  '(font-lock-comment-face ((((class color) (min-colors 88) (background light)) (:foreground "blue"))))
-
- ;; Markdown faces
  '(markdown-bold-face ((t (:family "Monoid HalfTight-7.5" :foreground "dark magenta" :weight bold :height 1.1))))
+ '(markdown-italic-face ((t (:foreground "dark green" :slant italic :height 1.0))))
  '(markdown-code-face ((t (:inherit fixed-pitch :background "ivory1"))))
  '(markdown-header-face ((t (:family "Liberation Serif" :height 1.5 :weight bold))))
  '(markdown-header-face-1 ((t (:inherit markdown-header-face :height 1.8 :foreground "navy blue"))))
@@ -375,11 +412,8 @@
  '(markdown-header-face-3 ((t (:inherit markdown-header-face :height 1.4 :foreground "dark red"))))
  '(markdown-header-face-4 ((t (:inherit markdown-header-face :height 1.2 :foreground "indian red"))))
  '(markdown-inline-code-face ((t (:inherit font-lock-constant-face :background "gainsboro"))))
- '(markdown-italic-face ((t (:foreground "dark green" :slant italic :height 1.1))))
  '(markdown-link-face ((t (:inherit link))))
  '(markdown-pre-face ((t (:background "ivory1" :family "monoid"))))
-
- ;; org mode fonts and colors
  '(org-level-1 ((t (:family "Liberation Serif" :height 2.3 :foreground "navy blue" :weight bold))))
  '(org-level-2 ((t (:family "Liberation Serif" :height 2.0 :foreground "dark magenta" :weight bold))))
  '(org-level-3 ((t (:family "Liberation Serif" :height 1.7 :foreground "dark red" :weight bold))))
@@ -431,11 +465,25 @@
 (tool-bar-mode 0)
 (menu-bar-mode 0)
 ;; and the irritating scrollbar that claims to have somewhere to
-;; scroll even on new 1-line files:
+;; scroll even on new 1-line files.
+;; Supposedly toggle-scroll-bar only works on "the selected frame",
+;; but it's been working for me globally.
 (toggle-scroll-bar -1)
+;; I guess this is now the more approved way, but it has to be called
+:; from the after-make-frame-functions hook:
+;; (scroll-bar-mode nil)
 
 ;; and the mousewheel progressive speed:
 (setq mouse-wheel-progressive-speed nil)
+;; and as of emacs 28, mouse wheel scroll is super slow, so try to
+;; go back to the speed it used to have:
+(setq mouse-wheel-scroll-amount
+      '(5
+        ((shift)
+         . hscroll)
+        ((meta))
+        ((control)
+         . text-scale)))
 
 ;; Emacs's html mode always asks for email address.  Why??
 (setq query-user-mail-address nil)
@@ -823,8 +871,8 @@
 
 (define-minor-mode dubcaps-mode
   "Toggle `dubcaps-mode'.  Converts words in DOuble CApitals to Single Capitals as you type."
-  :init-value nil
-  :lighter (" dubcaps")
+  :init-value nil          ;; mode off by default
+  :lighter (" dubcaps")    ;; What to say in the modeline when active
   (if dubcaps-mode
       (add-hook 'post-self-insert-hook #'dcaps-to-scaps nil 'local)
     (remove-hook 'post-self-insert-hook #'dcaps-to-scaps 'local)))
@@ -967,76 +1015,30 @@
   (local-set-key (kbd "C-:") 'insert-yesterday-date)
   (global-set-key (kbd "C-:") 'insert-yesterday-date)
   (dubcaps-mode t)
-  (toggle-word-wrap)
+  ; word-wrap sounds good but does strange things like leaving
+  ; lines with only the leading whitespace followed by the wrapped part,
+  ; and it's hard to tell which parts are actually wrapped.
+  ; (toggle-word-wrap)
   )
 
 (add-hook 'text-mode-hook 'text-hook)
 
-;;
-;; Browsing to URLs -- used in html and org modes
-;; (maybe some day I'll find a way to do it from markdown-mode).
-;;
 
-  ;; browse-url-of-buffer is on C-c C-v. Set it to quickbrowse:
-  ;; (setq browse-url-browser-function 'browse-url-generic
-  ;;       browse-url-generic-program "quickbrowse")
-  ;; default is xdg-open, set with xdg-settings get|set default-web-browser
-  ;; If that ever starts getting called when saving,
-  ;; it's probably because html-autoview-mode got mistakenly toggled on;
-  ;; toggle it back off with C-c C-s.
-  ;; For debugging such things: F1 m shows which minor modes are active,
-  ;; and also shows key bindings related to those modes.
+(defun openlink (url)
+  "Call the openlink program to open a URL in a smart way"
+  (interactive "sURL: ")
+  (let*
+      ((process-name (concat "openlink " url))
+       (encoded-url (browse-url-encode-url url))
+       )
+    (message (concat "openlink " encoded-url))
+    (sleep-for 2)
+    (start-process "openlink" nil "~/bin/openlink" encoded-url)
+    ))
 
-  ;; (setq browse-url-browser-function 'browse-url-generic
-  ;;             browse-url-generic-program "web-browser")
+(setq browse-url-browser-function 'openlink)
 
-    ;; (defun my-browse-url-firefox-new-tab (url &optional new-window)
-    ;;   "Open URL in a new tab in Mozilla."
-    ;;   (interactive (browse-url-interactive-arg "URL: "))
-    ;;   (unless
-    ;;       (string= ""
-    ;;                (shell-command-to-string
-    ;;                 (concat "mozilla-firefox -a firefox -new-tab 'openURL("
-    ;;                         url ",new-tab)'")))
-    ;;     (message "Starting Mozilla Firefox...")))
-    ;; (setq browse-url-browser-function 'my-browse-url-firefox-new-tab)
-
-  ;; https://www.emacswiki.org/emacs/BrowseUrl
-  (setq browse-url-new-window-flag nil)
-  (defun my-browse-url (url &optional new-window)
-    "Ask the Firefox WWW browser to load URL.
-  Default to the URL around or before point.  The strings in
-  variable `browse-url-firefox-arguments' are also passed to
-  Firefox.
-
-  When called interactively, if variable
-  `browse-url-new-window-flag' is non-nil, load the document in a
-  new Firefox window, otherwise use a random existing one.  A
-  non-nil interactive prefix argument reverses the effect of
-  `browse-url-new-window-flag'.
-
-  If `browse-url-firefox-new-window-is-tab' is non-nil, then
-  whenever a document would otherwise be loaded in a new window, it
-  is loaded in a new tab in an existing window instead.
-
-  When called non-interactively, optional second argument
-  NEW-WINDOW is used instead of `browse-url-new-window-flag'."
-    (interactive (browse-url-interactive-arg "URL: "))
-    (setq url (browse-url-encode-url url))
-    (let* ((process-environment (browse-url-process-environment))
-           (window-args (if (browse-url-maybe-new-window new-window)
-                            (if browse-url-firefox-new-window-is-tab
-                                '("-new-tab")
-                              '("-new-window"))))
-           (ff-args (append browse-url-firefox-arguments window-args (list url)))
-           (process-name (concat "firefox " url))
-           (process (apply 'start-process process-name nil
-                           browse-url-firefox-program ff-args) )) ))
-
-(setq browse-url-browser-function 'my-browse-url)
-
-  ;; More info, like how to write functions to do tabs or reload:
-  ;; https://www.emacswiki.org/emacs/BrowseUrl#toc5
+;; See also https://www.emacswiki.org/emacs/BrowseUrl#toc5
 
 ;;
 ;; html-mode definitions:
@@ -1136,7 +1138,42 @@
     )
 ))
 
-;; In HTML modes, turn ' -- ' to &mdash;
+;; And a similar function for images
+(defun add-html-image () (interactive)
+  (let ((src     "")
+        (start    (point))
+        (end      (point))
+        )
+
+    (if (region-active-p)
+      (progn
+        (setq start (region-beginning))
+        (setq end   (region-end))
+        (setq src
+              (buffer-substring-no-properties start end))
+        (kill-region start end)
+      )
+    )
+
+    (insert "<img src=\"" src "\"
+     alt=\"[]\"
+     align=\"right\" width=\"\" height=\"\">")
+
+    ;; Move the cursor to a useful place. By default it's at the end
+    ;; of the inserted text.
+    (previous-line)
+    (previous-line)
+    (beginning-of-line)
+    (if src
+        (progn
+          (search-forward "\"\"")
+          (backward-char)
+        )
+        (search-forward "width=\"")
+    )
+))
+
+;; Some HTML typing aids
 (defun dashes-to-mdash ()
   "Convert ' -- ' to &mdash;"
   (interactive)
@@ -1146,8 +1183,23 @@
        (insert " &mdash; ")
        )))
 
+(defun arrow-to-arrow ()
+  "Convert -> to &rarr;"
+  (interactive)
+  (if (looking-back "->")
+      (progn
+       (backward-delete-char 2)
+       (insert "&rarr;")
+       )))
+
+(defun html-postselfinsert-hook ()
+  (dashes-to-mdash)
+  (arrow-to-arrow)
+  )
+
 
 ;; Key bindings and such can be done in the mode hook.
+;; This is used for both html-mode and web-mode.
 (defun html-hook-fcn ()
   ;; Define keys for inserting tags in HTML and web modes:
   (local-set-key "\C-cb" (lambda () (interactive) (add-html-tag "strong")))
@@ -1165,6 +1217,8 @@
   (local-set-key "\C-ca" 'add-html-link)
   (local-set-key "\C-cl" 'add-html-link)
 
+  (local-set-key "\C-cI" 'add-html-image)
+
   ;(local-set-key "\C-m" (lambda () (interactive) (insert "\n")))
 
   ;; And finally, a generic shorthand to use with other tags:
@@ -1172,7 +1226,7 @@
   (local-set-key "\C-ct"  (lambda () (interactive) (sgml-tag)))
 
   ;; Convert " -- " to &mdash;
-  (add-hook 'post-self-insert-hook #'dashes-to-mdash nil 'local)
+  (add-hook 'post-self-insert-hook #'html-postselfinsert-hook nil 'local)
 
   ;; Contents of <pre> tags get reindented, destroying their formatting.
   ;; You can avoid that by not inserting a newline, same as with <code>,
@@ -1182,21 +1236,19 @@
   ;; no need to comment it out.
   ;; (setq indent-line-function 'ignore)
 
-  ;; Web mode is super aggressive about indenting everything, all the time.
-  ;; Try to disable it entirely.
-  ;; Setting electric-indent-mode to nilhas no effect;
-  ;; The help for c-electric-slash says that setting c-electric-flag
-  ;; to bil will disable it, and describe-variable knows it,
-  ;; but it doesn't show up in autocomplete for set-variable.
-  (setq web-mode-enable-auto-indentation nil)
-
   (setq c-electric-flag nil)
+  ;; electric-indent-mode seems to be both a function and a variable somehow
+  ;; and web-mode overrides both of the global settings.
   (electric-indent-mode nil)
+  (setq electric-indent-mode nil)
+
+  ;; And another page suggests this for web-mode
+  (setq web-mode-enable-auto-indentation nil)
 
   ;; Indent for web-mode
   (setq web-mode-markup-indent-offset 0)
+  (setq web-mode-code-indent-offset 2)
   ; (setq js-indent-level 4)
-  (setq web-mode-code-indent-offset 4)
 
   ;; Prevent the obnoxious line breaking in the middle of --
   ;; when sgml-mode thinks it's a comment.
@@ -1287,11 +1339,33 @@ word or non-word."
   ;; Start with everything that's in the html-mode hook:
   (html-hook-fcn)
 
+  ;; Web mode is super aggressive about indenting everything, all the time.
+  ;; Try to disable it entirely.
+  ;; Setting electric-indent-mode to nilhas no effect;
+  ;; The help for c-electric-slash says that setting c-electric-flag
+  ;; to bil will disable it, and describe-variable knows it,
+  ;; but it doesn't show up in autocomplete for set-variable.
+  ;; It also insists on completing every comment immediately,
+  ;; meaning every type you type <!-- to comment out a section,
+  ;; " -->" appears right after it and you have to delete it before
+  ;; you can move to the place where you actually want the comment to end.
+  ;; This doesn't do it:
+  ;; (setq web-mode-engines-auto-pairs '())
+  ;; but this does, hooray!
+  (setq web-mode-enable-auto-pairing nil)
+
+  ;; This, FINALLY, is a way to prevent / (auto-closing a tag)
+  ;; from reindenting the line.
+  ;; If this stops working, try commenting out the (indent-according-to-mode)
+  ;; in web-mode.el inside web-mode-on-post-command
+  ;; inside the various (and (web-mode--command-is-self-insert-p)... clauses.
+  (setq web-mode-enable-auto-opening nil)
+
   ;; (message "web-mode hook")
   ;; (sleep-for 2)
 
   ;; Disable indentation for HTML and CSS, while keeping it for PHP and JS.
-  ;; Unfortunately web-mode often ignores this.
+  ;; Unfortunately web-mode mostly ignores this.
   (setq-local web-mode-markup-indent-offset 0)
   (setq-local web-mode-css-indent-offset 0)
 
@@ -1303,7 +1377,7 @@ word or non-word."
   ;; but now that I found a PHP mode, maybe it doesn't matter so much.
   ;; (local-set-key "\C-w" 'dwim-backward-kill-word)
 
-  ;; The possible indent variables:
+  ;; Some possible indent variables:
   ;; coffee-tab-width              ; coffeescript
   ;; javascript-indent-level       ; javascript-mode
   ;; js-indent-level               ; js-mode
@@ -1311,7 +1385,6 @@ word or non-word."
   ;; web-mode-css-indent-offset    ; web-mode, css in html file
   ;; web-mode-code-indent-offset   ; web-mode, js code in html file
   ;; css-indent-offset             ; css-mode
-
 )
 
 (add-hook 'web-mode-hook 'web-mode-hook-fcn)
@@ -1422,9 +1495,10 @@ word or non-word."
 ;; for org mode headers and links.
 (setq org-emphasis-alist
   '(("*" (bold :foreground "maroon"
-               :weight bold
-               :family "Noto Mono"
-               ;; was "Noto Mono", some fonts that work:
+               :weight "bold"
+
+               ;; :family "Liberation Sans"
+               ;; defaults to "Noto Mono", some fonts that work:
                ;; If the base font is already bold, bolding it here
                ;; is less visible. Some fonts that help:
                ;; "Overload" "Joshs Font" "Hot Pizza"
@@ -1435,7 +1509,8 @@ word or non-word."
                ;; when changing resolutions
 
                ;; also make it a little bigger
-               :height 1.3))
+               :height 1.1
+               ))
     ("/" (italic :foreground "purple"))
     ("_" (underline :foreground "navy blue"))
 
@@ -1497,7 +1572,7 @@ word or non-word."
 
   ;; wrap long lines at word boundaries
   ;; A simple way that shows continuation lines:
-  (toggle-word-wrap)
+  ;; (toggle-word-wrap)
   ;; some people prefer visual-line-mode, which doesn't show the
   ;; continuation. I'm not clear what difference org-indent-mode makes.
   ;(visual-line-mode)
@@ -1986,6 +2061,9 @@ word or non-word."
         ("lwvweb/" . web-mode)
         ;; fairdistricts website is mostly adding long links,
         ("fairdistrictsnm/" . web-mode)
+        ;; billtracker files are jinja templates
+        ("billtracker/templates" . web-mode)
+        ("billtracker/static" . web-mode)
 
         ;; Make sure changelogs don't use text-wrap-mode -- they're too long,
         ;; and text-mode invokes spellcheck which takes forever.
@@ -2015,7 +2093,6 @@ word or non-word."
 
         ("Docs/classes/welding/" . text-wrap-mode)
         ))
-
 
 ;; If there's a PHP mode installed, use it instead:
 (if (condition-case nil (require 'php-mode) (error nil))
@@ -2113,14 +2190,22 @@ word or non-word."
 (require 'recentf)
 (recentf-mode 1)
 (setq recentf-max-menu-items 25)
-(global-set-key "\C-x\C-r" 'recentf-open-files)
+(setq recentf-max-saved-items 25)
+(global-set-key "\C-x\ \C-r" 'recentf-open-files)
 
-;; Save recent files every N minutes.
+;; Save recent files every N minutes, but save silently.
 ;; This is saved at exit, but since X crashes so often on the CX1,
 ;; emacs often doesn't get a chance to exit gracefully.
 ;; This is the simple way, but then you get frequent "saved recentf" messages.
+;; In emacs 28, the save-silently is no longer working.
+;;  recentf-save-list calls write-region, so maybe write-region
+;; doesn't pay attention to save-silently
 ;;(run-at-time nil (* 5 60) 'recentf-save-list)
-(run-at-time nil (* 5 60)
+;; Setting save-silently globally like so:
+;;(setq save-silently t)
+;; prevents the message from save-buffer (which I want)
+;; but doesn't suppress the one from recentf-save-list (which I don't want).
+(run-at-time (* 5 60) (* 5 60)
              (lambda ()
                (let ((save-silently t))
                  (recentf-save-list))))
@@ -2133,13 +2218,13 @@ word or non-word."
         (filename (buffer-file-name)))
     (if (not filename)
         (message "Buffer '%s' is not visiting a file!" name)
-      (if (get-buffer new-name)
-          (message "A buffer named '%s' already exists!" new-name)
-        (progn
-          (rename-file filename new-name 1)
-          (rename-buffer new-name)
-          (set-visited-file-name new-name)
-          (set-buffer-modified-p nil))))))
+        (if (get-buffer new-name)
+            (message "A buffer named '%s' already exists!" new-name)
+            ; The rest is all the "else" clause
+            (rename-file filename new-name 1)
+            (rename-buffer new-name)
+            (set-visited-file-name new-name)
+            (set-buffer-modified-p nil)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Turn debugging back off.  Put any questionable code after these lines!
@@ -2152,9 +2237,9 @@ word or non-word."
 ;; A minibuffer completion package from
 ;; http://www.emacswiki.org/emacs/RecentFiles
 ;; but it's not very smart, doesn't pay any attention to the current directory.
-(load "recent-minibuffer")
-(setq enable-recursive-minibuffers t)
-(global-set-key "\C-cr" 'recentf-minibuffer-dialog)
+;; (load "recent-minibuffer")
+;; (setq enable-recursive-minibuffers t)
+;; (global-set-key "\C-cr" 'recentf-minibuffer-dialog)
 
 ;;
 ;; Some useful tips on testing/evaluating elisp:
@@ -2203,7 +2288,8 @@ word or non-word."
  '(inhibit-startup-screen t)
  '(package-selected-packages '(jedi markdown-mode elpy undo-tree))
  '(safe-local-variable-values
-   '((\#+STARTUP . Content)
+   '((eval set-variable sh-basic-offset 2)
+     (\#+STARTUP . Content)
      (\#+STARTUP . overview)
      (org-startup-folded . t)
      (auto-fill)
@@ -2211,6 +2297,7 @@ word or non-word."
      (encoding . utf-8)
      (auto-fill-mode)
      (wrap-mode)))
+ '(warning-suppress-types '((comp)))
  '(web-mode-code-indent-offset 4)
  '(web-mode-markup-indent-offset 0))
 (put 'upcase-region 'disabled nil)
