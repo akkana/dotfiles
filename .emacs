@@ -78,6 +78,7 @@
     ;; from the screen height (for panels, menubars and
     ;; whatnot), then divide by the height of a char to
     ;; get the height we want
+    ;; XXX this is no longer working, comes out way too high on laptop screen
     (let ((newheight  (+ (floor (/ (* dpyheight 0.55)
                                    (frame-char-height)))
                          22)))
@@ -372,7 +373,7 @@
 ;(setq mode-line-format default-mode-line-format)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Custom colors
+;; Custom colors and fonts
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Color themes: search for color-theme.el
@@ -386,48 +387,101 @@
   ;; It may be that it's okay as long as you put all your face customizations
   ;; inside this one custom-set-faces call.
   ;;
-;(set-background-color "grey90")
-; Some decent colors: grey90, Alice Blue, light cyan, mint cream, Honeydew
-;(set-background-color "mint cream")
-(set-background-color "#e9fffa")
 
-;; XXX Colors and fonts don't apply to new windows created with make-frame.
-;; Apparently it would need to set default-frame properties or define
-;; a theme in order to apply to new frames.
-;; In the meantime, C-x C-0 should usually set things right.
 
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(flyspell-duplicate ((((class color)) (:foreground "red" :underline t :weight bold))))
- '(font-lock-comment-face ((((class color) (min-colors 88) (background light)) (:foreground "blue"))))
- '(markdown-bold-face ((t (:family "Monoid HalfTight-7.5" :foreground "dark magenta" :weight bold :height 1.1))))
- '(markdown-italic-face ((t (:foreground "dark green" :slant italic :height 1.0))))
- '(markdown-code-face ((t (:inherit fixed-pitch :background "ivory1"))))
- '(markdown-header-face ((t (:family "Liberation Serif" :height 1.5 :weight bold))))
- '(markdown-header-face-1 ((t (:inherit markdown-header-face :height 1.8 :foreground "navy blue"))))
- '(markdown-header-face-2 ((t (:inherit markdown-header-face :height 1.6 :foreground "medium violet red"))))
- '(markdown-header-face-3 ((t (:inherit markdown-header-face :height 1.4 :foreground "dark red"))))
- '(markdown-header-face-4 ((t (:inherit markdown-header-face :height 1.2 :foreground "indian red"))))
- '(markdown-inline-code-face ((t (:inherit font-lock-constant-face :background "gainsboro"))))
- '(markdown-link-face ((t (:inherit link))))
- '(markdown-pre-face ((t (:background "ivory1" :family "monoid"))))
- '(org-level-1 ((t (:family "Liberation Serif" :height 2.3 :foreground "navy blue" :weight bold))))
- '(org-level-2 ((t (:family "Liberation Serif" :height 2.0 :foreground "dark magenta" :weight bold))))
- '(org-level-3 ((t (:family "Liberation Serif" :height 1.7 :foreground "dark red" :weight bold))))
- '(org-level-4 ((t (:family "Liberation Serif" :height 1.3 :foreground "indian red" :weight bold))))
- '(org-link ((t (:underline t :slant italic :background "white" :foreground "blue"))))
- '(whitespace-trailing ((t (:background "cyan" :foreground "yellow" :weight bold)))))
+;; Probably I should be doing this with a theme?
+(defun set-colors-and-fonts ()
 
-(set-face-foreground 'mode-line "yellow")
-(set-face-background 'mode-line "purple")
-(set-face-background 'mode-line-inactive "light blue")
+    ;(set-background-color "grey90")
+    ; Some decent colors: grey90, Alice Blue, light cyan, mint cream, Honeydew
+    ;(set-background-color "mint cream")
+    (set-background-color "#e9fffa")
 
-(set-face-background 'trailing-whitespace "cornsilk")
+    ;; XXX Colors and fonts don't apply to new windows created with make-frame.
+    ;; Apparently it would need to set default-frame properties or define
+    ;; a theme in order to apply to new frames.
+    ;; In the meantime, C-x C-0 should usually set things right.
 
-(set-face-attribute 'region nil :background "#8df" :foreground "black")
+    (custom-set-faces
+     ;; custom-set-faces was added by Custom.
+     ;; If you edit it by hand, you could mess it up, so be careful.
+     ;; Your init file should contain only one such instance.
+     ;; If there is more than one, they won't work right.
+     '(flyspell-duplicate ((((class color)) (:foreground "red" :underline t :weight bold))))
+     '(font-lock-comment-face ((((class color) (min-colors 88) (background light)) (:foreground "blue"))))
+     '(markdown-bold-face ((t (:family "Monoid HalfTight-7.5" :foreground "dark magenta" :weight bold :height 1.1))))
+     '(markdown-italic-face ((t (:foreground "dark green" :slant italic :height 1.0))))
+     ;; The ``` around preformatted, but not the actual preformatted text
+     '(markdown-code-face ((t (:inherit fixed-pitch :background "white"))))
+     ;; The preformatted text inside ```
+     '(markdown-pre-face ((t (:background "white" :family "monoid"))))
+     ; '(markdown-inline-code-face ((t (:inherit font-lock-constant-face :background "gainsboro"))))
+     '(markdown-inline-code-face ((t (:background "white" :foreground "black" :family "monoid"))))
+     '(markdown-header-face ((t (:family "Liberation Serif" :height 1.5 :weight bold))))
+     '(markdown-header-face-1 ((t (:inherit markdown-header-face :height 1.8 :foreground "navy blue"))))
+     '(markdown-header-face-2 ((t (:inherit markdown-header-face :height 1.6 :foreground "medium violet red"))))
+     '(markdown-header-face-3 ((t (:inherit markdown-header-face :height 1.4 :foreground "dark red"))))
+     '(markdown-header-face-4 ((t (:inherit markdown-header-face :height 1.2 :foreground "indian red"))))
+     '(markdown-link-face ((t (:inherit link))))
+     '(org-level-1 ((t (:family "Liberation Serif" :height 2.3 :foreground "navy blue" :weight bold))))
+     '(org-level-2 ((t (:family "Liberation Serif" :height 2.0 :foreground "dark magenta" :weight bold))))
+     '(org-level-3 ((t (:family "Liberation Serif" :height 1.7 :foreground "dark red" :weight bold))))
+     '(org-level-4 ((t (:family "Liberation Serif" :height 1.3 :foreground "indian red" :weight bold))))
+     '(org-link ((t (:underline t :slant italic :background "white" :foreground "blue"))))
+     '(whitespace-trailing ((t (:background "cyan" :foreground "yellow" :weight bold)))))
+
+    (set-face-foreground 'mode-line "yellow")
+    (set-face-background 'mode-line "purple")
+    (set-face-background 'mode-line-inactive "light blue")
+
+    (set-face-background 'trailing-whitespace "cornsilk")
+
+    (set-face-attribute 'region nil :background "#8df" :foreground "black")
+
+    ;; Turn off the irritating scrollbar that claims to have somewhere to
+    ;; scroll even on new 1-line files.
+    ;; toggle-scroll-bar only works on the current frame
+    (toggle-scroll-bar -1)
+
+) ;; end defun set-colors-and-fonts
+
+;;
+;; Set colors and fonts in new frames (i.e. new GUI windows)
+;;
+(add-hook 'after-make-frame-functions
+    (lambda (frame)
+      (select-frame frame)
+      (set-colors-and-fonts)
+      (set-frame-size-by-resolution)
+      ;; (set-background-color "#e9fffa")
+      )
+    )
+
+;; The initial window apparently doesn't call the after-make-frame-functions
+;; hook, so this has to be called explicitly:
+(set-colors-and-fonts)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Frames (i.e. GUI/X windows)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; "tear off" the current window to a new frame (GUI window)
+;; on control-right click in modeline
+;; or run M-x tear-off-window when in the window you want to tear off.
+(global-set-key [mode-line C-mouse-3] 'tear-off-window)
+
+;; Other ways of opening new frames:
+;; https://www.gnu.org/software/emacs/manual/html_node/emacs/Creating-Frames.html
+;; find-file-other-frame (C-x 5 f)
+;; here's an easier to remember binding:
+(global-set-key "\C-xvv" 'find-file-other-frame)
+
+;; make-frame-command (C-x 5 2 ¶) opens a new frame duplicating the current buffer
+;; (both frames show windows on the same buffer, changes in one will
+;; appear in the other)
+;; clone-frame (C-x 5 c) Create a new frame using the window configuration
+;; and frame parameters of the current frame -- not clear what that means,
+;; but it doesn't clone colors or fonts.
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -451,7 +505,7 @@
 
 ;; undefine the keys that do narrow-to-page and narrow-to-region,
 ;; because who would ever want such a stupid function??
-;; And they're easy to hit accidentally.
+;; And I'm forever hitting them accidentally.
 (global-unset-key "\C-xp")
 (global-unset-key "\C-xn")
 
@@ -464,11 +518,6 @@
 ;; Turn off that big useless toolbar
 (tool-bar-mode 0)
 (menu-bar-mode 0)
-;; and the irritating scrollbar that claims to have somewhere to
-;; scroll even on new 1-line files.
-;; Supposedly toggle-scroll-bar only works on "the selected frame",
-;; but it's been working for me globally.
-(toggle-scroll-bar -1)
 ;; I guess this is now the more approved way, but it has to be called
 :; from the after-make-frame-functions hook:
 ;; (scroll-bar-mode nil)
@@ -1023,8 +1072,22 @@
 
 (add-hook 'text-mode-hook 'text-hook)
 
+;; default value of browse-url-browser-function is browse-url-default-browser
+;; which says:
+;; (browse-url-default-browser URL &rest ARGS)
+;; Find a suitable browser and ask it to load URL.
+;; Default to the URL around or before point.
 
-(defun openlink (url)
+;; When called interactively, if variable ‘browse-url-new-window-flag’ is
+;; non-nil, load the document in a new window, if possible, otherwise use
+;; a random existing one.  A non-nil interactive prefix argument reverses
+;; the effect of ‘browse-url-new-window-flag’.
+;;
+;; However, setting the following does NOT open new windows/tabs in firefox.
+;; (setq browse-url-new-window-flag t)
+;; Here's a custom function to do it:
+
+(defun openlink (url &rest ARGS)
   "Call the openlink program to open a URL in a smart way"
   (interactive "sURL: ")
   (let*
@@ -1037,6 +1100,7 @@
     ))
 
 (setq browse-url-browser-function 'openlink)
+
 
 ;; See also https://www.emacswiki.org/emacs/BrowseUrl#toc5
 
@@ -1404,7 +1468,7 @@ word or non-word."
 ;; things and makes HTML difficult to edit:
 ;; Unfortunately this may also turn off PHP indentation.
 ;; But no worries about that, it doesn't work anyway.
-;; (setq web-mode-enable-auto-indentation nil)
+(setq web-mode-enable-auto-indentation nil)
 
 ;; Run this on a region inside a <pre> to convert chars like < into entities.
 (defun unhtml (start end)
@@ -1716,7 +1780,7 @@ word or non-word."
   (local-set-key "\C-cr" 'repeat-screenshot)
   (local-set-key "\C-cp" 'mypaint)
 
-  ;; Our usual font is terrible for Greek letters.
+  ;; My usual font is terrible for Greek letters.
   ;; For courses that require a lot of greek-letter equations,
   ;; use a different font.
   ;; 11x18 or sony 8x16 (those two look the same), Default is nice and bold
@@ -1898,7 +1962,16 @@ word or non-word."
 
   ;; Enable autocomplete using jedi
   ;; Commented out for now, until I figure out how to prevent annoying popups.
-  ;(jedi:setup)
+  ;; Later: can't even get jedi emacs package installed.
+  ;; (jedi:setup)
+
+  ;; Alternately, try elpy:
+  ;; But it doesn't work either,
+  ;; Error (use-package): Failed to install elpy: https://stable.melpa.org/packages/s-1.12.0.el: Not found
+  ;; (use-package elpy
+  ;;   :ensure t
+  ;;   :init
+  ;;   (elpy-enable))
 
   ;(message "python hook")
   )
