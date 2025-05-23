@@ -36,8 +36,19 @@ if [[ $(tty) == /dev/tty1 || ! -z "$SSH_TTY" ]]; then
 
     # Environment
     export PAGER=less
-    # Need -er in LESS, for git colors to work
-    export LESS="-EerX"
+
+    # Use quickbrowse for email attachments
+    export EMAIL_BROWSER=quickbrowse
+
+    # Need -er in LESS, for git colors to work.
+    # But -er makes less fail to consider long lines.
+    # export LESS="-EerX"
+    # -e: exit the second time it sees EOF. -E: first time.
+    # -R: let ANSI color sequences through
+    # -X disables sending the terminal initialization sequence,
+    # meaning it disables using the alt screen.
+    export LESS="-eRX"
+
     export LC_COLLATE=C
 
     export MAILER=mutt
@@ -54,16 +65,49 @@ if [[ $(tty) == /dev/tty1 || ! -z "$SSH_TTY" ]]; then
     export XDG_PICTURES_DIR=/tmp
     export XDG_VIDEOS_DIR=/tmp
 
+    # Debian's python3-pyproj package can't be bothered to be aware
+    # of its own data directory, so it gives an annoying warning
+    # "Valid PROJ data directory not found"
+    # every time it's run unless you do this:
+    export PROJ_DATA=/usr/share/proj
+
     # Autocomplete in the python console:
     # https://python.readthedocs.io/en/v2.7.2/tutorial/interactive.html
     if [[ -f ~/.pystartup ]]; then
         export PYTHONSTARTUP=~/.pystartup
     fi
 
-    if [[ -e /usr/lib/x86_64-linux-gnu/libgtk3-nocsd.so.0 ]]; then
-        export GTK_CSD=0
-        export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libgtk3-nocsd.so.0
-    fi
+    export EDITOR=vim
+
+    # If EDITOR is vim, zsh will try to be "smart" and switch to vi mode.
+    # This switches bindings back to emacs:
+    bindkey -e
+
+    export RSYNC_RSH=ssh
+    # export PHO_ARGS=-p
+
+    # Disable NoCSD for GTK
+    # if [[ -e /usr/lib/x86_64-linux-gnu/libgtk3-nocsd.so.0 ]]; then
+    #     export GTK_CSD=0
+    #     export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libgtk3-nocsd.so.0
+    # fi
+    # if [[ -e /usr/lib/x86_64-linux-gnu/libgtk3-nocsd.so.0 ]]; then
+    #     export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libgtk3-nocsd.so.0
+    # fi
+
+    # virt-manager by default makes sessions that are only for root,
+    # while virsh looks for a QEMU/KVM user session.
+    # Tell virsh to use the root session:
+    export LIBVIRT_DEFAULT_URI="qemu:///system"
+
+    # ls colors, see:
+    # https://gist.github.com/jmoz/280005/3dca508fb193b6ae5d1f4a3f21efc7d90ecb0bde
+    # http://www.bigsoft.co.uk/blog/index.php/2008/04/11/configuring-ls_colors
+    # https://web.archive.org/web/20201129214825/http://www.linux-sxs.org/housekeeping/lscolors.html
+    export LS_COLORS='ex=1;31:ln=1;35:ow=47;1:or=0;103;1'
+
+    # Allow personal ispell dictionary without cluttering ~
+    export WORDLIST=~/.config/spell/ispell_words
 
     ########### End Environment
 
@@ -102,17 +146,25 @@ if [[ $(tty) == /dev/tty1 || ! -z "$SSH_TTY" ]]; then
     fi
     alias xx='startx >~/.Xout 2>&1'
 
-    if [[ $(hostname) == 'charon' ]]; then
-        # mute the microphone, set the builtin speakers as default output:
-        pulsehelper --source none --sink spkr > /tmp/pulsehelper.login 2>&1
+    # if [[ $(hostname) == 'charon' ]]; then
+    #     # mute the microphone, set the builtin speakers as default output
+    #     # This works from a shell after logging in, but at login time
+    #     # it doesn't.
+    #     echo "**** DEVICES:" > /tmp/pulsehelper.login
+    #     pulsehelper >> /tmp/pulsehelper.login 2>&1
+    #     echo "**** pacmd list-sinks:" >> /tmp/pulsehelper.login
+    #     pacmd list-sinks >> /tmp/pulsehelper.login 2>&1
+    #     echo "**** Setting:" >> /tmp/pulsehelper.login
+    #     pulsehelper --source none --sink spkr >> /tmp/pulsehelper.login 2>&1
 
-        # Incantation to enable all four speakers on Carbon X1 Gen 7
-        # https://gist.github.com/hamidzr/dd81e429dc86f4327ded7a2030e7d7d9
-        # https://forums.lenovo.com/t5/Ubuntu/Guide-X1-Carbon-7th-Generation-Ubuntu-compatability/m-p/4489823?page=15#5085965
-        # sudo /usr/bin/hda-verb /dev/snd/hwC0D0 0x17 SET_CONNECT_SEL 1
-    fi
+    #     # Incantation to enable all four speakers on Carbon X1 Gen 7
+    #     # https://gist.github.com/hamidzr/dd81e429dc86f4327ded7a2030e7d7d9
+    #     # https://forums.lenovo.com/t5/Ubuntu/Guide-X1-Carbon-7th-Generation-Ubuntu-compatability/m-p/4489823?page=15#5085965
+    #     # sudo /usr/bin/hda-verb /dev/snd/hwC0D0 0x17 SET_CONNECT_SEL 1
+    # fi
 
     # End things to do only on tty1
+
 else
 
     # If we're logged in over a serial port, we might be using screen
@@ -121,6 +173,15 @@ else
     if [[ $(tty) =~ /dev/ttyAMA0 ]]; then
         termsize
     fi
+fi
+
+if [[ $(tty) == /dev/pts/0 ]]; then
+    echo "====== /dev/pts/0: =====================" >>/tmp/pulsehelper.pts0
+    pulsehelper >> /tmp/pulsehelper.pts0 2>&1
+    echo "**** pacmd list-sinks:" >> /tmp/pulsehelper.pts0
+    pacmd list-sinks >> /tmp/pulsehelper.pts0 2>&1
+    echo "**** Setting:" >> /tmp/pulsehelper.pts0
+    pulsehelper --source none --sink spkr >> /tmp/pulsehelper.pts0 2>&1
 fi
 
 # Macs don't have rxvt-unicode-256color, and ssh from urxvt will
@@ -152,9 +213,9 @@ if [[ $(hostname) == 'charon' ]]; then
     # }
     # rancmd
 
-    if [[ -x /usr/bin/remind && -e ~/Docs/Lists/remind ]]; then
+    if [[ -x ~/bin/reminders && -e ~/web/cal/remind.txt ]]; then
         echo "==================================================="
-        remind -g ~/Docs/Lists/remind
+        ~/bin/reminders week
     fi
 
     acpi
