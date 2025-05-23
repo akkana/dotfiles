@@ -278,11 +278,6 @@ alias pastebin='nc termbin.com 9999'
 # Make wget use today's date, not the date on the server
 alias wget='wget --no-use-server-timestamps'
 
-# During COVID, I'm keeping meetings in ~/Meetings. Mirror them on Android.
-# Maybe some day I'll find or write a sensible way of actually mirroring
-# Android Calendar entries.
-alias pushmeetings='adb push ~/Meetings $androidSD/Documents/Meetings.txt'
-
 ##################
 # Alias related to file finding and listing:
 
@@ -312,11 +307,6 @@ show_symlinks() {
         fi
     done
 }
-# ls colors, see:
-# https://gist.github.com/jmoz/280005/3dca508fb193b6ae5d1f4a3f21efc7d90ecb0bde
-# http://www.bigsoft.co.uk/blog/index.php/2008/04/11/configuring-ls_colors
-# https://web.archive.org/web/20201129214825/http://www.linux-sxs.org/housekeeping/lscolors.html
-export LS_COLORS='ex=1;31:ln=1;35:ow=47;1:or=0;103;1'
 
 ls() { /bin/ls -FH --color "$@" ; }
 ll() {
@@ -673,6 +663,9 @@ kmz2gpx() {
 # Usage: utm2gpx 0353315 3954857
 # I don't know how to get the UTM zone if you don't already have it;
 # Barbara just gives me the pair of points without a zone.
+# XXX This doesn't work for utm2gpx 0381100 396373
+# which should come out as 35.810504 -106.316062
+# compare https://www.engineeringtoolbox.com/utm-latitude-longitude-d_1370.html
 utm2gpx() {
     unicsv=`mktemp /tmp/point-XXXXX.csv`
     gpxfile=$unicsv:r.gpx
@@ -1458,6 +1451,17 @@ pulladb() {
     ls
 }
 
+# Pull .fit files exported from the Specialized bike app
+# I leave them in /storage/emulated/0 because I don't want to be bothered
+# choosing a directory every time when I'm just going to download & delete.
+pull-specialized-fit() {
+    adbdir=/storage/emulated/0
+    for f in $(adb shell "ls $adbdir/Download/*.fit"); do    # get absolute paths
+        adb pull $f
+        adb shell rm $f
+    done
+}
+
 pullgpx() {
     # Pull recorded GPX tracks from OsmAnd.
     pushd_maybe ~/Docs/gps/new
@@ -1466,6 +1470,9 @@ pullgpx() {
     # pulladb $androidSD/Android/data/net.osmand.plus/files/tracks/rec
     # If on main storage:
     pulladb /storage/emulated/0/Android/data/net.osmand.plus/files/tracks/rec $*
+
+    # Also pull any .fit files exported with FX file manager
+    pull-specialized-fit
 }
 
 pullphotos() {
@@ -1871,6 +1878,18 @@ metronome() {
     fi
     echo "BPM $bpm minutes $minutes Volume $volume"
     play -n -c1 synth 0.004 sine 2000 pad $(awk "BEGIN { print 60/$bpm -.004 }") repeat $beats vol $volume
+}
+
+# Change rxvt foreground and background color. Usage: urxvtcolors bg [fg]
+# Color names are rgb.txt colors in lowercase with spaces removed, e.g. lightblue
+urxvtcolors() {
+    bg=$1
+    fg=$2
+    if [[ $fg == '' ]]; then
+        fg='black'
+    fi
+    printf "\033]11;$bg\007"
+    printf "\033]10;$fg\007"
 }
 
 # chroot to alternate partition /partitionname in order to update it
